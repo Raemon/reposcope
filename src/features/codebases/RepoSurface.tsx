@@ -4,6 +4,17 @@ import { useEffect, useState } from 'react';
 import { ApiEndpointDocumentation } from '@/features/api-surface/ApiEndpointDocumentation';
 import { ApiTypeDocumentation } from '@/features/api-surface/ApiTypeDocumentation';
 import { AppRouteDocumentation } from '@/features/api-surface/AppRouteDocumentation';
+import { ActivityView } from '@/features/repo-insights/ui/ActivityView';
+import { DataModelsView } from '@/features/repo-insights/ui/DataModelsView';
+import { DependenciesView } from '@/features/repo-insights/ui/DependenciesView';
+import { EntryPointsView } from '@/features/repo-insights/ui/EntryPointsView';
+import { MeterBar } from '@/features/repo-insights/ui/MeterBar';
+import { RuntimeView } from '@/features/repo-insights/ui/RuntimeView';
+import { RepoRefProvider } from '@/features/repo-insights/ui/SourceRef';
+import { StructureMapView } from '@/features/repo-insights/ui/StructureMapView';
+import { TestsView } from '@/features/repo-insights/ui/TestsView';
+import { ViewSwitcher } from '@/features/repo-insights/ui/ViewSwitcher';
+import { defaultViewId, surfaceViews, type SurfaceViewId } from '@/features/repo-insights/ui/surfaceViews';
 import type { RepoSurfacePayload } from '@/features/codebases/repoSurfacePayload';
 import { ApiClientError, apiJson } from '@/features/sources/apiClient';
 import { addSource, useGithubToken, useSources, useStoreReady } from '@/features/sources/sourceStore';
@@ -73,28 +84,69 @@ export function RepoSurface({ owner, repo }: { owner: string; repo: string }) {
       </section>
     );
   }
-  const { read, endpoints, typeSections, routes } = held.surface;
-  if (endpoints.length === 0 && routes.length === 0) {
-    return (
-      <section className="max-w-2xl">
-        {offer}
-        <p className="mb-1 text-[10px] uppercase tracking-[0.18em] text-ink-dim">{read}</p>
-        <h1 className="text-xl text-accent">{heading}</h1>
-        <p className="mt-2 text-xs leading-5 text-ink-dim">
-          No server boundary and no page tree found. apiscope reads Next.js route handlers and pages API routes,
-          Express-style route registrations, WebSocket upgrade handlers, and the app or pages directory.
-        </p>
-      </section>
-    );
-  }
+  return (
+    <RepoRefProvider owner={owner} repo={repo}>
+      {offer}
+      <SurfaceBody surface={held.surface} heading={heading} />
+    </RepoRefProvider>
+  );
+}
+
+function SurfaceBody({ surface, heading }: { surface: RepoSurfacePayload; heading: string }) {
+  const views = surfaceViews(surface);
+  const [active, setActive] = useState<SurfaceViewId>(() => defaultViewId(views));
+  const shown = views.find((view) => view.id === active && view.available) ? active : defaultViewId(views);
+  const { languages } = surface.insights;
   return (
     <div>
-      {offer}
-      <div className="flex flex-wrap items-start gap-8">
-        <ApiEndpointDocumentation endpoints={endpoints} heading={heading} summary={read} />
-        <ApiTypeDocumentation sections={typeSections} />
-        <AppRouteDocumentation routes={routes} />
+      <div className="mb-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+        <p className="text-[10px] uppercase tracking-[0.18em] text-ink-dim">{surface.read}</p>
+        {languages.length > 0 ? (
+          <span className="flex items-center gap-2">
+            <MeterBar
+              width="w-32"
+              segments={languages.map((held) => ({
+                label: held.language,
+                value: held.lines || held.files,
+                detail: `${held.language}: ${held.files} files, ${held.lines.toLocaleString()} lines`,
+              }))}
+            />
+            <span className="font-mono text-[10px] text-ink-dim">
+              {languages.slice(0, 3).map((held) => held.language).join(' · ')}
+            </span>
+          </span>
+        ) : null}
       </div>
+      <ViewSwitcher views={views} active={shown} onSelect={setActive} />
+      <ActiveView id={shown} surface={surface} heading={heading} />
     </div>
   );
+}
+
+function ActiveView({ id, surface, heading }: { id: SurfaceViewId; surface: RepoSurfacePayload; heading: string }) {
+  const { insights } = surface;
+  switch (id) {
+    case 'api':
+      return (
+        <div className="flex flex-wrap items-start gap-8">
+          <ApiEndpointDocumentation endpoints={surface.endpoints} heading={heading} summary="Traced from the source" />
+          <ApiTypeDocumentation sections={surface.typeSections} />
+          <AppRouteDocumentation routes={surface.routes} />
+        </div>
+      );
+    case 'entry':
+      return <EntryPointsView entryPoints={insights.entryPoints} deepCount={surface.endpoints.length} />;
+    case 'map':
+      return <StructureMapView map={insights.map} />;
+    case 'dependencies':
+      return <DependenciesView manifests={insights.dependencies} />;
+    case 'runtime':
+      return <RuntimeView runtime={insights.runtime} />;
+    case 'models':
+      return <DataModelsView models={insights.models} />;
+    case 'tests':
+      return <TestsView tests={insights.tests} />;
+    case 'activity':
+      return insights.activity ? <ActivityView activity={insights.activity} /> : null;
+  }
 }

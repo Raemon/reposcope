@@ -1,22 +1,19 @@
 import { AppRouteTree } from './AppRouteTree';
+import { InsightPanel, InsightSection } from '@/features/repo-insights/ui/InsightSection';
 import type { AppRoute, AppRouteComponent } from './appRouteCatalog';
 
 export function AppRouteDocumentation({ routes }: { routes: AppRoute[] }) {
   const componentCount = routes.reduce((total, route) => total + route.components.reduce(countComponents, 0), 0);
 
   return (
-    <section aria-labelledby="routes-heading" className="min-w-0">
-      <div className="mb-3 max-w-[22rem] border-b border-panel-edge pb-3">
-        <p className="mb-1 text-[10px] uppercase tracking-[0.18em] text-ink-dim">Rendered from the page tree</p>
-        <h2 id="routes-heading" className="text-xl text-accent">Browser surface</h2>
-        <p className="mt-1 text-xs leading-5 text-ink-dim">
-          Each URL a person can open, the components it nests, and the API calls those components make.
-        </p>
-        <p className="mt-2 font-mono text-[11px] text-ink-dim">
-          {routes.length} routes · {componentCount} components
-        </p>
-      </div>
-      <div className="w-fit max-w-[38rem] overflow-x-auto rounded border border-panel-edge bg-panel">
+    <InsightSection
+      id="routes"
+      kicker="Rendered from the page tree"
+      title="Browser surface"
+      blurb="Each URL a person can open, the components it nests, and the API calls those components make."
+      stat={`${routes.length} routes · ${componentCount} components`}
+    >
+      <InsightPanel>
         <table className="table-auto border-collapse">
           <caption className="sr-only">URL routes, their nested components, and the API calls those components make</caption>
           <thead className="sr-only">
@@ -29,8 +26,8 @@ export function AppRouteDocumentation({ routes }: { routes: AppRoute[] }) {
             <AppRouteTree routes={routes} />
           </tbody>
         </table>
-      </div>
-    </section>
+      </InsightPanel>
+    </InsightSection>
   );
 }
 

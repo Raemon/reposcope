@@ -9,14 +9,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ owne
   const { owner, repo } = await params;
   return apiRoute(request, async (): Promise<RepoSurfacePayload> => {
     await describeRepo(owner, repo);
-    const { codebase, endpoints, typeSections, routes, fetchedInMs, analyzedInMs } = await codebaseApiSurface(
+    const { codebase, endpoints, typeSections, routes, insights, fetchedInMs, analyzedInMs } = await codebaseApiSurface(
       owner,
       repo,
     );
     const read = `${codebase.files.length} source files · fetched in ${seconds(fetchedInMs)} · analyzed in ${seconds(
       analyzedInMs,
     )}${codebase.truncated ? ' · truncated' : ''}`;
-    return { heading: `${owner}/${repo}`, read, endpoints, typeSections, routes };
+    return { heading: `${owner}/${repo}`, read, endpoints, typeSections, routes, insights };
   });
 }
 

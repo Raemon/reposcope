@@ -4,6 +4,9 @@ import { buildApiSourceIndex } from './apiSourceIndex';
 import { buildApiTypeCatalog } from './apiTypeCatalog';
 import { buildApiTypeSections } from './apiTypeSectionCatalog';
 import { loadCodebase, type Codebase } from '@/features/codebases/codebaseSource';
+import { fetchRepoActivity } from '@/features/repo-insights/repoActivity';
+import { buildRepoInsights } from '@/features/repo-insights/repoInsights';
+import type { RepoInsights } from '@/features/repo-insights/insightTypes';
 import type { ApiEndpoint } from './apiEndpointTypes';
 import type { ApiTypeSection } from './apiTypeSectionTypes';
 
@@ -12,6 +15,7 @@ export interface CodebaseApiSurface {
   endpoints: ApiEndpoint[];
   typeSections: ApiTypeSection[];
   routes: AppRoute[];
+  insights: RepoInsights;
   fetchedInMs: number;
   analyzedInMs: number;
 }
@@ -24,7 +28,7 @@ export async function codebaseApiSurface(owner: string, repo: string): Promise<C
   const held = cache.get(key);
   if (held) return held;
   const startedFetch = Date.now();
-  const codebase = await loadCodebase(owner, repo);
+  const [codebase, activity] = await Promise.all([loadCodebase(owner, repo), fetchRepoActivity(owner, repo)]);
   const startedAnalysis = Date.now();
   const index = buildApiSourceIndex(codebase.files);
   const endpoints = apiEndpointsIn(index);
@@ -33,6 +37,7 @@ export async function codebaseApiSurface(owner: string, repo: string): Promise<C
     endpoints,
     typeSections: buildApiTypeSections(buildApiTypeCatalog(index, endpoints), endpoints),
     routes: buildAppRouteCatalog(index),
+    insights: { ...buildRepoInsights(codebase, endpoints), activity },
     fetchedInMs: startedAnalysis - startedFetch,
     analyzedInMs: Date.now() - startedAnalysis,
   };
