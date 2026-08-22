@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { floatingTipPosition, type TipPosition } from './tooltips/floatingTipPosition';
+import { floatingTipPosition, type TipPlacement, type TipPosition } from './tooltips/floatingTipPosition';
 
 const OFFSCREEN: TipPosition = { left: -9999, top: -9999 };
 const HOVER_INTENT_MS = 100;
@@ -13,11 +13,15 @@ export function HoverCardTrigger({
   card,
   children,
   className = '',
+  placement = 'side',
+  interactive = true,
 }: {
   label: string;
   card: ReactNode;
   children: ReactNode;
   className?: string;
+  placement?: TipPlacement;
+  interactive?: boolean;
 }) {
   const id = useId();
   const [anchor, setAnchor] = useState<DOMRect | null>(null);
@@ -83,7 +87,8 @@ export function HoverCardTrigger({
           id={id}
           label={label}
           anchor={anchor}
-          reachable={reachable}
+          placement={placement}
+          reachable={reachable && interactive}
           onEnter={clearTimers}
           onLeave={scheduleHide}
         >
@@ -99,6 +104,7 @@ function HoverCardPopper({
   id,
   label,
   anchor,
+  placement,
   reachable,
   onEnter,
   onLeave,
@@ -108,6 +114,7 @@ function HoverCardPopper({
   id: string;
   label: string;
   anchor: DOMRect;
+  placement: TipPlacement;
   reachable: boolean;
   onEnter: () => void;
   onLeave: () => void;
@@ -116,8 +123,8 @@ function HoverCardPopper({
   const [position, setPosition] = useState<TipPosition>(OFFSCREEN);
 
   useLayoutEffect(() => {
-    if (ref.current) setPosition(floatingTipPosition(ref.current.getBoundingClientRect(), anchor));
-  }, [anchor, ref]);
+    if (ref.current) setPosition(floatingTipPosition(ref.current.getBoundingClientRect(), anchor, placement));
+  }, [anchor, placement, ref]);
 
   return createPortal(
     <div
