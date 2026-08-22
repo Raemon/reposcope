@@ -36,7 +36,7 @@ function githubHeaders(accept: string): Record<string, string> {
   return {
     Accept: accept,
     'X-GitHub-Api-Version': '2022-11-28',
-    'User-Agent': 'apiscope',
+    'User-Agent': 'reposcope',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 }

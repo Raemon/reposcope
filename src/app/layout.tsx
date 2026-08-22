@@ -4,7 +4,7 @@ import { CodebaseSidebar } from '@/features/codebases/CodebaseSidebar';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'apiscope — codebase viewer',
+  title: 'reposcope — codebase viewer',
   description: 'Read the server boundary of any repository straight from GitHub.',
 };
 

@@ -32,7 +32,7 @@ export async function GET(request: Request) {
 async function exchangeCode(code: string, redirectUri: string, config: OAuthConfig): Promise<string> {
   const response = await fetch('https://github.com/login/oauth/access_token', {
     method: 'POST',
-    headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'apiscope' },
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'User-Agent': 'reposcope' },
     body: JSON.stringify({
       client_id: config.clientId,
       client_secret: config.clientSecret,

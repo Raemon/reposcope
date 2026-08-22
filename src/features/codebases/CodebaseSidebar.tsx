@@ -17,7 +17,7 @@ export function CodebaseSidebar() {
       <div className="border-b border-panel-edge px-3 py-2.5">
         <p className="text-[10px] uppercase tracking-[0.18em] text-ink-dim">Codebases</p>
         <Link href="/" className="text-sm text-accent">
-          apiscope
+          reposcope
         </Link>
       </div>
       {!ready ? (

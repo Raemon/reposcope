@@ -3,8 +3,12 @@
 import { useSyncExternalStore } from 'react';
 import { normalizeSources, parseSources, serializeSource, sourceKey, type CodebaseSource } from './sourceTypes';
 
-const SOURCES_KEY = 'apiscope.sources';
-const TOKEN_KEY = 'apiscope.githubToken';
+const SOURCES_KEY = 'reposcope.sources';
+const TOKEN_KEY = 'reposcope.githubToken';
+const RENAMED_FROM: Record<string, string> = {
+  [SOURCES_KEY]: 'apiscope.sources',
+  [TOKEN_KEY]: 'apiscope.githubToken',
+};
 const NO_SOURCES: CodebaseSource[] = [];
 const listeners = new Set<() => void>();
 let held: { raw: string | null; sources: CodebaseSource[] } | null = null;
@@ -68,7 +72,10 @@ function subscribe(listener: () => void): () => void {
 
 function readItem(key: string): string | null {
   try {
-    return window.localStorage.getItem(key);
+    const stored = window.localStorage.getItem(key);
+    if (stored !== null) return stored;
+    const previous = RENAMED_FROM[key];
+    return previous ? window.localStorage.getItem(previous) : null;
   } catch {
     return null;
   }
@@ -76,6 +83,8 @@ function readItem(key: string): string | null {
 
 function writeItem(key: string, value: string | null): void {
   try {
+    const previous = RENAMED_FROM[key];
+    if (previous) window.localStorage.removeItem(previous);
     if (value === null) window.localStorage.removeItem(key);
     else window.localStorage.setItem(key, value);
   } catch {}

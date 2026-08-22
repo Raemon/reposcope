@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { cookies } from 'next/headers';
 
-const STATE_COOKIE = 'apiscope-oauth-state';
+const STATE_COOKIE = 'reposcope-oauth-state';
 const STATE_PATH = '/api/github';
 const MAX_AGE = 10 * 60;
 
