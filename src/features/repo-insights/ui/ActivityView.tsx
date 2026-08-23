@@ -1,7 +1,7 @@
 'use client';
 
 import { useContext } from 'react';
-import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
+import { Tooltip } from '@/features/surface-ui/Tooltip';
 import { InsightPanel, InsightSection } from '@/features/surface-ui/InsightSection';
 import { InsightTable } from '@/features/surface-ui/InsightTable';
 import { RepoRefContext } from '@/features/surface-ui/SourceRef';
@@ -26,9 +26,9 @@ export function ActivityView({ activity }: { activity: ActivitySummary }) {
           {activity.commits.map((commit) => (
             <tr key={commit.sha} className="border-b border-panel-edge last:border-b-0">
               <td className="whitespace-nowrap py-1 pl-2 pr-3 align-top font-mono text-[10px] leading-5 text-ink-dim">
-                <HoverCardTrigger label={commit.sha} card={<p className="font-mono text-[11px] text-ink">{new Date(commit.date).toLocaleString()}</p>}>
+                <Tooltip label={commit.sha} tip={<p className="font-mono text-[11px] text-ink">{new Date(commit.date).toLocaleString()}</p>}>
                   <span>{timeAgo(commit.date)}</span>
-                </HoverCardTrigger>
+                </Tooltip>
               </td>
               <td className="py-1 pr-3 align-top font-mono text-[10px] leading-5">
                 {held ? (

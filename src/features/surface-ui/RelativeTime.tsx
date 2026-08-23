@@ -1,30 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-import { createPortal } from 'react-dom';
+import { Tooltip } from './Tooltip';
 import { timeAgoShort } from '@/features/repo-insights/ui/timeAgo';
 
 export function RelativeTime({ iso, className = '' }: { iso: string; className?: string }) {
-  const [anchor, setAnchor] = useState<DOMRect | null>(null);
   return (
-    <span
-      className={className}
-      onMouseEnter={(event) => setAnchor(event.currentTarget.getBoundingClientRect())}
-      onMouseLeave={() => setAnchor(null)}
-    >
+    <Tooltip variant="plain" tip={exactTime(iso)} className={className}>
       {timeAgoShort(iso)}
-      {anchor &&
-        createPortal(
-          <span
-            role="tooltip"
-            style={{ left: anchor.left + anchor.width / 2, top: anchor.bottom + 6 }}
-            className="fixed z-50 -translate-x-1/2 whitespace-nowrap rounded border border-btn-edge bg-tip px-1.5 py-0.5 text-[10px] leading-4 text-ink shadow-card"
-          >
-            {exactTime(iso)}
-          </span>,
-          document.body,
-        )}
-    </span>
+    </Tooltip>
   );
 }
 

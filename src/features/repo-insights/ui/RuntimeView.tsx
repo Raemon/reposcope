@@ -1,6 +1,6 @@
 'use client';
 
-import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
+import { Tooltip } from '@/features/surface-ui/Tooltip';
 import { Chip } from '@/features/surface-ui/Chip';
 import { InsightSection } from '@/features/surface-ui/InsightSection';
 import { InsightTable } from '@/features/surface-ui/InsightTable';
@@ -62,9 +62,9 @@ function ScriptsPanel({ scripts }: { scripts: RunnableScript[] }) {
         {scripts.map((script) => (
           <tr key={`${script.file} ${script.name}`} className="border-b border-panel-edge last:border-b-0">
             <td className="py-1 pl-2 pr-3 align-top font-mono text-[11px] leading-5 text-accent">
-              <HoverCardTrigger label={script.file} card={<p className="font-mono text-[11px] text-ink">defined in {script.file}</p>}>
+              <Tooltip label={script.file} tip={<p className="font-mono text-[11px] text-ink">defined in {script.file}</p>}>
                 <span>{script.name}</span>
-              </HoverCardTrigger>
+              </Tooltip>
             </td>
             <td className="max-w-96 py-1 pr-2 align-top font-mono text-[10px] leading-5 text-ink-dim">
               <span className="line-clamp-2">{script.command}</span>

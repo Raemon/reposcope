@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Chip } from '@/features/surface-ui/Chip';
 import { EmptyNote } from '@/features/surface-ui/EmptyNote';
 import { FilterField, matchesFilter } from '@/features/surface-ui/FilterField';
-import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
+import { Tooltip } from '@/features/surface-ui/Tooltip';
 import { InsightPanel, InsightSection } from '@/features/surface-ui/InsightSection';
 import { InsightTable } from '@/features/surface-ui/InsightTable';
 import { LabeledPanel } from '@/features/surface-ui/LabeledPanel';
@@ -53,9 +53,9 @@ function SchemaFileRow({ group }: { group: SchemaFileGroup }) {
   return (
     <tr className="border-b border-panel-edge last:border-b-0">
       <td className="py-1 pl-2 pr-3 font-mono text-[11px] leading-5 text-ink">
-        <HoverCardTrigger label={group.label} card={<p className="max-w-72 text-[11px] leading-4 text-ink">{group.signal}</p>}>
+        <Tooltip label={group.label} tip={<p className="max-w-72 text-[11px] leading-4 text-ink">{group.signal}</p>}>
           <span>{group.label}</span>
-        </HoverCardTrigger>
+        </Tooltip>
       </td>
       <td className="py-1 pr-3"><Chip>{group.kind}</Chip></td>
       <td className="py-1 pr-3 text-right font-mono text-[10px] text-ink-dim">{group.files}</td>
@@ -104,9 +104,9 @@ function CallsiteNote({ model }: { model: SchemaModel }) {
     return <span className="font-mono text-[10px] text-ink-dim">{label}</span>;
   }
   return (
-    <HoverCardTrigger
+    <Tooltip
       label={`references to ${model.name}`}
-      card={
+      tip={
         <div className="max-w-96">
           {model.sites.map((site) => (
             <p key={`${site.file}:${site.line}`} className="py-0.5 font-mono text-[10px] leading-4">
@@ -121,6 +121,6 @@ function CallsiteNote({ model }: { model: SchemaModel }) {
       }
     >
       <span className="font-mono text-[10px] text-ink-dim">{label}</span>
-    </HoverCardTrigger>
+    </Tooltip>
   );
 }

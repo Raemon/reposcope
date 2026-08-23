@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type 
 import { createPortal } from 'react-dom';
 
 const GAP = 10;
+const PLAIN_GAP = 6;
 const VIEWPORT_MARGIN = 8;
 
 interface TipPosition {
@@ -12,24 +13,27 @@ interface TipPosition {
 }
 
 export type TipPlacement = 'side' | 'below';
+export type TipVariant = 'card' | 'plain';
 
 const OFFSCREEN: TipPosition = { left: -9999, top: -9999 };
 const HOVER_INTENT_MS = 500;
 const HOVER_GRACE_MS = 220;
 
-export function HoverCardTrigger({
+export function Tooltip({
+  tip,
   label,
-  card,
   children,
   className = '',
   placement = 'side',
+  variant = 'card',
   interactive = true,
 }: {
-  label: string;
-  card: ReactNode;
+  tip: ReactNode;
+  label?: string;
   children: ReactNode;
   className?: string;
   placement?: TipPlacement;
+  variant?: TipVariant;
   interactive?: boolean;
 }) {
   const id = useId();
@@ -37,6 +41,7 @@ export function HoverCardTrigger({
   const [reachable, setReachable] = useState(false);
   const popper = useRef<HTMLDivElement>(null);
   const timers = useRef<{ hide?: ReturnType<typeof setTimeout>; reach?: ReturnType<typeof setTimeout> }>({});
+  const graceMs = variant === 'plain' ? 0 : HOVER_GRACE_MS;
 
   const clearTimers = useCallback(() => {
     clearTimeout(timers.current.hide);
@@ -58,8 +63,8 @@ export function HoverCardTrigger({
   const scheduleHide = useCallback(() => {
     clearTimeout(timers.current.reach);
     clearTimeout(timers.current.hide);
-    timers.current.hide = setTimeout(hide, HOVER_GRACE_MS);
-  }, [hide]);
+    timers.current.hide = setTimeout(hide, graceMs);
+  }, [hide, graceMs]);
 
   useEffect(() => {
     const hideOnScroll = (event: Event) => {
@@ -92,29 +97,31 @@ export function HoverCardTrigger({
     >
       {children}
       {anchor ? (
-        <HoverCardPopper
+        <TooltipPopper
           ref={popper}
           id={id}
           label={label}
           anchor={anchor}
           placement={placement}
-          reachable={reachable && interactive}
+          variant={variant}
+          reachable={reachable && interactive && variant === 'card'}
           onEnter={clearTimers}
           onLeave={scheduleHide}
         >
-          {card}
-        </HoverCardPopper>
+          {tip}
+        </TooltipPopper>
       ) : null}
     </span>
   );
 }
 
-function HoverCardPopper({
+function TooltipPopper({
   ref,
   id,
   label,
   anchor,
   placement,
+  variant,
   reachable,
   onEnter,
   onLeave,
@@ -122,9 +129,10 @@ function HoverCardPopper({
 }: {
   ref: React.RefObject<HTMLDivElement | null>;
   id: string;
-  label: string;
+  label?: string;
   anchor: DOMRect;
   placement: TipPlacement;
+  variant: TipVariant;
   reachable: boolean;
   onEnter: () => void;
   onLeave: () => void;
@@ -133,9 +141,23 @@ function HoverCardPopper({
   const [position, setPosition] = useState<TipPosition>(OFFSCREEN);
 
   useLayoutEffect(() => {
-    if (ref.current) setPosition(floatingTipPosition(ref.current.getBoundingClientRect(), anchor, placement));
-  }, [anchor, placement, ref]);
+    if (ref.current) setPosition(floatingTipPosition(ref.current.getBoundingClientRect(), anchor, placement, variant));
+  }, [anchor, placement, variant, ref]);
 
+  if (variant === 'plain') {
+    return createPortal(
+      <div
+        ref={ref}
+        id={id}
+        role="tooltip"
+        style={position}
+        className="pointer-events-none fixed z-50 whitespace-nowrap rounded border border-btn-edge bg-tip px-1.5 py-0.5 text-[10px] leading-4 text-ink shadow-card"
+      >
+        {children}
+      </div>,
+      document.body,
+    );
+  }
   return createPortal(
     <div
       ref={ref}
@@ -146,14 +168,23 @@ function HoverCardPopper({
       onMouseLeave={onLeave}
       className={`fixed z-50 w-max min-w-64 max-w-[min(34rem,calc(100vw-1rem))] overflow-hidden rounded-md border border-btn-edge bg-tip shadow-card ${reachable ? '' : 'pointer-events-none'}`}
     >
-      <div className="truncate border-b border-btn-edge px-3 py-2 font-mono text-[11px] text-accent">{label}</div>
+      {label && <div className="truncate border-b border-btn-edge px-3 py-2 font-mono text-[11px] text-accent">{label}</div>}
       <div className="max-h-[65vh] overflow-y-auto px-3 py-2">{children}</div>
     </div>,
     document.body,
   );
 }
 
-function floatingTipPosition(tip: DOMRect, anchor: DOMRect, placement: TipPlacement): TipPosition {
+function floatingTipPosition(tip: DOMRect, anchor: DOMRect, placement: TipPlacement, variant: TipVariant): TipPosition {
+  if (variant === 'plain') {
+    return {
+      left: Math.max(
+        VIEWPORT_MARGIN,
+        Math.min(anchor.left + anchor.width / 2 - tip.width / 2, window.innerWidth - tip.width - VIEWPORT_MARGIN),
+      ),
+      top: Math.min(anchor.bottom + PLAIN_GAP, window.innerHeight - tip.height - VIEWPORT_MARGIN),
+    };
+  }
   if (placement === 'below') {
     return {
       left: Math.max(VIEWPORT_MARGIN, Math.min(anchor.left, window.innerWidth - tip.width - VIEWPORT_MARGIN)),

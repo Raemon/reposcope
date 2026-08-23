@@ -1,6 +1,6 @@
 'use client';
 
-import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
+import { Tooltip } from '@/features/surface-ui/Tooltip';
 import type { SurfaceView, SurfaceViewId } from './surfaceViews';
 
 export function ViewSwitcher({
@@ -17,19 +17,19 @@ export function ViewSwitcher({
   return (
     <nav aria-label="Codebase views" className="mb-5 flex flex-wrap gap-1.5 border-b border-panel-edge pb-3">
       {views.map((view) => (
-        <HoverCardTrigger
+        <Tooltip
           key={view.id}
           label={view.label}
           placement="below"
           interactive={false}
-          card={
+          tip={
             <p className="max-w-72 text-[11px] leading-4 text-ink">
               {view.available ? view.hint : view.reason}
             </p>
           }
         >
           <ViewTab view={view} current={view.id === active} href={viewHref(view.id)} onSelect={onSelect} />
-        </HoverCardTrigger>
+        </Tooltip>
       ))}
     </nav>
   );
