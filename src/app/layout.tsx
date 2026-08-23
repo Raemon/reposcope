@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { CodebaseHeader } from '@/features/codebases/CodebaseHeader';
+import { ThemeScript } from '@/features/theme/ThemeScript';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -10,7 +11,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en" className="h-full">
+    <html lang="en" className="h-full" suppressHydrationWarning>
+      <head>
+        <ThemeScript />
+      </head>
       <body className="h-full bg-bg font-mono text-ink">
         <div className="flex h-full flex-col">
           <CodebaseHeader />

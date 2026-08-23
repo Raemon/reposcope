@@ -7,6 +7,7 @@ import { CodebaseList } from './CodebaseList';
 import { sidebarGroups } from './sidebarGroups';
 import { useSourceResults } from './useSourceResults';
 import { parseRepoLink, type RepoRef } from '@/features/sources/parseRepoLink';
+import { ThemeToggle } from '@/features/theme/ThemeToggle';
 import { clearGithubToken, removeSource, useGithubToken, useSources, useStoreReady } from '@/features/sources/sourceStore';
 
 export function CodebaseHeader() {
@@ -23,6 +24,9 @@ export function CodebaseHeader() {
           {reading.owner}/{reading.name}
         </span>
       )}
+      <div className="ml-auto">
+        <ThemeToggle />
+      </div>
     </header>
   );
 }
