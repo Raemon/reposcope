@@ -1,6 +1,11 @@
-import { RepoSurface } from '@/features/codebases/RepoSurface';
+import { Suspense } from 'react';
+import { RepoSurface, SurfaceLoading } from '@/features/codebases/RepoSurface';
 
 export default async function RepoApiPage({ params }: { params: Promise<{ owner: string; repo: string }> }) {
   const { owner, repo } = await params;
-  return <RepoSurface owner={owner} repo={repo} />;
+  return (
+    <Suspense fallback={<SurfaceLoading />}>
+      <RepoSurface owner={owner} repo={repo} />
+    </Suspense>
+  );
 }

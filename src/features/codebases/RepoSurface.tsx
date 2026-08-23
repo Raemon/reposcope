@@ -1,5 +1,6 @@
 'use client';
 
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ApiEndpointDocumentation } from '@/features/api-surface/ApiEndpointDocumentation';
 import { ApiTypeDocumentation } from '@/features/api-surface/ApiTypeDocumentation';
@@ -24,6 +25,10 @@ type SurfaceState =
   | { state: 'loading' }
   | { state: 'error'; status: number; message: string }
   | { state: 'ready'; surface: RepoSurfacePayload };
+
+export function SurfaceLoading() {
+  return <p className="text-xs text-ink-dim">Fetching and parsing the repository…</p>;
+}
 
 export function RepoSurface({ owner, repo }: { owner: string; repo: string }) {
   const ready = useStoreReady();
@@ -60,7 +65,7 @@ export function RepoSurface({ owner, repo }: { owner: string; repo: string }) {
     </button>
   );
 
-  if (held.state === 'loading') return <p className="text-xs text-ink-dim">Fetching and parsing the repository…</p>;
+  if (held.state === 'loading') return <SurfaceLoading />;
   if (held.state === 'error' && held.status === 404) {
     return (
       <section className="max-w-2xl">
@@ -94,8 +99,26 @@ export function RepoSurface({ owner, repo }: { owner: string; repo: string }) {
 
 function SurfaceBody({ surface, heading }: { surface: RepoSurfacePayload; heading: string }) {
   const views = surfaceViews(surface);
-  const [active, setActive] = useState<SurfaceViewId>(() => defaultViewId(views));
-  const shown = views.find((view) => view.id === active && view.available) ? active : defaultViewId(views);
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const fallback = defaultViewId(views);
+  const requested = searchParams.get('view');
+  const match = views.find((view) => view.id === requested && view.available);
+  const shown = match?.id ?? fallback;
+
+  const viewHref = (id: SurfaceViewId) => {
+    const params = new URLSearchParams(searchParams);
+    if (id === fallback) params.delete('view');
+    else params.set('view', id);
+    const query = params.toString();
+    return query ? `${pathname}?${query}` : pathname;
+  };
+
+  const selectView = (id: SurfaceViewId) => {
+    if (id === shown) return;
+    window.history.pushState(null, '', viewHref(id));
+  };
+
   const { languages } = surface.insights;
   return (
     <div>
@@ -117,7 +140,7 @@ function SurfaceBody({ surface, heading }: { surface: RepoSurfacePayload; headin
           </span>
         ) : null}
       </div>
-      <ViewSwitcher views={views} active={shown} onSelect={setActive} />
+      <ViewSwitcher views={views} active={shown} viewHref={viewHref} onSelect={selectView} />
       <ActiveView id={shown} surface={surface} heading={heading} />
     </div>
   );
