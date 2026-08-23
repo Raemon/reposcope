@@ -7,10 +7,12 @@ export function ApiEndpointDocumentation({
   endpoints,
   heading,
   summary,
+  reveal,
 }: {
   endpoints: ApiEndpoint[];
   heading: string;
   summary: string;
+  reveal: string | null;
 }) {
   const groups = groupApiEndpoints(endpoints);
   const methods = apiMethodColumns(endpoints);
@@ -40,7 +42,7 @@ export function ApiEndpointDocumentation({
             </tr>
           </thead>
           <tbody>
-            <ApiEndpointTree groups={groups} methods={methods} />
+            <ApiEndpointTree groups={groups} methods={methods} reveal={reveal} />
           </tbody>
         </table>
       </InsightPanel>
