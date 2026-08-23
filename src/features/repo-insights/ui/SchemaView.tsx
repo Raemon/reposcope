@@ -18,13 +18,15 @@ export function SchemaView({ schema }: { schema: SchemaSurface }) {
   const kinds = [...new Set(models.map((model) => model.kind))];
   const most = Math.max(1, ...models.map((model) => model.callsites));
   const shown = models.filter((model) => matchesFilter(filter, model.name));
+  const stored = models.filter((model) => model.storedIn !== null);
+  const storedNote = stored.length > 0 ? ` · ${stored.length} document types stored as JSON in ${[...new Set(stored.map((model) => model.storedIn))].join(', ')}` : '';
   return (
     <InsightSection
       id="schema"
       kicker="Tables, models, and types"
       title="The schema"
       blurb="What this codebase stores, ordered by how hard the rest of the code leans on each table. Reference counts are name matches outside tests, migrations, and each model's own definition — a rough but honest measure of which nouns carry the application."
-      stat={`${models.length} models · ${kinds.join(', ')}`}
+      stat={`${models.length} models · ${kinds.join(', ')}${storedNote}`}
       as="h1"
     >
       {files.length > 0 ? (
@@ -75,6 +77,7 @@ function ModelPanel({ model, most }: { model: SchemaModel; most: number }) {
           <span className="h-full bg-meter-2" style={{ width: `${Math.max(2, (model.callsites / most) * 100)}%` }} />
         </span>
         <CallsiteNote model={model} />
+        {model.storedIn ? <span className="font-mono text-[10px] text-ink-dim">in {model.storedIn}</span> : null}
       </div>
       {model.fields.length > 0 ? (
         <div className="px-2 py-1.5">

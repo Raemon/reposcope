@@ -89,6 +89,7 @@ export interface SchemaModel {
   kind: string;
   fields: ModelField[];
   at: SourceLocation;
+  storedIn: string | null;
   callsites: number;
   callsiteFiles: number;
   sites: SourceLocation[];
