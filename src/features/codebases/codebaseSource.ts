@@ -1,5 +1,5 @@
 import { githubBytes } from './githubRequest';
-import { githubTokenIdentity } from './githubToken';
+import { readSnapshot, writeSnapshot } from './snapshotStore';
 import { untarGzip } from './untar';
 
 export interface CodebaseFile {
@@ -48,27 +48,43 @@ const MAX_FILES = 6000;
 const MAX_INVENTORY = 30_000;
 const MAX_CACHED = 4;
 
-const cache = new Map<string, Codebase>();
+const cache = new Map<string, Promise<Codebase>>();
 
-export async function loadCodebase(owner: string, repo: string): Promise<Codebase> {
-  const key = `${githubTokenIdentity()}:${owner}/${repo}`;
+export function loadCodebase(owner: string, repo: string, sha: string | null): Promise<Codebase> {
+  if (!sha) return fetchCodebase(owner, repo, null);
+  const key = `${owner}/${repo}@${sha}`;
   const held = cache.get(key);
   if (held) return held;
-  const archive = await githubBytes(`https://api.github.com/repos/${owner}/${repo}/tarball`);
+  const pending = restoreOrFetch(owner, repo, sha);
+  pending.catch(() => {
+    if (cache.get(key) === pending) cache.delete(key);
+  });
+  cache.set(key, pending);
+  while (cache.size > MAX_CACHED) cache.delete(cache.keys().next().value as string);
+  return pending;
+}
+
+async function restoreOrFetch(owner: string, repo: string, sha: string): Promise<Codebase> {
+  const stored = await readSnapshot(owner, repo, sha);
+  if (stored) return stored;
+  const codebase = await fetchCodebase(owner, repo, sha);
+  await writeSnapshot(owner, repo, sha, codebase);
+  return codebase;
+}
+
+async function fetchCodebase(owner: string, repo: string, sha: string | null): Promise<Codebase> {
+  const archive = await githubBytes(`https://api.github.com/repos/${owner}/${repo}/tarball${sha ? `/${sha}` : ''}`);
   const inventory: InventoryEntry[] = [];
   const entries = untarGzip(archive, (path, size) => {
     if (inventory.length < MAX_INVENTORY && !excluded(path)) inventory.push({ path, size });
     return keepArchiveEntry(path, size);
   });
   const readable = entries.filter((entry) => !entry.source.includes('\u0000'));
-  const codebase: Codebase = {
+  return {
     files: prioritized(readable),
     inventory,
     truncated: readable.length > MAX_FILES,
   };
-  cache.set(key, codebase);
-  while (cache.size > MAX_CACHED) cache.delete(cache.keys().next().value as string);
-  return codebase;
 }
 
 function prioritized(entries: CodebaseFile[]): CodebaseFile[] {

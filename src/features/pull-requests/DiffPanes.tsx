@@ -4,12 +4,12 @@ import { useState } from 'react';
 import { ChangeCounts } from './ChangeCounts';
 import { ColumnHeader, CollapsedColumn, DragHandle, useDragWidth, type ColumnSize } from './ResizableColumn';
 import { splitDiff, type DiffCell, type DiffRow } from './splitDiff';
-import type { CommitFile } from './pullRequests';
+import type { ChangedFile } from './pullRequests';
 
 const ROW = 'flex h-[15px] items-center gap-1 leading-[15px]';
 const GUTTER = 'w-[38px] shrink-0 select-none pr-1 text-right text-[9px] text-ink-dim';
 
-export function DiffPanes({ file }: { file: CommitFile | null }) {
+export function DiffPanes({ file }: { file: ChangedFile | null }) {
   const [removedSize, setRemovedSize] = useState<ColumnSize>({ width: 520, open: true });
   const [addedOpen, setAddedOpen] = useState(true);
   const startDrag = useDragWidth(removedSize, setRemovedSize);
@@ -47,7 +47,7 @@ export function DiffPanes({ file }: { file: CommitFile | null }) {
   );
 }
 
-function FileBar({ file }: { file: CommitFile }) {
+function FileBar({ file }: { file: ChangedFile }) {
   return (
     <header className="flex items-baseline gap-2 border-b border-panel-edge bg-panel px-2 py-[2px] text-[11px] leading-4">
       <span className="min-w-0 flex-1 truncate text-ink">

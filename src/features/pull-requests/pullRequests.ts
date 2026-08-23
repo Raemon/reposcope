@@ -15,7 +15,7 @@ export interface CommitSummary {
   date: string;
 }
 
-export interface CommitFile {
+export interface ChangedFile {
   filename: string;
   previousFilename: string | null;
   status: string;
@@ -28,6 +28,8 @@ export interface PullRequestCommits {
   pull: PullRequestSummary;
   baseRef: string;
   headRef: string;
+  additions: number;
+  deletions: number;
   commits: CommitSummary[];
 }
 
@@ -39,23 +41,29 @@ interface GithubPull {
   draft?: boolean;
   base: { ref: string };
   head: { ref: string };
+  additions?: number;
+  deletions?: number;
+}
+
+interface GithubChangedFile {
+  filename: string;
+  previous_filename?: string;
+  status: string;
+  additions: number;
+  deletions: number;
+  patch?: string;
 }
 
 interface GithubCommit {
   sha: string;
   commit: { message: string; author: { name: string; date: string } | null };
   author: { login: string } | null;
-  files?: {
-    filename: string;
-    previous_filename?: string;
-    status: string;
-    additions: number;
-    deletions: number;
-    patch?: string;
-  }[];
+  files?: GithubChangedFile[];
 }
 
 const API = 'https://api.github.com';
+const FILE_PAGE = 100;
+const MAX_FILE_PAGES = 10;
 
 export async function listPullRequests(owner: string, name: string): Promise<PullRequestSummary[]> {
   const pulls = await githubJson<GithubPull[]>(
@@ -73,20 +81,38 @@ export async function describePullRequest(owner: string, name: string, number: n
     pull: summarizePull(pull),
     baseRef: pull.base.ref,
     headRef: pull.head.ref,
+    additions: pull.additions ?? 0,
+    deletions: pull.deletions ?? 0,
     commits: commits.map(summarizeCommit).reverse(),
   };
 }
 
-export async function listCommitFiles(owner: string, name: string, sha: string): Promise<CommitFile[]> {
+export async function listPullRequestFiles(owner: string, name: string, number: number): Promise<ChangedFile[]> {
+  const files: ChangedFile[] = [];
+  for (let page = 1; page <= MAX_FILE_PAGES; page += 1) {
+    const batch = await githubJson<GithubChangedFile[]>(
+      `${API}/repos/${owner}/${name}/pulls/${number}/files?per_page=${FILE_PAGE}&page=${page}`,
+    );
+    files.push(...batch.map(changedFile));
+    if (batch.length < FILE_PAGE) break;
+  }
+  return files;
+}
+
+export async function listCommitFiles(owner: string, name: string, sha: string): Promise<ChangedFile[]> {
   const commit = await githubJson<GithubCommit>(`${API}/repos/${owner}/${name}/commits/${sha}`);
-  return (commit.files ?? []).map((file) => ({
+  return (commit.files ?? []).map(changedFile);
+}
+
+function changedFile(file: GithubChangedFile): ChangedFile {
+  return {
     filename: file.filename,
     previousFilename: file.previous_filename ?? null,
     status: file.status,
     additions: file.additions,
     deletions: file.deletions,
     patch: file.patch ?? null,
-  }));
+  };
 }
 
 function summarizePull(pull: GithubPull): PullRequestSummary {

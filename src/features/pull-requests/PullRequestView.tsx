@@ -4,12 +4,13 @@ import { useEffect, useState } from 'react';
 import { ChangeCounts } from './ChangeCounts';
 import { DiffPanes } from './DiffPanes';
 import { ResizableColumn, type ColumnSize } from './ResizableColumn';
-import type { CommitFile, PullRequestCommits } from './pullRequests';
+import type { ChangedFile, PullRequestCommits } from './pullRequests';
 import { timeAgo } from '@/features/repo-insights/ui/timeAgo';
 import { apiJson } from '@/features/sources/apiClient';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 
 const ROW = 'flex w-full items-baseline gap-1.5 px-1.5 py-[1px] text-left text-[11px] leading-4';
+const WHOLE_PULL = 'all';
 
 export function PullRequestView({ owner, repo, number }: { owner: string; repo: string; number: number }) {
   const ready = useStoreReady();
@@ -17,8 +18,8 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
   const [pull, setPull] = useState<PullRequestCommits | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
-  const [sha, setSha] = useState<string | null>(null);
-  const [files, setFiles] = useState<CommitFile[] | null>(null);
+  const [selection, setSelection] = useState<string>(WHOLE_PULL);
+  const [files, setFiles] = useState<ChangedFile[] | null>(null);
   const [path, setPath] = useState<string | null>(null);
   const [commitSize, setCommitSize] = useState<ColumnSize>({ width: 260, open: true });
   const [fileSize, setFileSize] = useState<ColumnSize>({ width: 280, open: true });
@@ -28,9 +29,7 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
     const controller = new AbortController();
     setPull(null);
     setError(null);
-    setSha(null);
-    setFiles(null);
-    setPath(null);
+    setSelection(WHOLE_PULL);
     apiJson<PullRequestCommits>(
       `/api/github/pull?owner=${encodeURIComponent(owner)}&name=${encodeURIComponent(repo)}&number=${number}`,
       token,
@@ -38,7 +37,6 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
     )
       .then((loaded) => {
         setPull(loaded);
-        setSha(loaded.commits[0]?.sha ?? null);
         setCommitSize((size) => ({ ...size, open: loaded.commits.length > 1 }));
       })
       .catch((issue: unknown) => {
@@ -48,15 +46,17 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
   }, [owner, repo, number, token, ready]);
 
   useEffect(() => {
-    if (!ready || !sha) return;
+    if (!ready) return;
     const controller = new AbortController();
     setFiles(null);
     setFileError(null);
-    apiJson<CommitFile[]>(
-      `/api/github/commit?owner=${encodeURIComponent(owner)}&name=${encodeURIComponent(repo)}&sha=${sha}`,
-      token,
-      controller.signal,
-    )
+    setPath(null);
+    const repoParams = `owner=${encodeURIComponent(owner)}&name=${encodeURIComponent(repo)}`;
+    const source =
+      selection === WHOLE_PULL
+        ? `/api/github/pull-files?${repoParams}&number=${number}`
+        : `/api/github/commit?${repoParams}&sha=${selection}`;
+    apiJson<ChangedFile[]>(source, token, controller.signal)
       .then((loaded) => {
         setFiles(loaded);
         setPath(loaded[0]?.filename ?? null);
@@ -65,7 +65,7 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
         if (!controller.signal.aborted) setFileError(issue instanceof Error ? issue.message : String(issue));
       });
     return () => controller.abort();
-  }, [owner, repo, sha, token, ready]);
+  }, [owner, repo, number, selection, token, ready]);
 
   if (error) return <p className="px-2 py-1 text-[11px] text-error-ink">{error}</p>;
   if (!pull) return <p className="px-2 py-1 text-[11px] text-ink-dim">Loading #{number}…</p>;
@@ -82,12 +82,20 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
       </header>
       <div className="flex min-h-0 flex-1">
         <ResizableColumn icon="◆" title={`commits · ${pull.commits.length}`} size={commitSize} onSize={setCommitSize}>
+          <button
+            type="button"
+            onClick={() => setSelection(WHOLE_PULL)}
+            className={`${ROW} ${selection === WHOLE_PULL ? 'bg-btn-active text-accent' : 'text-ink hover:bg-btn-hover'}`}
+          >
+            <span className="min-w-0 flex-1 truncate">all changes</span>
+            <ChangeCounts additions={pull.additions} deletions={pull.deletions} />
+          </button>
           {pull.commits.map((commit) => (
             <button
               key={commit.sha}
               type="button"
-              onClick={() => setSha(commit.sha)}
-              className={`${ROW} ${commit.sha === sha ? 'bg-btn-active text-accent' : 'text-ink hover:bg-btn-hover'}`}
+              onClick={() => setSelection(commit.sha)}
+              className={`${ROW} ${commit.sha === selection ? 'bg-btn-active text-accent' : 'text-ink hover:bg-btn-hover'}`}
             >
               <span className="shrink-0 text-[9px] text-ink-dim">{commit.sha.slice(0, 7)}</span>
               <span className="min-w-0 flex-1 truncate">{commit.message}</span>

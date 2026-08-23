@@ -5,7 +5,7 @@ import { buildApiTypeSections, type ApiTypeSection } from './apiTypeSectionCatal
 import { discoverApiEndpoints } from './discoverApiEndpoints';
 import { findApiConsumerCandidates, findApiConsumers } from './findApiConsumers';
 import { loadCodebase, type Codebase } from '@/features/codebases/codebaseSource';
-import { fetchRepoActivity } from '@/features/repo-insights/repoActivity';
+import { resolveRepoHead } from '@/features/codebases/repoHead';
 import { buildRepoInsights } from '@/features/repo-insights/repoInsights';
 import type { RepoInsights } from '@/features/repo-insights/insightTypes';
 import type { ApiEndpoint, ApiSourceIndex } from './apiEndpointTypes';
@@ -24,11 +24,12 @@ const MAX_CACHED = 4;
 const cache = new Map<string, CodebaseApiSurface>();
 
 export async function codebaseApiSurface(owner: string, repo: string): Promise<CodebaseApiSurface> {
-  const key = `${owner}/${repo}`;
-  const held = cache.get(key);
+  const head = await resolveRepoHead(owner, repo).catch(() => null);
+  const key = head && `${owner}/${repo}@${head.sha}`;
+  const held = key ? cache.get(key) : undefined;
   if (held) return held;
   const startedFetch = Date.now();
-  const [codebase, activity] = await Promise.all([loadCodebase(owner, repo), fetchRepoActivity(owner, repo)]);
+  const codebase = await loadCodebase(owner, repo, head?.sha ?? null);
   const startedAnalysis = Date.now();
   const index = buildApiSourceIndex(codebase.files);
   const endpoints = apiEndpointsIn(index);
@@ -37,12 +38,14 @@ export async function codebaseApiSurface(owner: string, repo: string): Promise<C
     endpoints,
     typeSections: buildApiTypeSections(buildApiTypeCatalog(index, endpoints), endpoints),
     routes: buildAppRouteCatalog(index),
-    insights: { ...buildRepoInsights(codebase, endpoints), activity },
+    insights: { ...buildRepoInsights(codebase, endpoints), activity: head && { commits: head.commits } },
     fetchedInMs: startedAnalysis - startedFetch,
     analyzedInMs: Date.now() - startedAnalysis,
   };
-  cache.set(key, surface);
-  while (cache.size > MAX_CACHED) cache.delete(cache.keys().next().value as string);
+  if (key) {
+    cache.set(key, surface);
+    while (cache.size > MAX_CACHED) cache.delete(cache.keys().next().value as string);
+  }
   return surface;
 }
 
