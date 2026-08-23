@@ -1,14 +1,12 @@
 import type { RepoSurfacePayload } from '@/features/codebases/repoSurfacePayload';
 
-export type SurfaceViewId =
-  | 'api'
-  | 'entry'
-  | 'map'
-  | 'dependencies'
-  | 'runtime'
-  | 'models'
-  | 'tests'
-  | 'activity';
+const surfaceViewIds = ['api', 'entry', 'map', 'dependencies', 'runtime', 'models', 'tests', 'activity'] as const;
+
+export type SurfaceViewId = (typeof surfaceViewIds)[number];
+
+export function isSurfaceViewId(value: string): value is SurfaceViewId {
+  return (surfaceViewIds as readonly string[]).includes(value);
+}
 
 export interface SurfaceView {
   id: SurfaceViewId;
