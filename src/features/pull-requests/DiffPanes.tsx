@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { ChangeCounts } from './ChangeCounts';
 import { ColumnHeader, CollapsedColumn, DragHandle, useDragWidth, type ColumnSize } from './ResizableColumn';
 import { splitDiff, type DiffCell, type DiffRow } from './splitDiff';
@@ -8,55 +8,112 @@ import type { ChangedFile } from './pullRequests';
 
 const ROW = 'flex h-[15px] items-center gap-1 leading-[15px]';
 const GUTTER = 'w-[38px] shrink-0 select-none pr-1 text-right text-[9px] text-ink-dim';
+const SCROLL_MS = 100;
 
-export function DiffPanes({ file }: { file: ChangedFile | null }) {
-  const [removedSize, setRemovedSize] = useState<ColumnSize>({ width: 520, open: true });
-  const [addedOpen, setAddedOpen] = useState(true);
-  const startDrag = useDragWidth(removedSize, setRemovedSize);
+export interface DiffPanesHandle {
+  scrollToFile: (path: string) => void;
+}
 
-  if (!file) return <Note text="Select a file" />;
-  if (!file.patch) return <Note text={`${file.status} — no textual diff`} />;
+export function DiffPanes({ files, ref }: { files: ChangedFile[] | null; ref?: Ref<DiffPanesHandle> }) {
+  const scroller = useRef<HTMLDivElement | null>(null);
+  const sections = useRef(new Map<string, HTMLElement>());
 
-  const rows = splitDiff(file.patch);
+  useImperativeHandle(ref, () => ({
+    scrollToFile(path: string) {
+      const container = scroller.current;
+      const section = sections.current.get(path);
+      if (!container || !section) return;
+      const top = container.scrollTop + section.getBoundingClientRect().top - container.getBoundingClientRect().top;
+      animateScrollTop(container, top);
+    },
+  }));
+
+  if (!files) return <Note text="Loading…" />;
+  if (files.length === 0) return <Note text="No files changed" />;
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <FileBar file={file} />
-      <div className="flex min-h-0 flex-1 overflow-y-auto">
-        {removedSize.open ? (
-          <section
-            className="relative flex shrink-0 flex-col border-r border-panel-edge"
-            style={{ width: addedOpen ? removedSize.width : undefined, flex: addedOpen ? undefined : '1 1 0%' }}
-          >
-            <ColumnHeader icon="−" title="removed" onCollapse={() => setRemovedSize({ ...removedSize, open: false })} />
-            <DiffSide rows={rows} side="left" labels />
-            {addedOpen && <DragHandle onPointerDown={startDrag} />}
-          </section>
-        ) : (
-          <CollapsedColumn icon="−" title="removed" onExpand={() => setRemovedSize({ ...removedSize, open: true })} />
-        )}
-        {addedOpen ? (
-          <section className="flex min-w-0 flex-1 flex-col">
-            <ColumnHeader icon="+" title="added" onCollapse={() => setAddedOpen(false)} />
-            <DiffSide rows={rows} side="right" labels={!removedSize.open} />
-          </section>
-        ) : (
-          <CollapsedColumn icon="+" title="added" onExpand={() => setAddedOpen(true)} />
-        )}
-      </div>
+    <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
+      {files.map((file) => (
+        <FileSection
+          key={file.filename}
+          file={file}
+          sectionRef={(node) => {
+            if (node) sections.current.set(file.filename, node);
+            else sections.current.delete(file.filename);
+          }}
+        />
+      ))}
     </div>
   );
 }
 
-function FileBar({ file }: { file: ChangedFile }) {
+function animateScrollTop(container: HTMLElement, target: number) {
+  const start = container.scrollTop;
+  const end = Math.max(0, Math.min(target, container.scrollHeight - container.clientHeight));
+  const began = performance.now();
+  const step = (now: number) => {
+    const progress = Math.min(1, (now - began) / SCROLL_MS);
+    const eased = 1 - (1 - progress) * (1 - progress);
+    container.scrollTop = start + (end - start) * eased;
+    if (progress < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+function FileSection({ file, sectionRef }: { file: ChangedFile; sectionRef: (node: HTMLElement | null) => void }) {
+  const [open, setOpen] = useState(true);
   return (
-    <header className="flex items-baseline gap-2 border-b border-panel-edge bg-panel px-2 py-[2px] text-[11px] leading-4">
-      <span className="min-w-0 flex-1 truncate text-ink">
-        {file.previousFilename && <span className="text-ink-dim">{file.previousFilename} → </span>}
-        {file.filename}
-      </span>
-      <span className="shrink-0 text-[9px] uppercase tracking-[0.18em] text-ink-dim">{file.status}</span>
-      <ChangeCounts additions={file.additions} deletions={file.deletions} />
-    </header>
+    <section ref={sectionRef} className="border-b border-panel-edge">
+      <button
+        type="button"
+        onClick={() => setOpen((was) => !was)}
+        aria-expanded={open}
+        className="sticky top-0 z-20 flex w-full items-baseline gap-2 border-b border-panel-edge bg-panel px-2 py-[2px] text-left text-[11px] leading-4 hover:bg-btn-hover"
+      >
+        <span aria-hidden className="w-2 shrink-0 text-[9px] text-ink-dim">
+          {open ? '▾' : '▸'}
+        </span>
+        <span className="min-w-0 flex-1 truncate text-ink">
+          {file.previousFilename && <span className="text-ink-dim">{file.previousFilename} → </span>}
+          {file.filename}
+        </span>
+        <span className="shrink-0 text-[9px] uppercase tracking-[0.18em] text-ink-dim">{file.status}</span>
+        <ChangeCounts additions={file.additions} deletions={file.deletions} />
+      </button>
+      {open &&
+        (file.patch ? <FileDiff patch={file.patch} /> : <Note text={`${file.status} — no textual diff`} />)}
+    </section>
+  );
+}
+
+function FileDiff({ patch }: { patch: string }) {
+  const [removedSize, setRemovedSize] = useState<ColumnSize>({ width: 520, open: true });
+  const [addedOpen, setAddedOpen] = useState(true);
+  const startDrag = useDragWidth(removedSize, setRemovedSize);
+
+  const rows = splitDiff(patch);
+  return (
+    <div className="flex">
+      {removedSize.open ? (
+        <section
+          className="relative flex shrink-0 flex-col border-r border-panel-edge"
+          style={{ width: addedOpen ? removedSize.width : undefined, flex: addedOpen ? undefined : '1 1 0%' }}
+        >
+          <ColumnHeader icon="−" title="removed" onCollapse={() => setRemovedSize({ ...removedSize, open: false })} />
+          <DiffSide rows={rows} side="left" labels />
+          {addedOpen && <DragHandle onPointerDown={startDrag} />}
+        </section>
+      ) : (
+        <CollapsedColumn icon="−" title="removed" onExpand={() => setRemovedSize({ ...removedSize, open: true })} />
+      )}
+      {addedOpen ? (
+        <section className="flex min-w-0 flex-1 flex-col">
+          <ColumnHeader icon="+" title="added" onCollapse={() => setAddedOpen(false)} />
+          <DiffSide rows={rows} side="right" labels={!removedSize.open} />
+        </section>
+      ) : (
+        <CollapsedColumn icon="+" title="added" onExpand={() => setAddedOpen(true)} />
+      )}
+    </div>
   );
 }
 
@@ -102,5 +159,5 @@ function DiffLine({
 }
 
 function Note({ text }: { text: string }) {
-  return <p className="px-2 py-1 text-[11px] text-ink-dim">{text}</p>;
+  return <p className="flex-1 px-2 py-1 text-[11px] text-ink-dim">{text}</p>;
 }

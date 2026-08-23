@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ChangeCounts } from './ChangeCounts';
-import { DiffPanes } from './DiffPanes';
+import { DiffPanes, type DiffPanesHandle } from './DiffPanes';
 import { ResizableColumn, type ColumnSize } from './ResizableColumn';
 import type { ChangedFile, PullRequestCommits } from './pullRequests';
 import { timeAgo } from '@/features/repo-insights/ui/timeAgo';
+import { RelativeTime } from '@/features/surface-ui/RelativeTime';
 import { apiJson } from '@/features/sources/apiClient';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 
@@ -23,6 +24,7 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
   const [path, setPath] = useState<string | null>(null);
   const [commitSize, setCommitSize] = useState<ColumnSize>({ width: 260, open: true });
   const [fileSize, setFileSize] = useState<ColumnSize>({ width: 280, open: true });
+  const diffPanes = useRef<DiffPanesHandle>(null);
 
   useEffect(() => {
     if (!ready) return;
@@ -70,7 +72,6 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
   if (error) return <p className="px-2 py-1 text-[11px] text-error-ink">{error}</p>;
   if (!pull) return <p className="px-2 py-1 text-[11px] text-ink-dim">Loading #{number}…</p>;
 
-  const file = files?.find((candidate) => candidate.filename === path) ?? null;
   return (
     <div className="flex h-full min-h-0 flex-col">
       <header className="flex items-baseline gap-2 border-b border-panel-edge bg-panel px-2 py-[2px] text-[11px] leading-4">
@@ -97,9 +98,9 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
               onClick={() => setSelection(commit.sha)}
               className={`${ROW} ${commit.sha === selection ? 'bg-btn-active text-accent' : 'text-ink hover:bg-btn-hover'}`}
             >
-              <span className="shrink-0 text-[9px] text-ink-dim">{commit.sha.slice(0, 7)}</span>
+              <span className="shrink-0 text-[9px] text-ink-dim/50">{commit.sha.slice(0, 7)}</span>
               <span className="min-w-0 flex-1 truncate">{commit.message}</span>
-              <span className="shrink-0 text-[9px] text-ink-dim">{timeAgo(commit.date)}</span>
+              <RelativeTime iso={commit.date} className="shrink-0 text-[9px] text-ink-dim" />
             </button>
           ))}
         </ResizableColumn>
@@ -113,19 +114,26 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
               <button
                 key={candidate.filename}
                 type="button"
-                onClick={() => setPath(candidate.filename)}
+                onClick={() => {
+                  setPath(candidate.filename);
+                  diffPanes.current?.scrollToFile(candidate.filename);
+                }}
                 title={candidate.filename}
                 className={`${ROW} ${
                   candidate.filename === path ? 'bg-btn-active text-accent' : 'text-ink hover:bg-btn-hover'
                 }`}
               >
-                <span className="min-w-0 flex-1 truncate text-right [direction:rtl]">{candidate.filename}</span>
+                <span className="min-w-0 flex-1 truncate">{candidate.filename}</span>
                 <ChangeCounts additions={candidate.additions} deletions={candidate.deletions} />
               </button>
             ))
           )}
         </ResizableColumn>
-        <DiffPanes file={file} />
+        {fileError !== null ? (
+          <p className="flex-1 px-2 py-1 text-[11px] text-error-ink">{fileError}</p>
+        ) : (
+          <DiffPanes ref={diffPanes} files={files} />
+        )}
       </div>
     </div>
   );
