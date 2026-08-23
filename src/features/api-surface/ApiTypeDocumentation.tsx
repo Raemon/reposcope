@@ -1,7 +1,7 @@
 import { ApiTypeSections } from './ApiTypeSections';
 import { InsightPanel, InsightSection } from '@/features/surface-ui/InsightSection';
 import { InsightTable } from '@/features/surface-ui/InsightTable';
-import type { ApiTypeSection } from './apiTypeSectionTypes';
+import type { ApiTypeSection } from './apiTypeSectionCatalog';
 
 export function ApiTypeDocumentation({ sections }: { sections: ApiTypeSection[] }) {
   const entries = sections.flatMap((section) => section.entries);

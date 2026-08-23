@@ -8,14 +8,13 @@ export function Chip({
   tipLabel,
 }: {
   children: ReactNode;
-  tone?: 'dim' | 'accent' | 'plain';
+  tone?: 'dim' | 'accent';
   tip?: ReactNode;
   tipLabel?: string;
 }) {
   const tones = {
     dim: 'border-btn-edge bg-btn text-ink-dim',
     accent: 'border-btn-edge bg-btn text-accent',
-    plain: 'border-panel-edge bg-panel text-ink',
   };
   const body = (
     <span className={`inline-flex items-center whitespace-nowrap rounded border px-1.5 py-px font-mono text-[10px] leading-4 ${tones[tone]}`}>

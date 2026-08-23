@@ -6,7 +6,7 @@ import { InsightSection } from '@/features/surface-ui/InsightSection';
 import { InsightTable } from '@/features/surface-ui/InsightTable';
 import { LabeledPanel } from '@/features/surface-ui/LabeledPanel';
 import { SourceRef } from '@/features/surface-ui/SourceRef';
-import type { EnvVarUse, RuntimeSurface } from '../insightTypes';
+import type { EnvVarUse, RunnableScript, RuntimeSurface } from '../insightTypes';
 
 export function RuntimeView({ runtime }: { runtime: RuntimeSurface }) {
   const undocumented = runtime.envVars.filter((held) => !held.documented && held.sites.length > 0).length;
@@ -21,7 +21,7 @@ export function RuntimeView({ runtime }: { runtime: RuntimeSurface }) {
     >
       <div className="flex flex-wrap items-start gap-6">
         {runtime.envVars.length > 0 ? <EnvVarsPanel envVars={runtime.envVars} /> : null}
-        {runtime.scripts.length > 0 ? <ScriptsPanel runtime={runtime} /> : null}
+        {runtime.scripts.length > 0 ? <ScriptsPanel scripts={runtime.scripts} /> : null}
         <SidePanels runtime={runtime} />
       </div>
     </InsightSection>
@@ -55,11 +55,11 @@ function EnvVarsPanel({ envVars }: { envVars: EnvVarUse[] }) {
   );
 }
 
-function ScriptsPanel({ runtime }: { runtime: RuntimeSurface }) {
+function ScriptsPanel({ scripts }: { scripts: RunnableScript[] }) {
   return (
     <LabeledPanel label="Runnable scripts" className="min-w-0">
       <InsightTable caption="Scripts defined by the repository" columns={['Name', 'Command']}>
-        {runtime.scripts.map((script) => (
+        {scripts.map((script) => (
           <tr key={`${script.file} ${script.name}`} className="border-b border-panel-edge last:border-b-0">
             <td className="py-1 pl-2 pr-3 align-top font-mono text-[11px] leading-5 text-accent">
               <HoverCardTrigger label={script.file} card={<p className="font-mono text-[11px] text-ink">defined in {script.file}</p>}>

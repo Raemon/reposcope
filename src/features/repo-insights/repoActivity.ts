@@ -17,7 +17,7 @@ export async function fetchRepoActivity(owner: string, repo: string): Promise<Ac
     const commits = await githubJson<GithubCommit[]>(
       `https://api.github.com/repos/${owner}/${repo}/commits?per_page=${COMMITS_SHOWN}`,
     );
-    return { commits: commits.map(commitInfo), note: null };
+    return { commits: commits.map(commitInfo) };
   } catch {
     return null;
   }

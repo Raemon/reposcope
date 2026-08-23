@@ -7,8 +7,6 @@ export interface RepoSummary {
   description: string;
   language: string;
   updatedAt: string;
-  archived: boolean;
-  size: number;
   private: boolean;
 }
 
@@ -23,8 +21,6 @@ interface GithubRepo {
   description: string | null;
   language: string | null;
   pushed_at: string;
-  archived: boolean;
-  size: number;
   private: boolean;
 }
 
@@ -82,8 +78,6 @@ function summarize(repo: GithubRepo): RepoSummary {
     description: repo.description ?? '',
     language: repo.language ?? '',
     updatedAt: repo.pushed_at,
-    archived: repo.archived,
-    size: repo.size,
     private: repo.private,
   };
 }

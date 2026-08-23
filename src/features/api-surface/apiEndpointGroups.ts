@@ -7,7 +7,10 @@ export interface ApiEndpointGroup {
   children: ApiEndpointGroup[];
 }
 
-interface MutableApiEndpointGroup extends ApiEndpointGroup {
+interface MutableApiEndpointGroup {
+  segment: string;
+  path: string;
+  endpoints: ApiEndpoint[];
   childGroups: Map<string, MutableApiEndpointGroup>;
 }
 
@@ -44,7 +47,7 @@ function addEndpoint(root: MutableApiEndpointGroup, endpoint: ApiEndpoint): void
 }
 
 function mutableGroup(segment: string, path: string): MutableApiEndpointGroup {
-  return { segment, path, endpoints: [], children: [], childGroups: new Map() };
+  return { segment, path, endpoints: [], childGroups: new Map() };
 }
 
 function finalizeGroups(group: MutableApiEndpointGroup): ApiEndpointGroup[] {

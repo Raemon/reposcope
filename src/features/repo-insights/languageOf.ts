@@ -1,3 +1,5 @@
+import { fileNameOf } from './lineScan';
+
 const EXTENSION_LANGUAGES: [string, string][] = [
   ['.tsx', 'TypeScript'], ['.ts', 'TypeScript'], ['.mts', 'TypeScript'], ['.cts', 'TypeScript'],
   ['.jsx', 'JavaScript'], ['.js', 'JavaScript'], ['.mjs', 'JavaScript'], ['.cjs', 'JavaScript'],
@@ -23,7 +25,7 @@ export function languageOf(path: string): string | null {
 }
 
 export function isTestPath(path: string): boolean {
-  const name = path.split('/').at(-1)!.toLowerCase();
+  const name = fileNameOf(path).toLowerCase();
   if (/(?:^|[._-])(?:test|tests|spec)[._-]/.test(name) || /^test_/.test(name) || /_test\.\w+$/.test(name)) return true;
   return /(?:^|\/)(?:__tests__|tests?|specs?|e2e)\//.test(path.toLowerCase());
 }

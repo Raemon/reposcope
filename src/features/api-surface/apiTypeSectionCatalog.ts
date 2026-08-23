@@ -1,11 +1,24 @@
 import type { ApiTypeEntry } from './apiTypeCatalog';
 import type { ApiEndpoint } from './apiEndpointTypes';
-import {
-  RETURNED_SECTION_ID,
-  type ApiTypeReturn,
-  type ApiTypeSection,
-  type ApiTypeSectionEntry,
-} from './apiTypeSectionTypes';
+
+export interface ApiTypeReturn {
+  method: string;
+  path: string;
+  status: number;
+  through: string;
+}
+
+export interface ApiTypeSectionEntry extends ApiTypeEntry {
+  returnedBy: ApiTypeReturn[];
+}
+
+export interface ApiTypeSection {
+  id: string;
+  title: string;
+  entries: ApiTypeSectionEntry[];
+}
+
+export const RETURNED_SECTION_ID = 'returned-by-post-and-put';
 
 const MUTATING_METHODS = new Set(['POST', 'PUT']);
 const SPLIT_ABOVE = 60;

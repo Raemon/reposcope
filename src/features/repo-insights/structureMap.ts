@@ -86,10 +86,14 @@ function insert(root: Accumulating, entry: InventoryEntry, content: CodebaseFile
   const language = languageOf(entry.path);
   const lines = content && language ? countLines(content.source) : 0;
   let node = root;
+  let tooDeep = false;
   for (let depth = 0; depth <= segments.length - 1; depth += 1) {
     tally(node, language, lines);
     if (depth === segments.length - 1) break;
-    if (depth >= MAX_DEPTH) break;
+    if (depth >= MAX_DEPTH) {
+      tooDeep = true;
+      break;
+    }
     const segment = segments[depth]!;
     let child = node.childIndex.get(segment);
     if (!child) {
@@ -98,22 +102,9 @@ function insert(root: Accumulating, entry: InventoryEntry, content: CodebaseFile
     }
     node = child;
   }
-  if (!content) return;
-  const holder = directoryNodeOf(root, segments);
-  if (holder === null) return;
-  if (fileNameOf(entry.path).toLowerCase() === 'readme.md') holder.gloss ??= glossFrom(content.source);
-  else if (holder.symbols.length < MAX_SYMBOLS) holder.symbols.push(...symbolsIn(content, MAX_SYMBOLS - holder.symbols.length));
-}
-
-function directoryNodeOf(root: Accumulating, segments: string[]): Accumulating | null {
-  let node = root;
-  for (let depth = 0; depth < segments.length - 1; depth += 1) {
-    if (depth >= MAX_DEPTH) return null;
-    const child = node.childIndex.get(segments[depth]!);
-    if (!child) return null;
-    node = child;
-  }
-  return node;
+  if (!content || tooDeep) return;
+  if (fileNameOf(entry.path).toLowerCase() === 'readme.md') node.gloss ??= glossFrom(content.source);
+  else if (node.symbols.length < MAX_SYMBOLS) node.symbols.push(...symbolsIn(content, MAX_SYMBOLS - node.symbols.length));
 }
 
 function tally(node: Accumulating, language: string | null, lines: number): void {
@@ -132,37 +123,15 @@ function finalize(node: Accumulating): void {
     .sort((left, right) => right.codeLines - left.codeLines || right.files - left.files)
     .slice(0, MAX_CHILDREN);
   for (const child of node.children as Accumulating[]) finalize(child);
-  cleanup(node);
-}
-
-function cleanup(node: Accumulating): void {
   delete (node as Partial<Accumulating>).languageTallies;
   delete (node as Partial<Accumulating>).childIndex;
 }
 
-export function languageShares(tallies: Map<string, { files: number; lines: number }>): LanguageShare[] {
+function languageShares(tallies: Map<string, { files: number; lines: number }>): LanguageShare[] {
   return [...tallies]
     .map(([language, held]) => ({ language, files: held.files, lines: held.lines }))
     .sort((left, right) => right.lines - left.lines || right.files - left.files)
     .slice(0, MAX_LANGUAGES_SHOWN);
-}
-
-export function overallLanguages(inventory: InventoryEntry[], files: CodebaseFile[]): LanguageShare[] {
-  const byPath = new Map(files.map((file) => [file.path, file]));
-  const tallies = new Map<string, { files: number; lines: number }>();
-  for (const entry of inventory) {
-    const language = languageOf(entry.path);
-    if (!language) continue;
-    const held = tallies.get(language) ?? { files: 0, lines: 0 };
-    held.files += 1;
-    const content = byPath.get(entry.path);
-    if (content) held.lines += countLines(content.source);
-    tallies.set(language, held);
-  }
-  return [...tallies]
-    .map(([language, held]) => ({ language, files: held.files, lines: held.lines }))
-    .sort((left, right) => right.lines - left.lines)
-    .slice(0, 8);
 }
 
 function glossFrom(readme: string): string | null {

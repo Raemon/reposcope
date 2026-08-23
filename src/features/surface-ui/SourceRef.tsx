@@ -2,7 +2,7 @@
 
 import { createContext, useContext, type ReactNode } from 'react';
 import { HoverCardTrigger } from './HoverCard';
-import type { SourceLocation } from './sourceLocation';
+import { shortFile, type SourceLocation } from './sourceLocation';
 
 export const RepoRefContext = createContext<{ owner: string; repo: string } | null>(null);
 
@@ -10,13 +10,13 @@ export function RepoRefProvider({ owner, repo, children }: { owner: string; repo
   return <RepoRefContext.Provider value={{ owner, repo }}>{children}</RepoRefContext.Provider>;
 }
 
-export function githubBlobUrl(owner: string, repo: string, file: string, line?: number): string {
+function githubBlobUrl(owner: string, repo: string, file: string, line?: number): string {
   return `https://github.com/${owner}/${repo}/blob/HEAD/${file}${line ? `#L${line}` : ''}`;
 }
 
-export function SourceRef({ at, showFile = true }: { at: SourceLocation; showFile?: boolean }) {
+export function SourceRef({ at }: { at: SourceLocation }) {
   const held = useContext(RepoRefContext);
-  const label = showFile ? `${shortFile(at.file)}:${at.line}` : `:${at.line}`;
+  const label = `${shortFile(at.file)}:${at.line}`;
   const card = (
     <div>
       <pre className="overflow-x-auto whitespace-pre-wrap font-mono text-[11px] leading-4 text-ink">{at.excerpt || '(empty line)'}</pre>
@@ -40,9 +40,4 @@ export function SourceRef({ at, showFile = true }: { at: SourceLocation; showFil
       {anchor}
     </HoverCardTrigger>
   );
-}
-
-function shortFile(file: string): string {
-  const segments = file.split('/');
-  return segments.length <= 2 ? file : `…/${segments.slice(-2).join('/')}`;
 }

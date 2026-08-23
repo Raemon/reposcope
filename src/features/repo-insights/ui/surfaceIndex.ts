@@ -2,6 +2,7 @@ import type { RepoSurfacePayload } from '@/features/codebases/repoSurfacePayload
 import { surfaceViewLabels, type SurfaceViewId } from './surfaceViews';
 import { locationTarget } from '../sourceTarget';
 import type { MapNode } from '../insightTypes';
+import { shortFile } from '@/features/surface-ui/sourceLocation';
 
 export interface SurfaceItem {
   kind: string;
@@ -36,9 +37,7 @@ export function surfaceIndex(surface: RepoSurfacePayload): SurfaceItem[] {
 }
 
 function shortLocation(at: { file: string; line: number }): string {
-  const segments = at.file.split('/');
-  const file = segments.length <= 2 ? at.file : `…/${segments.slice(-2).join('/')}`;
-  return `${file}:${at.line}`;
+  return `${shortFile(at.file)}:${at.line}`;
 }
 
 export function searchSurface(items: SurfaceItem[], query: string): SurfaceGroup[] {
@@ -48,7 +47,9 @@ export function searchSurface(items: SurfaceItem[], query: string): SurfaceGroup
   for (const item of items) {
     const rank = rankOf(item, needle);
     if (rank === null) continue;
-    ranked.set(item.viewId, [...(ranked.get(item.viewId) ?? []), { item, rank }]);
+    const held = ranked.get(item.viewId) ?? [];
+    held.push({ item, rank });
+    ranked.set(item.viewId, held);
   }
   return (Object.keys(surfaceViewLabels) as SurfaceViewId[])
     .map((viewId) => groupOf(viewId, ranked.get(viewId) ?? []))
@@ -56,7 +57,7 @@ export function searchSurface(items: SurfaceItem[], query: string): SurfaceGroup
 }
 
 function groupOf(viewId: SurfaceViewId, held: { item: SurfaceItem; rank: number }[]): SurfaceGroup {
-  const ordered = [...held].sort(
+  const ordered = held.sort(
     (left, right) =>
       left.rank - right.rank ||
       left.item.label.length - right.item.label.length ||

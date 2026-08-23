@@ -2,7 +2,7 @@
 
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import type { ApiTypeEntry } from './apiTypeCatalog';
-import type { ApiTypeReturn } from './apiTypeSectionTypes';
+import type { ApiTypeReturn } from './apiTypeSectionCatalog';
 
 const KIND_MARK: Readonly<Record<ApiTypeEntry['kind'], string>> = {
   interface: 'I',

@@ -5,21 +5,17 @@ import { normalizeSources, parseSources, serializeSource, sourceKey, type Codeba
 
 const SOURCES_KEY = 'reposcope.sources';
 const TOKEN_KEY = 'reposcope.githubToken';
-const RENAMED_FROM: Record<string, string> = {
-  [SOURCES_KEY]: 'apiscope.sources',
-  [TOKEN_KEY]: 'apiscope.githubToken',
-};
 const NO_SOURCES: CodebaseSource[] = [];
 const listeners = new Set<() => void>();
 let held: { raw: string | null; sources: CodebaseSource[] } | null = null;
 
-export function readSources(): CodebaseSource[] {
+function readSources(): CodebaseSource[] {
   const raw = readItem(SOURCES_KEY);
   if (!held || held.raw !== raw) held = { raw, sources: parseSources(raw) };
   return held.sources;
 }
 
-export function writeSources(sources: CodebaseSource[]): void {
+function writeSources(sources: CodebaseSource[]): void {
   const kept = normalizeSources(sources);
   writeItem(SOURCES_KEY, kept.length === 0 ? null : JSON.stringify(kept.map(serializeSource)));
 }
@@ -33,7 +29,7 @@ export function removeSource(source: CodebaseSource): void {
   writeSources(readSources().filter((candidate) => sourceKey(candidate) !== key));
 }
 
-export function readGithubToken(): string | null {
+function readGithubToken(): string | null {
   return readItem(TOKEN_KEY);
 }
 
@@ -72,10 +68,7 @@ function subscribe(listener: () => void): () => void {
 
 function readItem(key: string): string | null {
   try {
-    const stored = window.localStorage.getItem(key);
-    if (stored !== null) return stored;
-    const previous = RENAMED_FROM[key];
-    return previous ? window.localStorage.getItem(previous) : null;
+    return window.localStorage.getItem(key);
   } catch {
     return null;
   }
@@ -83,8 +76,6 @@ function readItem(key: string): string | null {
 
 function writeItem(key: string, value: string | null): void {
   try {
-    const previous = RENAMED_FROM[key];
-    if (previous) window.localStorage.removeItem(previous);
     if (value === null) window.localStorage.removeItem(key);
     else window.localStorage.setItem(key, value);
   } catch {}

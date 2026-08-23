@@ -16,7 +16,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ owne
     const read = `${codebase.files.length} source files · fetched in ${seconds(fetchedInMs)} · analyzed in ${seconds(
       analyzedInMs,
     )}${codebase.truncated ? ' · truncated' : ''}`;
-    return { heading: `${owner}/${repo}`, read, endpoints, typeSections, routes, insights };
+    return { read, endpoints, typeSections, routes, insights };
   });
 }
 

@@ -10,7 +10,7 @@ import { DataModelsView } from '@/features/repo-insights/ui/DataModelsView';
 import { DependenciesView } from '@/features/repo-insights/ui/DependenciesView';
 import { EntryPointsView } from '@/features/repo-insights/ui/EntryPointsView';
 import { JumpPalette } from '@/features/repo-insights/ui/JumpPalette';
-import { MeterBar } from '@/features/surface-ui/MeterBar';
+import { languageSegments, MeterBar } from '@/features/surface-ui/MeterBar';
 import { RuntimeView } from '@/features/repo-insights/ui/RuntimeView';
 import { RepoRefProvider } from '@/features/surface-ui/SourceRef';
 import { StructureMapView } from '@/features/repo-insights/ui/StructureMapView';
@@ -100,7 +100,7 @@ export function RepoSurface({ owner, repo }: { owner: string; repo: string }) {
   return (
     <RepoRefProvider owner={owner} repo={repo}>
       {offer}
-      <SurfaceBody surface={held.surface} heading={heading} />
+      <SurfaceBody surface={held.surface} />
     </RepoRefProvider>
   );
 }
@@ -128,7 +128,7 @@ function ElapsedNote() {
   );
 }
 
-function SurfaceBody({ surface, heading }: { surface: RepoSurfacePayload; heading: string }) {
+function SurfaceBody({ surface }: { surface: RepoSurfacePayload }) {
   const views = surfaceViews(surface);
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -164,21 +164,14 @@ function SurfaceBody({ surface, heading }: { surface: RepoSurfacePayload; headin
     if (standing) document.querySelector('[data-reveal="true"]')?.scrollIntoView({ block: 'center' });
   };
 
-  const { languages } = surface.insights;
+  const { languages } = surface.insights.map;
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1">
         <p className="text-[10px] uppercase tracking-[0.18em] text-ink-dim">{surface.read}</p>
         {languages.length > 0 ? (
           <span className="flex items-center gap-2">
-            <MeterBar
-              width="w-32"
-              segments={languages.map((held) => ({
-                label: held.language,
-                value: held.lines || held.files,
-                detail: `${held.language}: ${held.files} files, ${held.lines.toLocaleString()} lines`,
-              }))}
-            />
+            <MeterBar width="w-32" segments={languageSegments(languages)} />
             <span className="font-mono text-[10px] text-ink-dim">
               {languages.slice(0, 3).map((held) => held.language).join(' · ')}
             </span>
@@ -187,7 +180,7 @@ function SurfaceBody({ surface, heading }: { surface: RepoSurfacePayload; headin
         <JumpPalette items={items} hrefOf={jumpHref} onSelect={selectItem} />
       </div>
       <ViewSwitcher views={views} active={shown} viewHref={viewHref} onSelect={selectView} />
-      <ActiveView id={shown} surface={surface} heading={heading} reveal={reveal} />
+      <ActiveView id={shown} surface={surface} reveal={reveal} />
     </div>
   );
 }
@@ -195,12 +188,10 @@ function SurfaceBody({ surface, heading }: { surface: RepoSurfacePayload; headin
 function ActiveView({
   id,
   surface,
-  heading,
   reveal,
 }: {
   id: SurfaceViewId;
   surface: RepoSurfacePayload;
-  heading: string;
   reveal: string | null;
 }) {
   const { insights } = surface;
@@ -208,12 +199,7 @@ function ActiveView({
     case 'api':
       return (
         <div className="flex flex-wrap items-start gap-8">
-          <ApiEndpointDocumentation
-            endpoints={surface.endpoints}
-            heading={heading}
-            summary="Traced from the source"
-            reveal={reveal}
-          />
+          <ApiEndpointDocumentation endpoints={surface.endpoints} reveal={reveal} />
           <ApiTypeDocumentation sections={surface.typeSections} />
           <AppRouteDocumentation routes={surface.routes} />
         </div>

@@ -1,6 +1,7 @@
 import { fileNameOf, locationAt, scanned, type ScannedFile } from './lineScan';
 import type { CodebaseFile, InventoryEntry } from '@/features/codebases/codebaseSource';
-import type { EnvVarUse, PortUse, RunnableScript, RuntimeSurface, SourceLocation, WorkflowInfo } from './insightTypes';
+import type { EnvVarUse, PortUse, RunnableScript, RuntimeSurface, WorkflowInfo } from './insightTypes';
+import type { SourceLocation } from '@/features/surface-ui/sourceLocation';
 
 const MAX_ENV_VARS = 120;
 const MAX_SITES_PER_VAR = 6;
@@ -51,7 +52,7 @@ export function buildRuntimeSurface(files: CodebaseFile[], inventory: InventoryE
     if (!uses.has(name) && envVars.length < MAX_ENV_VARS) envVars.push({ name, documented: true, sites: [] });
   }
   return {
-    envVars: envVars.slice(0, MAX_ENV_VARS),
+    envVars,
     ports: ports.slice(0, MAX_PORTS),
     scripts: scripts.slice(0, MAX_SCRIPTS),
     workflows: workflows.slice(0, MAX_WORKFLOWS),
@@ -74,7 +75,6 @@ function documentedEnvKeys(files: CodebaseFile[]): Set<string> {
 function collectEnvVars(file: ScannedFile, uses: Map<string, SourceLocation[]>): void {
   file.lines.forEach((line, at) => {
     for (const pattern of ENV_PATTERNS) {
-      pattern.lastIndex = 0;
       for (const match of line.matchAll(pattern)) {
         const name = match[1]!;
         if (name === 'NODE_ENV') continue;

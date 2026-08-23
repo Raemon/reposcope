@@ -1,7 +1,5 @@
 import type { SourceLocation } from '@/features/surface-ui/sourceLocation';
 
-export type { SourceLocation };
-
 export type EntryPointKind = 'http' | 'websocket' | 'graphql' | 'cli';
 
 export interface EntryPoint {
@@ -119,11 +117,9 @@ export interface CommitInfo {
 
 export interface ActivitySummary {
   commits: CommitInfo[];
-  note: string | null;
 }
 
 export interface RepoInsights {
-  languages: LanguageShare[];
   entryPoints: EntryPoint[];
   map: MapNode;
   dependencies: DependencyManifest[];

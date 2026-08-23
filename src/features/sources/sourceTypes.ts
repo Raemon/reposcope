@@ -22,7 +22,7 @@ export function serializeSource(source: CodebaseSource): string {
   }
 }
 
-export function parseSource(raw: unknown): CodebaseSource | null {
+function parseSource(raw: unknown): CodebaseSource | null {
   if (typeof raw !== 'string') return null;
   if (raw === 'viewer') return { kind: 'viewer' };
   const owner = raw.match(/^owner:(.+)$/);
