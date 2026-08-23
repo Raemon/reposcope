@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { floatingTipPosition, type TipPlacement, type TipPosition } from './tooltips/floatingTipPosition';
+import { floatingTipPosition, type TipPlacement, type TipPosition } from './floatingTipPosition';
 
 const OFFSCREEN: TipPosition = { left: -9999, top: -9999 };
 const HOVER_INTENT_MS = 100;

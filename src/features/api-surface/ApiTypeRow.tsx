@@ -1,6 +1,6 @@
 'use client';
 
-import { HoverCardTrigger } from './HoverCard';
+import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import type { ApiTypeEntry } from './apiTypeCatalog';
 import type { ApiTypeReturn } from './apiTypeSectionTypes';
 

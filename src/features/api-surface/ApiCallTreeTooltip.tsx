@@ -1,7 +1,8 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { HoverCardTrigger } from './HoverCard';
+import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
+import { INDENT_PX, NESTED_GLYPH, ROOT_GLYPH } from '@/features/surface-ui/TreeRowLabel';
 import { ApiSignatureSummary, apiSignatureIsEmpty } from './ApiSignatureSummary';
 import type { ApiCodeStep, ApiConsumer, ApiSignature } from './apiEndpointTypes';
 
@@ -64,9 +65,9 @@ function CallTreeNode({ step, depth }: { step: ApiCodeStep; depth: number }) {
     <div>
       <div
         className="flex min-h-4 items-center gap-1 font-mono text-[10px] leading-4 text-ink"
-        style={{ paddingLeft: `${depth * 12}px` }}
+        style={{ paddingLeft: `${depth * INDENT_PX}px` }}
       >
-        <span className="text-ink-dim" aria-hidden="true">{depth === 0 ? '•' : '↳'}</span>
+        <span className="text-ink-dim" aria-hidden="true">{depth === 0 ? ROOT_GLYPH : NESTED_GLYPH}</span>
         <span>{step.symbol}</span>
       </div>
       {step.calls.map((call, index) => (

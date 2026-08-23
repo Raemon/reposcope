@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { ApiTypeKindMark, ApiTypeName, ApiTypeRow } from './ApiTypeRow';
-import { ChainChevron, TreeBranchLabel, TreeLeafLabel } from './TreeRowLabel';
+import { ChainChevron, TreeBranchLabel, TreeLeafLabel } from '@/features/surface-ui/TreeRowLabel';
 import { RETURNED_SECTION_ID, type ApiTypeSection, type ApiTypeSectionEntry } from './apiTypeSectionTypes';
 
 export function ApiTypeSections({ sections }: { sections: ApiTypeSection[] }) {

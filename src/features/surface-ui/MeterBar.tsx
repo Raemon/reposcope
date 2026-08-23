@@ -1,4 +1,4 @@
-import { HoverCardTrigger } from '@/features/api-surface/HoverCard';
+import { HoverCardTrigger } from './HoverCard';
 
 export interface MeterSegment {
   label: string;

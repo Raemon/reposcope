@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Chip, MethodChip } from './Chip';
-import { EmptyNote } from './EmptyNote';
-import { FilterField, matchesFilter } from './FilterField';
-import { InsightPanel, InsightSection } from './InsightSection';
-import { SourceRef } from './SourceRef';
+import { Chip, MethodChip } from '@/features/surface-ui/Chip';
+import { EmptyNote } from '@/features/surface-ui/EmptyNote';
+import { FilterField, matchesFilter } from '@/features/surface-ui/FilterField';
+import { InsightSection } from '@/features/surface-ui/InsightSection';
+import { InsightTable } from '@/features/surface-ui/InsightTable';
+import { LabeledPanel } from '@/features/surface-ui/LabeledPanel';
+import { SourceRef } from '@/features/surface-ui/SourceRef';
 import type { EntryPoint, EntryPointKind } from '../insightTypes';
 
 const KIND_TITLES: Record<EntryPointKind, string> = {
@@ -46,35 +48,21 @@ export function EntryPointsView({ entryPoints, deepCount }: { entryPoints: Entry
 
 function EntryPointGroup({ title, entries }: { title: string; entries: EntryPoint[] }) {
   return (
-    <div className="min-w-0">
-      <p className="mb-1.5 text-[10px] uppercase tracking-[0.18em] text-ink-dim">{title} · {entries.length}</p>
-      <InsightPanel>
-        <table className="table-auto border-collapse">
-          <caption className="sr-only">{title}</caption>
-          <thead className="sr-only">
-            <tr>
-              <th scope="col">Method</th>
-              <th scope="col">Name</th>
-              <th scope="col">Framework</th>
-              <th scope="col">Declared at</th>
-            </tr>
-          </thead>
-          <tbody>
-            {entries.map((entry) => (
-              <tr key={`${entry.method} ${entry.name} ${entry.at.file}`} className="border-b border-panel-edge last:border-b-0">
-                <td className="py-1 pl-2 pr-2 align-top"><MethodChip method={entry.method} /></td>
-                <td className="py-1 pr-3 align-top font-mono text-[11px] leading-5 text-ink">{entry.name}</td>
-                <td className="py-1 pr-3 align-top">
-                  <Chip tip={<p className="text-[11px] text-ink">{entry.language} · matched as a {entry.framework} declaration</p>} tipLabel={entry.framework}>
-                    {entry.framework}
-                  </Chip>
-                </td>
-                <td className="py-1 pr-2 align-top"><SourceRef at={entry.at} /></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </InsightPanel>
-    </div>
+    <LabeledPanel label={<>{title} · {entries.length}</>} className="min-w-0">
+      <InsightTable caption={title} columns={['Method', 'Name', 'Framework', 'Declared at']}>
+        {entries.map((entry) => (
+          <tr key={`${entry.method} ${entry.name} ${entry.at.file}`} className="border-b border-panel-edge last:border-b-0">
+            <td className="py-1 pl-2 pr-2 align-top"><MethodChip method={entry.method} /></td>
+            <td className="py-1 pr-3 align-top font-mono text-[11px] leading-5 text-ink">{entry.name}</td>
+            <td className="py-1 pr-3 align-top">
+              <Chip tip={<p className="text-[11px] text-ink">{entry.language} · matched as a {entry.framework} declaration</p>} tipLabel={entry.framework}>
+                {entry.framework}
+              </Chip>
+            </td>
+            <td className="py-1 pr-2 align-top"><SourceRef at={entry.at} /></td>
+          </tr>
+        ))}
+      </InsightTable>
+    </LabeledPanel>
   );
 }

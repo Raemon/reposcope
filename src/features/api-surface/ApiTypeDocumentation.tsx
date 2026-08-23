@@ -1,5 +1,6 @@
 import { ApiTypeSections } from './ApiTypeSections';
-import { InsightPanel, InsightSection } from '@/features/repo-insights/ui/InsightSection';
+import { InsightPanel, InsightSection } from '@/features/surface-ui/InsightSection';
+import { InsightTable } from '@/features/surface-ui/InsightTable';
 import type { ApiTypeSection } from './apiTypeSectionTypes';
 
 export function ApiTypeDocumentation({ sections }: { sections: ApiTypeSection[] }) {
@@ -15,18 +16,9 @@ export function ApiTypeDocumentation({ sections }: { sections: ApiTypeSection[] 
       stat={`${reached} on the API path · ${entries.length} total · ${sections.length} sections`}
     >
       <InsightPanel>
-        <table className="table-auto border-collapse">
-          <caption className="sr-only">Types and interfaces declared in this codebase</caption>
-          <thead className="sr-only">
-            <tr>
-              <th scope="col">Kind</th>
-              <th scope="col">Name</th>
-            </tr>
-          </thead>
-          <tbody>
-            <ApiTypeSections sections={sections} />
-          </tbody>
-        </table>
+        <InsightTable caption="Types and interfaces declared in this codebase" columns={['Kind', 'Name']}>
+          <ApiTypeSections sections={sections} />
+        </InsightTable>
       </InsightPanel>
     </InsightSection>
   );

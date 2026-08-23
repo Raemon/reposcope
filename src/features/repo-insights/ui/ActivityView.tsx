@@ -1,9 +1,10 @@
 'use client';
 
 import { useContext } from 'react';
-import { HoverCardTrigger } from '@/features/api-surface/HoverCard';
-import { InsightPanel, InsightSection } from './InsightSection';
-import { RepoRefContext } from './SourceRef';
+import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
+import { InsightPanel, InsightSection } from '@/features/surface-ui/InsightSection';
+import { InsightTable } from '@/features/surface-ui/InsightTable';
+import { RepoRefContext } from '@/features/surface-ui/SourceRef';
 import { timeAgo } from './timeAgo';
 import type { ActivitySummary } from '../insightTypes';
 
@@ -21,46 +22,35 @@ export function ActivityView({ activity }: { activity: ActivitySummary }) {
       as="h1"
     >
       <InsightPanel>
-        <table className="table-auto border-collapse">
-          <caption className="sr-only">Recent commits</caption>
-          <thead className="sr-only">
-            <tr>
-              <th scope="col">When</th>
-              <th scope="col">Commit</th>
-              <th scope="col">Message</th>
-              <th scope="col">Author</th>
+        <InsightTable caption="Recent commits" columns={['When', 'Commit', 'Message', 'Author']}>
+          {activity.commits.map((commit) => (
+            <tr key={commit.sha} className="border-b border-panel-edge last:border-b-0">
+              <td className="whitespace-nowrap py-1 pl-2 pr-3 align-top font-mono text-[10px] leading-5 text-ink-dim">
+                <HoverCardTrigger label={commit.sha} card={<p className="font-mono text-[11px] text-ink">{new Date(commit.date).toLocaleString()}</p>}>
+                  <span>{timeAgo(commit.date)}</span>
+                </HoverCardTrigger>
+              </td>
+              <td className="py-1 pr-3 align-top font-mono text-[10px] leading-5">
+                {held ? (
+                  <a
+                    href={`https://github.com/${held.owner}/${held.repo}/commit/${commit.sha}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-ink-dim underline decoration-btn-edge underline-offset-2 hover:text-accent"
+                  >
+                    {commit.sha}
+                  </a>
+                ) : (
+                  <span className="text-ink-dim">{commit.sha}</span>
+                )}
+              </td>
+              <td className="max-w-md py-1 pr-3 align-top font-mono text-[11px] leading-5 text-ink">
+                <span className="line-clamp-1">{commit.message}</span>
+              </td>
+              <td className="whitespace-nowrap py-1 pr-2 align-top font-mono text-[10px] leading-5 text-ink-dim">{commit.author}</td>
             </tr>
-          </thead>
-          <tbody>
-            {activity.commits.map((commit) => (
-              <tr key={commit.sha} className="border-b border-panel-edge last:border-b-0">
-                <td className="whitespace-nowrap py-1 pl-2 pr-3 align-top font-mono text-[10px] leading-5 text-ink-dim">
-                  <HoverCardTrigger label={commit.sha} card={<p className="font-mono text-[11px] text-ink">{new Date(commit.date).toLocaleString()}</p>}>
-                    <span>{timeAgo(commit.date)}</span>
-                  </HoverCardTrigger>
-                </td>
-                <td className="py-1 pr-3 align-top font-mono text-[10px] leading-5">
-                  {held ? (
-                    <a
-                      href={`https://github.com/${held.owner}/${held.repo}/commit/${commit.sha}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-ink-dim underline decoration-btn-edge underline-offset-2 hover:text-accent"
-                    >
-                      {commit.sha}
-                    </a>
-                  ) : (
-                    <span className="text-ink-dim">{commit.sha}</span>
-                  )}
-                </td>
-                <td className="max-w-md py-1 pr-3 align-top font-mono text-[11px] leading-5 text-ink">
-                  <span className="line-clamp-1">{commit.message}</span>
-                </td>
-                <td className="whitespace-nowrap py-1 pr-2 align-top font-mono text-[10px] leading-5 text-ink-dim">{commit.author}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+          ))}
+        </InsightTable>
       </InsightPanel>
     </InsightSection>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { HoverCardTrigger } from '@/features/api-surface/HoverCard';
+import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import type { SurfaceView, SurfaceViewId } from './surfaceViews';
 
 export function ViewSwitcher({

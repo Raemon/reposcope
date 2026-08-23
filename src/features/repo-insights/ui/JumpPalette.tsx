@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { Chip } from './Chip';
-import { FilterField } from './FilterField';
+import { Chip } from '@/features/surface-ui/Chip';
+import { FilterField } from '@/features/surface-ui/FilterField';
 import { searchSurface, type SurfaceGroup, type SurfaceItem } from './surfaceIndex';
 
 export function JumpPalette({

@@ -3,7 +3,7 @@
 import { Fragment, useEffect, useState, type ReactNode } from 'react';
 import { ApiCallTreeTrigger } from './ApiCallTreeTooltip';
 import { ApiPathOperations, callTreeRoot } from './ApiPathOperations';
-import { ChainChevron, TreeBranchLabel, TreeLeafLabel, startsOpen } from './TreeRowLabel';
+import { ChainChevron, NESTED_GLYPH, TreeBranchLabel, TreeLeafLabel, startsOpen } from '@/features/surface-ui/TreeRowLabel';
 import { displayApiPath, type ApiEndpointGroup } from './apiEndpointGroups';
 import { locationTarget } from '@/features/repo-insights/sourceTarget';
 
@@ -60,7 +60,7 @@ function GroupRows({
       {name}
     </TreeBranchLabel>
   ) : (
-    <TreeLeafLabel depth={depth} glyph={depth === 0 ? '/' : '↳'}>{name}</TreeLeafLabel>
+    <TreeLeafLabel depth={depth} glyph={depth === 0 ? '/' : NESTED_GLYPH}>{name}</TreeLeafLabel>
   );
   return (
     <>
