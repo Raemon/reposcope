@@ -2,7 +2,7 @@
 
 import { Fragment, useState } from 'react';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
-import { ChainChevron, NESTED_GLYPH, TreeBranchLabel, TreeLeafLabel, startsOpen } from '@/features/surface-ui/TreeRowLabel';
+import { ChainChevron, NESTED_GLYPH, TreeBranchLabel, TreeLeafLabel } from '@/features/surface-ui/TreeRowLabel';
 import type { AppRoute, AppRouteApiCall, AppRouteComponent } from './appRouteCatalog';
 
 export function AppRouteTree({ routes }: { routes: AppRoute[] }) {
@@ -14,10 +14,9 @@ export function AppRouteTree({ routes }: { routes: AppRoute[] }) {
 }
 
 function RouteRows({ route }: { route: AppRoute }) {
-  const [open, setOpen] = useState(startsOpen(0));
-  const lone = route.components.length === 1 ? route.components[0] : undefined;
-  const { chain, tail } = lone ? componentChain(lone) : { chain: [], tail: undefined };
-  const children = tail ? tail.children : route.components;
+  const [open, setOpen] = useState(true);
+  const { chain, tail } = componentChain(route.component);
+  const children = tail.children;
   const name = (
     <span className="flex min-w-0 items-center gap-1.5">
       <code className="truncate text-[11px] text-ink">{route.path}</code>
@@ -64,7 +63,7 @@ function AppRouteComponentRow({
   component: AppRouteComponent;
   depth: number;
 }) {
-  const [open, setOpen] = useState(startsOpen(depth));
+  const [open, setOpen] = useState(depth === 0);
   const { chain, tail } = componentChain(component);
   const branch = tail.children.length > 0;
   const name = (

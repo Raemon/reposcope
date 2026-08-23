@@ -15,10 +15,7 @@ export function githubToken(): string | null {
   return userGithubToken() ?? process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN ?? null;
 }
 
-export function tokenIdentity(token: string | null): string {
-  return token ? createHash('sha256').update(token).digest('hex').slice(0, 16) : 'anonymous';
-}
-
 export function githubTokenIdentity(): string {
-  return tokenIdentity(githubToken());
+  const token = githubToken();
+  return token ? createHash('sha256').update(token).digest('hex').slice(0, 16) : 'anonymous';
 }

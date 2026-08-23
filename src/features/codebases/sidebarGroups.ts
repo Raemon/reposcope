@@ -1,12 +1,12 @@
-import type { RepoSummary, ViewerRepos } from './repoDirectory';
-import type { CodebaseSource } from '@/features/sources/sourceTypes';
+import type { RepoSummary } from './repoDirectory';
+import { sourceKey, type CodebaseSource } from '@/features/sources/sourceTypes';
 
 export type SourceResult =
   | { state: 'loading' }
   | { state: 'error'; message: string }
   | { state: 'ready'; repos: RepoSummary[]; login: string | null };
 
-export interface SidebarRepo extends RepoSummary {
+interface SidebarRepo extends RepoSummary {
   source: CodebaseSource | null;
 }
 
@@ -22,30 +22,11 @@ export interface SidebarGroup {
 export function sidebarGroups(sources: CodebaseSource[], results: Map<string, SourceResult>): SidebarGroup[] {
   const groups = new Map<string, SidebarGroup>();
   for (const source of sources) {
-    for (const group of groupsFor(source, results.get(sourceResultKey(source)) ?? { state: 'loading' })) {
+    for (const group of groupsFor(source, results.get(sourceKey(source)) ?? { state: 'loading' })) {
       mergeGroup(groups, group);
     }
   }
   return [...groups.values()];
-}
-
-export function sourceResultKey(source: CodebaseSource): string {
-  switch (source.kind) {
-    case 'repo':
-      return `repo:${source.owner}/${source.name}`.toLowerCase();
-    case 'owner':
-      return `owner:${source.login}`.toLowerCase();
-    case 'viewer':
-      return 'viewer';
-  }
-}
-
-export function viewerResult(viewer: ViewerRepos): SourceResult {
-  return { state: 'ready', repos: viewer.repos, login: viewer.login };
-}
-
-export function reposResult(repos: RepoSummary[]): SourceResult {
-  return { state: 'ready', repos, login: null };
 }
 
 function groupsFor(source: CodebaseSource, result: SourceResult): SidebarGroup[] {
@@ -98,5 +79,5 @@ function mergeGroup(groups: Map<string, SidebarGroup>, group: SidebarGroup): voi
 }
 
 function placeholder(owner: string, name: string): RepoSummary {
-  return { owner, name, description: '', language: '', updatedAt: '', archived: false, size: 0, private: false };
+  return { owner, name, description: '', language: '', updatedAt: '', private: false };
 }

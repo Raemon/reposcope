@@ -6,6 +6,16 @@ export interface MeterSegment {
   detail?: string;
 }
 
+export function languageSegments(
+  languages: { language: string; files: number; lines: number }[],
+): MeterSegment[] {
+  return languages.map((held) => ({
+    label: held.language,
+    value: held.lines || held.files,
+    detail: `${held.language}: ${held.files} ${held.files === 1 ? 'file' : 'files'}, ${held.lines.toLocaleString()} lines`,
+  }));
+}
+
 const SEGMENT_SHADES = ['bg-meter-1', 'bg-meter-2', 'bg-meter-3', 'bg-meter-4', 'bg-meter-5', 'bg-meter-6'];
 
 export function MeterBar({ segments, width = 'w-48' }: { segments: MeterSegment[]; width?: string }) {

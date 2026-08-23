@@ -1,3 +1,4 @@
+import { GithubRequestError } from '@/features/codebases/githubRequest';
 import { withGithubToken } from '@/features/codebases/githubToken';
 
 export function apiRoute<T>(request: Request, work: () => Promise<T>): Promise<Response> {
@@ -12,17 +13,8 @@ export function apiRoute<T>(request: Request, work: () => Promise<T>): Promise<R
 
 export function requireParam(request: Request, name: string, pattern: RegExp): string {
   const value = new URL(request.url).searchParams.get(name) ?? '';
-  if (!pattern.test(value)) throw new ApiError(400, `Missing or invalid ${name}`);
+  if (!pattern.test(value)) throw new GithubRequestError(400, `Missing or invalid ${name}`);
   return value;
-}
-
-export class ApiError extends Error {
-  constructor(
-    readonly status: number,
-    message: string,
-  ) {
-    super(message);
-  }
 }
 
 function bearerToken(request: Request): string | null {

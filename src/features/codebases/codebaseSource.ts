@@ -13,8 +13,6 @@ export interface InventoryEntry {
 }
 
 export interface Codebase {
-  owner: string;
-  repo: string;
   files: CodebaseFile[];
   inventory: InventoryEntry[];
   truncated: boolean;
@@ -64,8 +62,6 @@ export async function loadCodebase(owner: string, repo: string): Promise<Codebas
   });
   const readable = entries.filter((entry) => !entry.source.includes('\u0000'));
   const codebase: Codebase = {
-    owner,
-    repo,
     files: prioritized(readable),
     inventory,
     truncated: readable.length > MAX_FILES,
@@ -73,10 +69,6 @@ export async function loadCodebase(owner: string, repo: string): Promise<Codebas
   cache.set(key, codebase);
   while (cache.size > MAX_CACHED) cache.delete(cache.keys().next().value as string);
   return codebase;
-}
-
-export function codeFileExtensions(): readonly string[] {
-  return CODE_EXTENSIONS;
 }
 
 function prioritized(entries: CodebaseFile[]): CodebaseFile[] {

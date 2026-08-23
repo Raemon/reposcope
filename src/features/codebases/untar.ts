@@ -1,15 +1,11 @@
 import { gunzipSync } from 'node:zlib';
+import type { CodebaseFile } from './codebaseSource';
 
 const BLOCK = 512;
 
-export interface ArchiveEntry {
-  path: string;
-  source: string;
-}
-
-export function untarGzip(archive: Uint8Array, keep: (path: string, size: number) => boolean): ArchiveEntry[] {
+export function untarGzip(archive: Uint8Array, keep: (path: string, size: number) => boolean): CodebaseFile[] {
   const bytes = gunzipSync(archive);
-  const entries: ArchiveEntry[] = [];
+  const entries: CodebaseFile[] = [];
   const decoder = new TextDecoder('utf8', { fatal: false });
   let offset = 0;
   let longName: string | null = null;

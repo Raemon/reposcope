@@ -1,5 +1,5 @@
 import type { CodebaseFile } from '@/features/codebases/codebaseSource';
-import type { SourceLocation } from './insightTypes';
+import type { SourceLocation } from '@/features/surface-ui/sourceLocation';
 
 const EXCERPT_LIMIT = 180;
 

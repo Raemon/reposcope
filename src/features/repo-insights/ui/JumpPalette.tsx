@@ -94,10 +94,10 @@ export function JumpPalette({
         onFocus={() => setOpen(true)}
         onKeyDown={steer}
         role="combobox"
-        label="Jump to anything in this repository"
-        expanded={shown}
-        controls={shown ? panelId : undefined}
-        activeRow={shown && rows.length > 0 ? rowId(cursor) : undefined}
+        aria-label="Jump to anything in this repository"
+        aria-expanded={shown}
+        aria-controls={shown ? panelId : undefined}
+        aria-activedescendant={shown && rows.length > 0 ? rowId(cursor) : undefined}
         placeholder="jump to anything — press /"
         className="w-72"
       />

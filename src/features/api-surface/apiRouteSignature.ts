@@ -1,6 +1,12 @@
 import ts from 'typescript';
 import { responseBodyTypes } from './apiResponseTypes';
-import { apiPropertyName, resolveApiDeclaration } from './apiSourceIndex';
+import {
+  apiPropertyName,
+  HTTP_METHODS,
+  propertyValue,
+  resolveApiDeclaration,
+  stringProperty,
+} from './apiSourceIndex';
 import type {
   ApiDeclarationRef,
   ApiInput,
@@ -13,15 +19,6 @@ import type {
 
 const MAX_DEPTH = 5;
 const MAX_DECLARATIONS = 40;
-const HTTP_METHOD_KEYS = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']);
-
-const KIND_TYPES: Readonly<Record<string, string>> = {
-  int: 'int',
-  number: 'number',
-  text: 'string',
-  nodeId: 'nodeId',
-  json: 'json',
-};
 
 export function apiRouteSignature(
   handler: ApiDeclarationRef,
@@ -69,7 +66,7 @@ function declaredInputs(object: ts.ObjectLiteralExpression, source: ApiInputSour
     const kind = stringProperty(property.initializer, 'kind') ?? 'text';
     return [{
       name,
-      type: KIND_TYPES[kind] ?? kind,
+      type: kind === 'text' ? 'string' : kind,
       source,
       optional: propertyValue(property.initializer, 'optional')?.kind === ts.SyntaxKind.TrueKeyword,
       help: stringProperty(property.initializer, 'help') ?? '',
@@ -139,7 +136,7 @@ function scanResponses(
 function methodBranch(node: ts.Node, method: string): ts.Node | null {
   if (!ts.isObjectLiteralExpression(node)) return null;
   const names = node.properties.map((property) => property.name ? apiPropertyName(property.name) : null);
-  if (!names.some((name) => name !== null && HTTP_METHOD_KEYS.has(name))) return null;
+  if (!names.some((name) => name !== null && HTTP_METHODS.has(name))) return null;
   const index = names.indexOf(method);
   return index === -1 ? null : node.properties[index]!;
 }
@@ -269,18 +266,4 @@ function literalStatus(node: ts.Node | undefined): number | null {
 
 function namesProperty(object: ts.ObjectLiteralExpression, name: string): boolean {
   return object.properties.some((property) => property.name !== undefined && apiPropertyName(property.name) === name);
-}
-
-function propertyValue(object: ts.ObjectLiteralExpression, name: string): ts.Expression | undefined {
-  const property = object.properties.find((candidate) =>
-    ts.isPropertyAssignment(candidate) && apiPropertyName(candidate.name) === name,
-  );
-  return property && ts.isPropertyAssignment(property) ? property.initializer : undefined;
-}
-
-function stringProperty(object: ts.ObjectLiteralExpression, name: string): string | null {
-  const value = propertyValue(object, name);
-  if (!value) return null;
-  if (ts.isStringLiteral(value) || ts.isNoSubstitutionTemplateLiteral(value)) return value.text;
-  return null;
 }

@@ -4,7 +4,7 @@ import { InsightTable } from '@/features/surface-ui/InsightTable';
 import type { AppRoute, AppRouteComponent } from './appRouteCatalog';
 
 export function AppRouteDocumentation({ routes }: { routes: AppRoute[] }) {
-  const componentCount = routes.reduce((total, route) => total + route.components.reduce(countComponents, 0), 0);
+  const componentCount = routes.reduce((total, route) => countComponents(total, route.component), 0);
 
   return (
     <InsightSection

@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { RepoSummary, ViewerRepos } from './repoDirectory';
-import { reposResult, sourceResultKey, viewerResult, type SourceResult } from './sidebarGroups';
+import type { SourceResult } from './sidebarGroups';
 import { apiJson } from '@/features/sources/apiClient';
-import type { CodebaseSource } from '@/features/sources/sourceTypes';
+import { sourceKey, type CodebaseSource } from '@/features/sources/sourceTypes';
 
 const NONE = new Map<string, SourceResult>();
 
@@ -20,7 +20,7 @@ export function useSourceResults(
     if (!ready) return;
     let live = true;
     for (const source of sources) {
-      const key = sourceResultKey(source);
+      const key = sourceKey(source);
       const cacheKey = `${token ?? ''} ${key}`;
       let request = pending.current.get(cacheKey);
       if (!request) {
@@ -52,14 +52,18 @@ function fetchSource(source: CodebaseSource, token: string | null): Promise<Sour
   switch (source.kind) {
     case 'owner':
       return apiJson<RepoSummary[]>(`/api/github/repos?owner=${encodeURIComponent(source.login)}`, token).then(
-        reposResult,
+        (repos) => ({ state: 'ready', repos, login: null }),
       );
     case 'repo':
       return apiJson<RepoSummary>(
         `/api/github/repo?owner=${encodeURIComponent(source.owner)}&name=${encodeURIComponent(source.name)}`,
         token,
-      ).then((repo) => reposResult([repo]));
+      ).then((repo) => ({ state: 'ready', repos: [repo], login: null }));
     case 'viewer':
-      return apiJson<ViewerRepos>('/api/github/viewer', token).then(viewerResult);
+      return apiJson<ViewerRepos>('/api/github/viewer', token).then((viewer) => ({
+        state: 'ready',
+        repos: viewer.repos,
+        login: viewer.login,
+      }));
   }
 }

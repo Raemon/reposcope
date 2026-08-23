@@ -61,7 +61,3 @@ export function TreeLeafLabel({
     </div>
   );
 }
-
-export function startsOpen(depth: number): boolean {
-  return depth === 0;
-}

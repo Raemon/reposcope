@@ -1,6 +1,6 @@
 import ts from 'typescript';
 import { apiCodeTree, attachApiRegistration } from './apiCodeTree';
-import { apiPropertyName } from './apiSourceIndex';
+import { defaultApiExport, hasModifier, HTTP_METHODS, stringProperty } from './apiSourceIndex';
 import { apiRouteSignature } from './apiRouteSignature';
 import type {
   ApiDeclarationRef,
@@ -8,8 +8,6 @@ import type {
   ApiSourceIndex,
   IndexedApiFile,
 } from './apiEndpointTypes';
-
-const HTTP_METHODS = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']);
 
 export function discoverApiEndpoints(index: ApiSourceIndex): ApiEndpoint[] {
   const registrations = routeRegistrations(index);
@@ -45,7 +43,6 @@ function endpointsFromRouteFile(
       method,
       path,
       transport: 'http' as const,
-      framework: 'next-app-router' as const,
       code,
       consumers: [],
       signature: apiRouteSignature(handler, registration, index, method, path),
@@ -60,7 +57,7 @@ function exportedHandlers(file: IndexedApiFile): { method: string; node: ts.Node
 }
 
 function handlersFrom(statement: ts.Statement): { method: string; node: ts.Node }[] {
-  if (!hasExportModifier(statement)) return [];
+  if (!hasModifier(statement, ts.SyntaxKind.ExportKeyword)) return [];
   if (ts.isFunctionDeclaration(statement) && statement.name && HTTP_METHODS.has(statement.name.text)) {
     return [{ method: statement.name.text, node: statement }];
   }
@@ -80,34 +77,17 @@ function pagesRouterEndpoints(index: ApiSourceIndex): ApiEndpoint[] {
 }
 
 function endpointsFromPagesFile(file: IndexedApiFile, index: ApiSourceIndex): ApiEndpoint[] {
-  const handler = defaultExport(file);
+  const handler = defaultApiExport(file);
   if (!handler) return [];
   const path = pagesRouterPath(file.path);
   return methodsHandledIn(file).map((method) => ({
     method,
     path,
     transport: 'http' as const,
-    framework: 'next-pages-router' as const,
     code: apiCodeTree(handler, index, method),
     consumers: [],
     signature: apiRouteSignature(handler, null, index, method, path),
   }));
-}
-
-function defaultExport(file: IndexedApiFile): ApiDeclarationRef | null {
-  for (const statement of file.ast.statements) {
-    if (ts.isExportAssignment(statement) && ts.isIdentifier(statement.expression)) {
-      const declaration = file.declarations.get(statement.expression.text);
-      if (declaration) return { file, node: declaration, symbol: statement.expression.text };
-    }
-    if (!hasExportModifier(statement)) continue;
-    const isDefault = ts.canHaveModifiers(statement) &&
-      (ts.getModifiers(statement)?.some((modifier) => modifier.kind === ts.SyntaxKind.DefaultKeyword) ?? false);
-    if (isDefault && ts.isFunctionDeclaration(statement)) {
-      return { file, node: statement, symbol: statement.name?.text ?? 'handler' };
-    }
-  }
-  return null;
 }
 
 function methodsHandledIn(file: IndexedApiFile): string[] {
@@ -144,7 +124,6 @@ function routeCallsIn(file: IndexedApiFile, index: ApiSourceIndex): ApiEndpoint[
         method: route.method,
         path: route.path,
         transport: 'http',
-        framework: 'registered-route',
         code: apiCodeTree(owner, index, route.method),
         consumers: [],
         signature: apiRouteSignature(owner, null, index, route.method, route.path),
@@ -213,7 +192,6 @@ function webSocketsFrom(file: IndexedApiFile, index: ApiSourceIndex): ApiEndpoin
         method: 'WS',
         path,
         transport: 'websocket' as const,
-        framework: 'websocket' as const,
         code: apiCodeTree(owner, index, 'WS'),
         consumers: [],
         signature: apiRouteSignature(owner, null, index, 'WS', path),
@@ -281,16 +259,7 @@ function registrationFrom(
     : null;
 }
 
-function stringProperty(object: ts.ObjectLiteralExpression, name: string): string | null {
-  const property = object.properties.find((candidate) =>
-    ts.isPropertyAssignment(candidate) && apiPropertyName(candidate.name) === name,
-  );
-  return property && ts.isPropertyAssignment(property) && ts.isStringLiteral(property.initializer)
-    ? property.initializer.text
-    : null;
-}
-
-function appRouterPath(filePath: string): string {
+export function appRouterPath(filePath: string): string {
   const afterApp = filePath.replace(/^.*?(?:^|\/)app\//, '');
   const segments = afterApp.split('/').slice(0, -1)
     .filter((segment) => !segment.startsWith('(') && !segment.startsWith('@'))
@@ -298,16 +267,14 @@ function appRouterPath(filePath: string): string {
   return `/${segments.join('/')}`.replace(/\/$/, '') || '/';
 }
 
-function pagesRouterPath(filePath: string): string {
+export function pagesRouterPath(filePath: string): string {
   const afterPages = filePath.replace(/^.*?(?:^|\/)pages\//, '').replace(/\.(?:ts|tsx|js|jsx)$/, '');
   const segments = afterPages.split('/').filter((segment) => segment !== 'index').map(routeSegment);
   return `/${segments.join('/')}`.replace(/\/$/, '') || '/';
 }
 
 function routeSegment(segment: string): string {
-  const catchAll = segment.match(/^\[\[?\.\.\.([^\]]+)\]\]?$/);
-  if (catchAll) return `{${catchAll[1]}}`;
-  const dynamic = segment.match(/^\[([^\]]+)\]$/);
+  const dynamic = segment.match(/^\[\[?\.?\.?\.?([^\]]+)\]\]?$/);
   return dynamic ? `{${dynamic[1]}}` : segment;
 }
 
@@ -322,9 +289,4 @@ function dedupe(endpoints: ApiEndpoint[]): ApiEndpoint[] {
     if (!seen.has(key)) seen.set(key, endpoint);
   }
   return [...seen.values()];
-}
-
-function hasExportModifier(node: ts.Node): boolean {
-  return ts.canHaveModifiers(node) &&
-    (ts.getModifiers(node)?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword) ?? false);
 }

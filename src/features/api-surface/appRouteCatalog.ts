@@ -1,5 +1,6 @@
 import ts from 'typescript';
-import { apiLineOf, resolveApiDeclaration } from './apiSourceIndex';
+import { apiLineOf, defaultApiExport, resolveApiDeclaration } from './apiSourceIndex';
+import { appRouterPath, pagesRouterPath } from './discoverApiEndpoints';
 import { findApiConsumerCandidates } from './findApiConsumers';
 import type { ApiDeclarationRef, ApiSourceIndex, IndexedApiFile } from './apiEndpointTypes';
 
@@ -20,7 +21,7 @@ export interface AppRouteComponent {
 export interface AppRoute {
   path: string;
   file: string;
-  components: AppRouteComponent[];
+  component: AppRouteComponent;
 }
 
 const MAX_COMPONENT_DEPTH = 6;
@@ -54,12 +55,12 @@ function routeFrom(
   index: ApiSourceIndex,
   calls: Map<string, AppRouteApiCall[]>,
 ): AppRoute | null {
-  const entry = defaultExport(file);
+  const entry = defaultApiExport(file);
   if (!entry) return null;
   return {
-    path: routePath(file.path),
+    path: pagesRouterPage(file.path) ? pagesRouterPath(file.path) : appRouterPath(file.path),
     file: file.path,
-    components: [componentTree(entry, index, calls, 0, new Set())],
+    component: componentTree(entry, index, calls, 0, new Set()),
   };
 }
 
@@ -153,43 +154,4 @@ function callsBySymbol(index: ApiSourceIndex): Map<string, AppRouteApiCall[]> {
 
 function componentIdentity(ref: ApiDeclarationRef): string {
   return `${ref.file.path}:${ref.symbol}`;
-}
-
-function defaultExport(file: IndexedApiFile): ApiDeclarationRef | null {
-  for (const statement of file.ast.statements) {
-    if (ts.isExportAssignment(statement) && ts.isIdentifier(statement.expression)) {
-      const declaration = file.declarations.get(statement.expression.text);
-      if (declaration) return { file, node: declaration, symbol: statement.expression.text };
-    }
-    if (!isDefaultExport(statement)) continue;
-    if (ts.isFunctionDeclaration(statement) && statement.name) {
-      return { file, node: statement, symbol: statement.name.text };
-    }
-  }
-  return null;
-}
-
-function isDefaultExport(statement: ts.Statement): boolean {
-  return ts.canHaveModifiers(statement) &&
-    (ts.getModifiers(statement)?.some((modifier) => modifier.kind === ts.SyntaxKind.DefaultKeyword) ?? false);
-}
-
-function routePath(pageFile: string): string {
-  const segments = pagesRouterPage(pageFile) ? pagesRouterSegments(pageFile) : appRouterSegments(pageFile);
-  return `/${segments.map(routeSegment).join('/')}`.replace(/(.)\/$/, '$1');
-}
-
-function appRouterSegments(pageFile: string): string[] {
-  return pageFile.replace(/^.*?(?:^|\/)app\//, '').split('/').slice(0, -1)
-    .filter((segment) => !segment.startsWith('(') && !segment.startsWith('@'));
-}
-
-function pagesRouterSegments(pageFile: string): string[] {
-  return pageFile.replace(/^.*?(?:^|\/)pages\//, '').replace(/\.(?:tsx|jsx)$/, '')
-    .split('/').filter((segment) => segment !== 'index');
-}
-
-function routeSegment(segment: string): string {
-  const dynamic = segment.match(/^\[\[?\.?\.?\.?([^\]]+)\]\]?$/);
-  return dynamic ? `{${dynamic[1]}}` : segment;
 }

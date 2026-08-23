@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { TreeBranchLabel, TreeLeafLabel } from '@/features/surface-ui/TreeRowLabel';
 import { Chip } from '@/features/surface-ui/Chip';
 import { InsightPanel, InsightSection } from '@/features/surface-ui/InsightSection';
-import { MeterBar } from '@/features/surface-ui/MeterBar';
+import { languageSegments, MeterBar } from '@/features/surface-ui/MeterBar';
 import { SourceRef } from '@/features/surface-ui/SourceRef';
 import { locationTarget, targetHoldsPath } from '../sourceTarget';
 import type { MapNode, MapSymbol } from '../insightTypes';
@@ -84,14 +84,7 @@ function MapBranch({ node, depth, reveal }: { node: MapNode; depth: number; reve
       <span className="whitespace-nowrap font-mono text-[10px] text-ink-dim">
         {node.files} {node.files === 1 ? 'file' : 'files'}{node.codeLines > 0 ? ` · ${node.codeLines.toLocaleString()} loc` : ''}
       </span>
-      <MeterBar
-        width="w-16"
-        segments={node.languages.map((held) => ({
-          label: held.language,
-          value: held.lines || held.files,
-          detail: `${held.language}: ${held.files} ${held.files === 1 ? 'file' : 'files'}, ${held.lines.toLocaleString()} lines`,
-        }))}
-      />
+      <MeterBar width="w-16" segments={languageSegments(node.languages)} />
       {node.gloss ? <span className="hidden max-w-64 truncate text-[10px] text-ink-dim sm:inline">{node.gloss}</span> : null}
     </span>
   );

@@ -9,6 +9,8 @@ import type {
 
 const JAVASCRIPT_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'];
 
+export const HTTP_METHODS = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']);
+
 export function buildApiSourceIndex(sources: CodebaseFile[]): ApiSourceIndex {
   const files = new Map<string, IndexedApiFile>();
   for (const file of sources) {
@@ -33,7 +35,7 @@ function parsedOnDemand(file: CodebaseFile): IndexedApiFile {
   return indexed;
 }
 
-export function joinModulePath(from: string, relativeModule: string): string {
+function joinModulePath(from: string, relativeModule: string): string {
   const segments = from.split('/').slice(0, -1);
   for (const segment of relativeModule.split('/')) {
     if (segment === '.' || segment === '') continue;
@@ -72,6 +74,37 @@ export function apiExcerptOf(file: IndexedApiFile, node: ts.Node, maxLines: numb
 
 export function apiPropertyName(name: ts.PropertyName): string | null {
   return ts.isIdentifier(name) || ts.isStringLiteral(name) ? name.text : null;
+}
+
+export function hasModifier(node: ts.Node, kind: ts.SyntaxKind): boolean {
+  return ts.canHaveModifiers(node) && (ts.getModifiers(node)?.some((modifier) => modifier.kind === kind) ?? false);
+}
+
+export function propertyValue(object: ts.ObjectLiteralExpression, name: string): ts.Expression | undefined {
+  const property = object.properties.find((candidate) =>
+    ts.isPropertyAssignment(candidate) && apiPropertyName(candidate.name) === name,
+  );
+  return property && ts.isPropertyAssignment(property) ? property.initializer : undefined;
+}
+
+export function stringProperty(object: ts.ObjectLiteralExpression, name: string): string | null {
+  const value = propertyValue(object, name);
+  if (!value) return null;
+  if (ts.isStringLiteral(value) || ts.isNoSubstitutionTemplateLiteral(value)) return value.text;
+  return null;
+}
+
+export function defaultApiExport(file: IndexedApiFile): ApiDeclarationRef | null {
+  for (const statement of file.ast.statements) {
+    if (ts.isExportAssignment(statement) && ts.isIdentifier(statement.expression)) {
+      const declaration = file.declarations.get(statement.expression.text);
+      if (declaration) return { file, node: declaration, symbol: statement.expression.text };
+    }
+    if (hasModifier(statement, ts.SyntaxKind.DefaultKeyword) && ts.isFunctionDeclaration(statement)) {
+      return { file, node: statement, symbol: statement.name?.text ?? 'handler' };
+    }
+  }
+  return null;
 }
 
 function declarationsIn(ast: ts.SourceFile): Map<string, ts.Node> {

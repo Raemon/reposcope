@@ -46,7 +46,15 @@ function prismaModels(file: ScannedFile, models: DataModel[]): void {
   file.lines.forEach((line, at) => {
     const match = line.match(/^model\s+(\w+)\s*\{/);
     if (!match) return;
-    const fields = blockFields(file, at, /^\s*(\w+)\s+(\S+)/, (name) => !name.startsWith('@'));
+    const fields: ModelField[] = [];
+    for (let scan = at + 1; scan < Math.min(at + BLOCK_LIMIT, file.lines.length); scan += 1) {
+      const row = file.lines[scan]!;
+      if (row.trim().startsWith('}')) break;
+      const field = row.match(/^\s*(\w+)\s+(\S+)/);
+      if (field && !field[1]!.startsWith('@') && fields.length < MAX_FIELDS) {
+        fields.push({ name: field[1]!, type: field[2] ?? '' });
+      }
+    }
     models.push({ name: match[1]!, kind: 'prisma', fields, at: locationAt(file, at) });
   });
 }
@@ -147,22 +155,4 @@ function jsSchemas(file: ScannedFile, models: DataModel[]): void {
     }
     models.push({ name: drizzle[1]!, kind: 'drizzle', fields, at: locationAt(file, at) });
   });
-}
-
-function blockFields(
-  file: ScannedFile,
-  openAt: number,
-  pattern: RegExp,
-  keep: (name: string) => boolean,
-): ModelField[] {
-  const fields: ModelField[] = [];
-  for (let scan = openAt + 1; scan < Math.min(openAt + BLOCK_LIMIT, file.lines.length); scan += 1) {
-    const row = file.lines[scan]!;
-    if (row.trim().startsWith('}')) break;
-    const match = row.match(pattern);
-    if (match && keep(match[1]!) && fields.length < MAX_FIELDS) {
-      fields.push({ name: match[1]!, type: match[2] ?? '' });
-    }
-  }
-  return fields;
 }

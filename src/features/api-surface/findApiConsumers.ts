@@ -4,15 +4,16 @@ import {
   apiLineOf,
   apiPropertyName,
   resolveApiDeclaration,
+  stringProperty,
 } from './apiSourceIndex';
-import type {
-  ApiCodeStep,
-  ApiConsumer,
-  ApiConsumerCandidate,
-  ApiDeclarationRef,
-  ApiEndpoint,
-  ApiSourceIndex,
-  IndexedApiFile,
+import {
+  codeSteps,
+  type ApiConsumer,
+  type ApiConsumerCandidate,
+  type ApiDeclarationRef,
+  type ApiEndpoint,
+  type ApiSourceIndex,
+  type IndexedApiFile,
 } from './apiEndpointTypes';
 
 export function findApiConsumers(
@@ -20,7 +21,7 @@ export function findApiConsumers(
   candidates: ApiConsumerCandidate[],
 ): ApiConsumer[] {
   const endpointShape = pathShape(endpoint.path);
-  const implementationFiles = new Set(codeFiles(endpoint.code));
+  const implementationFiles = new Set(codeSteps(endpoint.code).map((step) => step.file));
   return uniqueConsumers(candidates
     .filter((candidate) => !implementationFiles.has(candidate.file))
     .filter((candidate) => pathShape(candidate.path) === endpointShape)
@@ -137,12 +138,7 @@ function consumerMethod(node: ts.Node): string | null {
 function fetchMethod(call: ts.CallExpression): string {
   const options = call.arguments[1];
   if (!options || !ts.isObjectLiteralExpression(options)) return 'GET';
-  const property = options.properties.find((candidate) =>
-    ts.isPropertyAssignment(candidate) && apiPropertyName(candidate.name) === 'method',
-  );
-  return property && ts.isPropertyAssignment(property) && ts.isStringLiteral(property.initializer)
-    ? property.initializer.text
-    : 'GET';
+  return stringProperty(options, 'method') ?? 'GET';
 }
 
 function isPathTable(node: ts.Node): boolean {
@@ -170,10 +166,6 @@ function consumerFileIsExcluded(path: string): boolean {
 
 function pathShape(path: string): string {
   return path.split('?')[0]!.replace(/\{[^}]+\}/g, '{}');
-}
-
-function codeFiles(step: ApiCodeStep): string[] {
-  return [step.file, ...step.calls.flatMap(codeFiles)];
 }
 
 function expressionName(expression: ts.Expression): string {

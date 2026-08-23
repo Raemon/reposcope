@@ -8,6 +8,10 @@ export interface ApiCodeStep {
   calls: ApiCodeStep[];
 }
 
+export function codeSteps(step: ApiCodeStep): ApiCodeStep[] {
+  return [step, ...step.calls.flatMap(codeSteps)];
+}
+
 export interface ApiConsumer {
   symbol: string;
   file: string;
@@ -18,7 +22,6 @@ export interface ApiConsumer {
 export interface ApiEndpoint {
   method: string;
   path: string;
-  framework: ApiFramework;
   transport: 'http' | 'websocket';
   code: ApiCodeStep;
   consumers: ApiConsumer[];
@@ -87,5 +90,3 @@ export interface ApiSignature {
   inputs: ApiInput[];
   outputs: ApiOutput[];
 }
-
-export type ApiFramework = 'next-app-router' | 'next-pages-router' | 'registered-route' | 'websocket';

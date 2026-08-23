@@ -1,8 +1,8 @@
 import ts from 'typescript';
-import { apiExcerptOf, apiLineOf, resolveApiModuleFile } from './apiSourceIndex';
-import type { ApiCodeStep, ApiEndpoint, ApiSourceIndex, IndexedApiFile } from './apiEndpointTypes';
+import { apiExcerptOf, apiLineOf, hasModifier, resolveApiModuleFile } from './apiSourceIndex';
+import { codeSteps, type ApiEndpoint, type ApiSourceIndex, type IndexedApiFile } from './apiEndpointTypes';
 
-export type ApiTypeKind = 'interface' | 'type' | 'enum';
+type ApiTypeKind = 'interface' | 'type' | 'enum';
 
 export interface ApiTypeEntry {
   name: string;
@@ -46,12 +46,8 @@ function orderByApiIntroduction(
   }
 }
 
-function codeSteps(step: ApiCodeStep): ApiCodeStep[] {
-  return [step, ...step.calls.flatMap(codeSteps)];
-}
-
 function importedFilePaths(path: string, index: ApiSourceIndex): string[] {
-  const file = filesByPath(index).get(path);
+  const file = index.files.get(path);
   if (!file) return [];
   const paths: string[] = [];
   for (const reference of file.imports.values()) {
@@ -59,16 +55,6 @@ function importedFilePaths(path: string, index: ApiSourceIndex): string[] {
     if (imported && !paths.includes(imported.path)) paths.push(imported.path);
   }
   return paths;
-}
-
-const pathIndexes = new WeakMap<ApiSourceIndex, Map<string, IndexedApiFile>>();
-
-function filesByPath(index: ApiSourceIndex): Map<string, IndexedApiFile> {
-  const held = pathIndexes.get(index);
-  if (held) return held;
-  const byPath = new Map([...index.files.values()].map((file) => [file.path, file] as const));
-  pathIndexes.set(index, byPath);
-  return byPath;
 }
 
 function typesByFile(index: ApiSourceIndex): Map<string, ApiTypeEntry[]> {
@@ -91,7 +77,7 @@ function typeEntry(file: IndexedApiFile, statement: ts.Statement): ApiTypeEntry[
     file: file.path,
     line: apiLineOf(file, statement),
     excerpt: apiExcerptOf(file, statement, declarationLines(file, statement)),
-    exported: isExported(statement),
+    exported: hasModifier(statement, ts.SyntaxKind.ExportKeyword),
     reachedByApi: false,
   }];
 }
@@ -107,9 +93,4 @@ function typeKind(statement: ts.Statement): ApiTypeKind | null {
   if (ts.isTypeAliasDeclaration(statement)) return 'type';
   if (ts.isEnumDeclaration(statement)) return 'enum';
   return null;
-}
-
-function isExported(statement: ts.Statement): boolean {
-  return ts.canHaveModifiers(statement) &&
-    (ts.getModifiers(statement)?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword) ?? false);
 }

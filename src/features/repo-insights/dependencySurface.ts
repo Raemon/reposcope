@@ -7,7 +7,7 @@ const MAX_MANIFESTS = 12;
 
 const LOCKFILES: [string, string][] = [
   ['package.json', 'package-lock.json'], ['package.json', 'yarn.lock'], ['package.json', 'pnpm-lock.yaml'], ['package.json', 'bun.lockb'],
-  ['pyproject.toml', 'poetry.lock'], ['pyproject.toml', 'uv.lock'], ['requirements.txt', ''],
+  ['pyproject.toml', 'poetry.lock'], ['pyproject.toml', 'uv.lock'],
   ['go.mod', 'go.sum'], ['Cargo.toml', 'Cargo.lock'], ['Gemfile', 'Gemfile.lock'], ['composer.json', 'composer.lock'],
 ];
 
@@ -37,7 +37,7 @@ function lockfileNear(manifestPath: string, paths: Set<string>): string | null {
   const dir = manifestPath.includes('/') ? manifestPath.slice(0, manifestPath.lastIndexOf('/') + 1) : '';
   const name = fileNameOf(manifestPath);
   for (const [manifest, lock] of LOCKFILES) {
-    if (name !== manifest || lock === '') continue;
+    if (name !== manifest) continue;
     if (paths.has(`${dir}${lock}`)) return lock;
   }
   return null;
@@ -100,7 +100,7 @@ function pyprojectToml(file: CodebaseFile): Omit<DependencyManifest, 'lockfile'>
       collectPythonSpecs(line, 'runtime', entries);
       continue;
     }
-    if (/^\[(?:tool\.poetry\.)?(?:dependency-groups|project\.optional-dependencies|tool\.poetry\.dev-dependencies|tool\.uv)/.test(line) || /^\[dependency-groups\]/.test(line)) {
+    if (/^\[(?:tool\.poetry\.)?(?:dependency-groups|project\.optional-dependencies|tool\.poetry\.dev-dependencies|tool\.uv)/.test(line)) {
       section = 'dev';
       inArray = false;
       continue;
