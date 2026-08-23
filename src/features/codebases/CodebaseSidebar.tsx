@@ -1,9 +1,11 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { CodebaseList } from './CodebaseList';
 import { sidebarGroups } from './sidebarGroups';
 import { useSourceResults } from './useSourceResults';
+import { parseRepoLink, type RepoRef } from '@/features/sources/parseRepoLink';
 import { clearGithubToken, removeSource, useGithubToken, useSources, useStoreReady } from '@/features/sources/sourceStore';
 
 export function CodebaseSidebar() {
@@ -12,6 +14,8 @@ export function CodebaseSidebar() {
   const token = useGithubToken();
   const results = useSourceResults(sources, token, ready);
   const connected = sources.some((source) => source.kind === 'viewer');
+  const pathname = usePathname();
+  const reading = repoBeingRead(pathname);
   return (
     <aside className="flex h-full w-72 shrink-0 flex-col border-r border-panel-edge bg-panel">
       <div className="border-b border-panel-edge px-3 py-2.5">
@@ -23,13 +27,17 @@ export function CodebaseSidebar() {
       {!ready ? (
         <p className="px-3 py-3 text-[11px] leading-4 text-ink-dim">Loading…</p>
       ) : sources.length === 0 ? (
-        <p className="px-3 py-3 text-[11px] leading-4 text-ink-dim">
-          No repositories yet.{' '}
-          <Link href="/" className="text-accent underline">
-            Add one
-          </Link>{' '}
-          to get started.
-        </p>
+        reading ? (
+          <ReadingRow reading={reading} />
+        ) : (
+          <p className="px-3 py-3 text-[11px] leading-4 text-ink-dim">
+            No repositories yet.{' '}
+            <Link href="/" className="text-accent underline">
+              Add one
+            </Link>{' '}
+            to get started.
+          </p>
+        )
       ) : (
         <CodebaseList groups={sidebarGroups(sources, results)} />
       )}
@@ -49,4 +57,29 @@ export function CodebaseSidebar() {
       )}
     </aside>
   );
+}
+
+function ReadingRow({ reading }: { reading: RepoRef }) {
+  return (
+    <nav className="min-h-0 flex-1 overflow-auto py-1">
+      <h2 className="px-3 pb-1 pt-2 text-[9px] uppercase tracking-[0.18em] text-ink-dim">{reading.owner}</h2>
+      <div className="flex items-baseline gap-1.5 bg-btn-active pr-2">
+        <Link
+          href={`/repo/${reading.owner}/${reading.name}`}
+          aria-current="page"
+          className="flex min-w-0 flex-1 items-baseline justify-between gap-2 py-[3px] pl-3 text-[11px] leading-4 text-accent"
+        >
+          <span className="truncate">{reading.name}</span>
+          <span className="shrink-0 text-[9px] text-ink-dim">reading</span>
+        </Link>
+      </div>
+    </nav>
+  );
+}
+
+function repoBeingRead(pathname: string): RepoRef | null {
+  const segments = pathname.match(/^\/repo\/([^/]+)\/([^/]+)$/);
+  if (!segments?.[1] || !segments[2]) return null;
+  const parsed = parseRepoLink(`${decodeURIComponent(segments[1])}/${decodeURIComponent(segments[2])}`);
+  return parsed.ok ? parsed.value : null;
 }

@@ -60,7 +60,14 @@ export function RepoSurface({ owner, repo }: { owner: string; repo: string }) {
     </button>
   );
 
-  if (held.state === 'loading') return <p className="text-xs text-ink-dim">Fetching and parsing the repository…</p>;
+  if (held.state === 'loading') {
+    return (
+      <section className="max-w-2xl">
+        <h1 className="text-xl text-accent">{heading}</h1>
+        <ElapsedNote key={heading} />
+      </section>
+    );
+  }
   if (held.state === 'error' && held.status === 404) {
     return (
       <section className="max-w-2xl">
@@ -89,6 +96,29 @@ export function RepoSurface({ owner, repo }: { owner: string; repo: string }) {
       {offer}
       <SurfaceBody surface={held.surface} heading={heading} />
     </RepoRefProvider>
+  );
+}
+
+const PATIENCE_SECONDS = 20;
+
+function ElapsedNote() {
+  const [seconds, setSeconds] = useState(0);
+
+  useEffect(() => {
+    const startedAt = Date.now();
+    const ticker = setInterval(() => setSeconds(Math.round((Date.now() - startedAt) / 1000)), 1000);
+    return () => clearInterval(ticker);
+  }, []);
+
+  return (
+    <>
+      <p className="mt-2 text-xs leading-5 text-ink-dim">Fetching and parsing the repository… {seconds}s</p>
+      {seconds >= PATIENCE_SECONDS && (
+        <p className="mt-1 text-xs leading-5 text-ink-dim">
+          Large repositories take a while: every file is read and parsed before anything is drawn.
+        </p>
+      )}
+    </>
   );
 }
 
