@@ -1,4 +1,4 @@
-import { HoverCardTrigger } from './HoverCard';
+import { Tooltip } from './Tooltip';
 
 export interface MeterSegment {
   label: string;
@@ -29,13 +29,13 @@ export function MeterBar({ segments, width = 'w-48' }: { segments: MeterSegment[
           className="flex h-full"
           style={{ width: `${Math.max(1.5, (segment.value / total) * 100)}%` }}
         >
-          <HoverCardTrigger
+          <Tooltip
             label={segment.label}
-            card={<p className="text-[11px] text-ink">{segment.detail ?? `${segment.value} of ${total}`}</p>}
+            tip={<p className="text-[11px] text-ink">{segment.detail ?? `${segment.value} of ${total}`}</p>}
             className="h-full w-full"
           >
             <span className={`block h-full w-full ${SEGMENT_SHADES[Math.min(at, SEGMENT_SHADES.length - 1)]}`} />
-          </HoverCardTrigger>
+          </Tooltip>
         </span>
       ))}
     </span>

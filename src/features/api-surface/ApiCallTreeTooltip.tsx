@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
+import { Tooltip } from '@/features/surface-ui/Tooltip';
 import { INDENT_PX, NESTED_GLYPH, ROOT_GLYPH } from '@/features/surface-ui/TreeRowLabel';
 import { ApiSignatureSummary, apiSignatureIsEmpty } from './ApiSignatureSummary';
 import type { ApiCodeStep, ApiConsumer, ApiSignature } from './apiEndpointTypes';
@@ -25,9 +25,9 @@ export function ApiCallTreeTrigger({
   className?: string;
 }) {
   return (
-    <HoverCardTrigger label={label} className={className} card={<CallTreeCard roots={roots} />}>
+    <Tooltip label={label} className={className} tip={<CallTreeCard roots={roots} />}>
       {children}
-    </HoverCardTrigger>
+    </Tooltip>
   );
 }
 

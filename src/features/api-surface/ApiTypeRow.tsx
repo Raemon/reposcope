@@ -1,6 +1,6 @@
 'use client';
 
-import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
+import { Tooltip } from '@/features/surface-ui/Tooltip';
 import type { ApiTypeEntry } from './apiTypeCatalog';
 import type { ApiTypeReturn } from './apiTypeSectionCatalog';
 
@@ -37,15 +37,15 @@ export function ApiTypeKindMark({ entry }: { entry: ApiTypeEntry }) {
 export function ApiTypeName({ entry, returnedBy }: { entry: ApiTypeEntry; returnedBy: ApiTypeReturn[] }) {
   return (
     <>
-      <HoverCardTrigger
+      <Tooltip
         label={`${entry.file}:${entry.line}`}
-        card={<TypeCard entry={entry} returnedBy={returnedBy} />}
+        tip={<TypeCard entry={entry} returnedBy={returnedBy} />}
         className="min-w-0"
       >
         <code className={`truncate text-[11px] ${entry.reachedByApi ? 'text-ink' : 'text-ink-dim'}`}>
           {entry.name}
         </code>
-      </HoverCardTrigger>
+      </Tooltip>
       {returnedBy.length > 0 ? (
         <span className="ml-2 font-mono text-[9px] text-ink-dim">{returnSummary(returnedBy)}</span>
       ) : null}

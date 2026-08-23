@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, useState } from 'react';
-import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
+import { Tooltip } from '@/features/surface-ui/Tooltip';
 import { ChainChevron, NESTED_GLYPH, TreeBranchLabel, TreeLeafLabel } from '@/features/surface-ui/TreeRowLabel';
 import type { AppRoute, AppRouteApiCall, AppRouteComponent } from './appRouteCatalog';
 
@@ -126,13 +126,13 @@ function chainCalls(chain: AppRouteComponent[]): AppRouteApiCall[] {
 
 function ComponentName({ component }: { component: AppRouteComponent }) {
   return (
-    <HoverCardTrigger
+    <Tooltip
       label={`${component.file}:${component.line}`}
-      card={<ComponentCard component={component} />}
+      tip={<ComponentCard component={component} />}
       className="min-w-0"
     >
       <code className="truncate text-[11px] text-ink">{component.name}</code>
-    </HoverCardTrigger>
+    </Tooltip>
   );
 }
 

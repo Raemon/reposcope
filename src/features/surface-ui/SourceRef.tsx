@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, type ReactNode } from 'react';
-import { HoverCardTrigger } from './HoverCard';
+import { Tooltip } from './Tooltip';
 import { shortFile, type SourceLocation } from './sourceLocation';
 
 export const RepoRefContext = createContext<{ owner: string; repo: string } | null>(null);
@@ -36,8 +36,8 @@ export function SourceRef({ at }: { at: SourceLocation }) {
     <span className="font-mono text-[10px] text-ink-dim">{label}</span>
   );
   return (
-    <HoverCardTrigger label={`${at.file}:${at.line}`} card={card}>
+    <Tooltip label={`${at.file}:${at.line}`} tip={card}>
       {anchor}
-    </HoverCardTrigger>
+    </Tooltip>
   );
 }

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { HoverCardTrigger } from './HoverCard';
+import { Tooltip } from './Tooltip';
 
 export function Chip({
   children,
@@ -23,9 +23,9 @@ export function Chip({
   );
   if (tip === undefined) return body;
   return (
-    <HoverCardTrigger label={tipLabel ?? ''} card={tip} className="cursor-default">
+    <Tooltip label={tipLabel} tip={tip} className="cursor-default">
       {body}
-    </HoverCardTrigger>
+    </Tooltip>
   );
 }
 
