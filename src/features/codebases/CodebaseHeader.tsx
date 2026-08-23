@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { CodebaseList } from './CodebaseList';
 import { sidebarGroups } from './sidebarGroups';
 import { useSourceResults } from './useSourceResults';
+import { ScopeMark } from '@/features/brand/ScopeMark';
 import { parseRepoLink, type RepoRef } from '@/features/sources/parseRepoLink';
 import { ThemeToggle } from '@/features/theme/ThemeToggle';
 import { clearGithubToken, removeSource, useGithubToken, useSources, useStoreReady } from '@/features/sources/sourceStore';
@@ -14,16 +15,11 @@ export function CodebaseHeader() {
   const pathname = usePathname();
   const reading = repoBeingRead(pathname);
   return (
-    <header className="flex items-center gap-3 border-b border-panel-edge bg-panel px-3 py-2">
-      <CodebaseMenu reading={reading} />
-      <Link href="/" className="text-sm text-accent">
-        reposcope
+    <header className="flex items-center gap-3 border-b border-panel-edge bg-panel px-3 py-1.5">
+      <Link href="/" aria-label="reposcope home" className="shrink-0">
+        <ScopeMark size={64} title="reposcope home" />
       </Link>
-      {reading && (
-        <span className="min-w-0 truncate text-[11px] text-ink-dim">
-          {reading.owner}/{reading.name}
-        </span>
-      )}
+      <CodebaseMenu reading={reading} />
       <div className="ml-auto">
         <ThemeToggle />
       </div>
@@ -66,11 +62,14 @@ function CodebaseMenu({ reading }: { reading: RepoRef | null }) {
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((held) => !held)}
-        className={`rounded border border-btn-edge px-2 py-1 text-[10px] uppercase tracking-[0.18em] ${
-          open ? 'bg-btn-active text-accent' : 'text-ink-dim hover:bg-btn-hover hover:text-ink'
+        className={`flex max-w-[22rem] items-baseline gap-1.5 rounded border border-btn-edge px-2 py-1 text-[11px] ${
+          open ? 'bg-btn-active text-accent' : 'text-ink hover:bg-btn-hover'
         }`}
       >
-        Codebases ▾
+        <span className="truncate">{reading ? `${reading.owner}/${reading.name}` : 'Codebases'}</span>
+        <span aria-hidden className="shrink-0 text-[9px] text-ink-dim">
+          ▾
+        </span>
       </button>
       {open && (
         <div className="absolute left-0 top-full z-20 mt-1 flex max-h-[70vh] w-80 flex-col overflow-hidden rounded border border-panel-edge bg-panel shadow-lg">

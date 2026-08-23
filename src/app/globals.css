@@ -9,6 +9,8 @@
   --color-ink: var(--ink);
   --color-ink-dim: var(--ink-dim);
   --color-accent: var(--accent);
+  --color-scope: var(--scope);
+  --color-scope-lens: var(--scope-lens);
 
   --color-field: var(--field);
   --color-procgen: var(--procgen);
@@ -48,6 +50,8 @@
   --ink: #0a0e14;
   --ink-dim: #45505f;
   --accent: #7a4400;
+  --scope: #157a3f;
+  --scope-lens: #dff0e3;
 
   --field: #ffffff;
   --procgen: #dfe5ee;
@@ -87,6 +91,8 @@
     --ink: #f8f4ec;
     --ink-dim: #bcb2a4;
     --accent: #ffbe55;
+    --scope: #4fd489;
+    --scope-lens: #15291d;
 
     --field: #141311;
     --procgen: #35302a;
@@ -126,6 +132,8 @@
   --ink: #f8f4ec;
   --ink-dim: #bcb2a4;
   --accent: #ffbe55;
+  --scope: #4fd489;
+  --scope-lens: #15291d;
 
   --field: #141311;
   --procgen: #35302a;
