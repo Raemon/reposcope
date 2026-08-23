@@ -8,10 +8,12 @@ export function ApiEndpointDocumentation({
   endpoints,
   heading,
   summary,
+  reveal,
 }: {
   endpoints: ApiEndpoint[];
   heading: string;
   summary: string;
+  reveal: string | null;
 }) {
   const groups = groupApiEndpoints(endpoints);
   const methods = apiMethodColumns(endpoints);
@@ -28,8 +30,8 @@ export function ApiEndpointDocumentation({
       as="h1"
     >
       <InsightPanel>
-        <InsightTable caption="API endpoints grouped by URL layer" columns={['Path', ...methods]} colgroup>
-          <ApiEndpointTree groups={groups} methods={methods} />
+<InsightTable caption="API endpoints grouped by URL layer" columns={['Path', ...methods]} colgroup>
+          <ApiEndpointTree groups={groups} methods={methods} reveal={reveal} />
         </InsightTable>
       </InsightPanel>
     </InsightSection>

@@ -134,7 +134,7 @@ function HoverCardPopper({
       style={position}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
-      className={`fixed z-50 w-max min-w-64 max-w-[min(34rem,calc(100vw-1rem))] overflow-hidden rounded-md border border-btn-edge bg-tip shadow-[0_8px_28px_rgba(20,30,50,0.18)] ${reachable ? '' : 'pointer-events-none'}`}
+      className={`fixed z-50 w-max min-w-64 max-w-[min(34rem,calc(100vw-1rem))] overflow-hidden rounded-md border border-btn-edge bg-tip shadow-card ${reachable ? '' : 'pointer-events-none'}`}
     >
       <div className="truncate border-b border-btn-edge px-3 py-2 font-mono text-[11px] text-accent">{label}</div>
       <div className="max-h-[65vh] overflow-y-auto px-3 py-2">{children}</div>
