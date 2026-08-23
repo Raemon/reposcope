@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { ColumnHeader, CollapsedColumn, DragHandle, useColumn, useDragWidth } from './ResizableColumn';
+import { ChangeCounts } from './ChangeCounts';
+import { ColumnHeader, CollapsedColumn, DragHandle, useDragWidth, type ColumnSize } from './ResizableColumn';
 import { splitDiff, type DiffCell, type DiffRow } from './splitDiff';
 import type { CommitFile } from './pullRequests';
 
@@ -9,7 +10,7 @@ const ROW = 'flex h-[15px] items-center gap-1 leading-[15px]';
 const GUTTER = 'w-[38px] shrink-0 select-none pr-1 text-right text-[9px] text-ink-dim';
 
 export function DiffPanes({ file }: { file: CommitFile | null }) {
-  const [removedSize, setRemovedSize] = useColumn(520);
+  const [removedSize, setRemovedSize] = useState<ColumnSize>({ width: 520, open: true });
   const [addedOpen, setAddedOpen] = useState(true);
   const startDrag = useDragWidth(removedSize, setRemovedSize);
 
@@ -27,7 +28,7 @@ export function DiffPanes({ file }: { file: CommitFile | null }) {
             style={{ width: addedOpen ? removedSize.width : undefined, flex: addedOpen ? undefined : '1 1 0%' }}
           >
             <ColumnHeader icon="−" title="removed" onCollapse={() => setRemovedSize({ ...removedSize, open: false })} />
-            <DiffSide rows={rows} side="left" />
+            <DiffSide rows={rows} side="left" labels />
             {addedOpen && <DragHandle onPointerDown={startDrag} />}
           </section>
         ) : (
@@ -36,7 +37,7 @@ export function DiffPanes({ file }: { file: CommitFile | null }) {
         {addedOpen ? (
           <section className="flex min-w-0 flex-1 flex-col">
             <ColumnHeader icon="+" title="added" onCollapse={() => setAddedOpen(false)} />
-            <DiffSide rows={rows} side="right" />
+            <DiffSide rows={rows} side="right" labels={!removedSize.open} />
           </section>
         ) : (
           <CollapsedColumn icon="+" title="added" onExpand={() => setAddedOpen(true)} />
@@ -59,31 +60,33 @@ function FileBar({ file }: { file: CommitFile }) {
   );
 }
 
-export function ChangeCounts({ additions, deletions }: { additions: number; deletions: number }) {
-  return (
-    <span className="shrink-0 text-[9px] leading-4">
-      <span className="text-add-ink">+{additions}</span> <span className="text-del-ink">−{deletions}</span>
-    </span>
-  );
-}
-
-function DiffSide({ rows, side }: { rows: DiffRow[]; side: 'left' | 'right' }) {
+function DiffSide({ rows, side, labels }: { rows: DiffRow[]; side: 'left' | 'right'; labels: boolean }) {
   return (
     <div className="min-w-0 flex-1 overflow-x-auto">
       <div className="w-max min-w-full">
         {rows.map((row, index) => (
-          <DiffLine key={index} row={row} cell={side === 'left' ? row.left : row.right} side={side} />
+          <DiffLine key={index} row={row} cell={side === 'left' ? row.left : row.right} side={side} labels={labels} />
         ))}
       </div>
     </div>
   );
 }
 
-function DiffLine({ row, cell, side }: { row: DiffRow; cell: DiffCell | null; side: 'left' | 'right' }) {
+function DiffLine({
+  row,
+  cell,
+  side,
+  labels,
+}: {
+  row: DiffRow;
+  cell: DiffCell | null;
+  side: 'left' | 'right';
+  labels: boolean;
+}) {
   if (row.kind === 'hunk') {
     return (
       <div className={`${ROW} bg-procgen px-1 text-[9px] text-ink-dim`}>
-        <span className="truncate">{side === 'left' ? row.label : ''}</span>
+        <span className="truncate">{labels ? row.label : ''}</span>
       </div>
     );
   }

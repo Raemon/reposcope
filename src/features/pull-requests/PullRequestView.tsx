@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ChangeCounts, DiffPanes } from './DiffPanes';
-import { ResizableColumn, useColumn } from './ResizableColumn';
+import { ChangeCounts } from './ChangeCounts';
+import { DiffPanes } from './DiffPanes';
+import { ResizableColumn, type ColumnSize } from './ResizableColumn';
 import type { CommitFile, PullRequestCommits } from './pullRequests';
 import { timeAgo } from '@/features/repo-insights/ui/timeAgo';
 import { apiJson } from '@/features/sources/apiClient';
@@ -15,17 +16,21 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
   const token = useGithubToken();
   const [pull, setPull] = useState<PullRequestCommits | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
   const [sha, setSha] = useState<string | null>(null);
   const [files, setFiles] = useState<CommitFile[] | null>(null);
   const [path, setPath] = useState<string | null>(null);
-  const [commitSize, setCommitSize] = useColumn(260);
-  const [fileSize, setFileSize] = useColumn(280);
+  const [commitSize, setCommitSize] = useState<ColumnSize>({ width: 260, open: true });
+  const [fileSize, setFileSize] = useState<ColumnSize>({ width: 280, open: true });
 
   useEffect(() => {
     if (!ready) return;
     const controller = new AbortController();
     setPull(null);
     setError(null);
+    setSha(null);
+    setFiles(null);
+    setPath(null);
     apiJson<PullRequestCommits>(
       `/api/github/pull?owner=${encodeURIComponent(owner)}&name=${encodeURIComponent(repo)}&number=${number}`,
       token,
@@ -33,7 +38,7 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
     )
       .then((loaded) => {
         setPull(loaded);
-        setSha(loaded.commits[loaded.commits.length - 1]?.sha ?? null);
+        setSha(loaded.commits[0]?.sha ?? null);
         setCommitSize((size) => ({ ...size, open: loaded.commits.length > 1 }));
       })
       .catch((issue: unknown) => {
@@ -46,6 +51,7 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
     if (!ready || !sha) return;
     const controller = new AbortController();
     setFiles(null);
+    setFileError(null);
     apiJson<CommitFile[]>(
       `/api/github/commit?owner=${encodeURIComponent(owner)}&name=${encodeURIComponent(repo)}&sha=${sha}`,
       token,
@@ -56,7 +62,7 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
         setPath(loaded[0]?.filename ?? null);
       })
       .catch((issue: unknown) => {
-        if (!controller.signal.aborted) setError(issue instanceof Error ? issue.message : String(issue));
+        if (!controller.signal.aborted) setFileError(issue instanceof Error ? issue.message : String(issue));
       });
     return () => controller.abort();
   }, [owner, repo, sha, token, ready]);
@@ -90,7 +96,9 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
           ))}
         </ResizableColumn>
         <ResizableColumn icon="▤" title={`files · ${files?.length ?? 0}`} size={fileSize} onSize={setFileSize}>
-          {files === null ? (
+          {fileError !== null ? (
+            <p className="px-1.5 py-[1px] text-[11px] leading-4 text-error-ink">{fileError}</p>
+          ) : files === null ? (
             <p className="px-1.5 py-[1px] text-[11px] leading-4 text-ink-dim">Loading…</p>
           ) : (
             files.map((candidate) => (

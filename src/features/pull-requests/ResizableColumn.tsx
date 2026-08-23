@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import { useCallback, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 
 const MIN_WIDTH = 140;
 const MAX_WIDTH = 900;
@@ -8,10 +8,6 @@ const MAX_WIDTH = 900;
 export interface ColumnSize {
   width: number;
   open: boolean;
-}
-
-export function useColumn(initialWidth: number) {
-  return useState<ColumnSize>({ width: initialWidth, open: true });
 }
 
 export function useDragWidth(size: ColumnSize, onSize: (next: ColumnSize) => void) {
@@ -26,9 +22,11 @@ export function useDragWidth(size: ColumnSize, onSize: (next: ColumnSize) => voi
       const stop = () => {
         window.removeEventListener('pointermove', move);
         window.removeEventListener('pointerup', stop);
+        window.removeEventListener('pointercancel', stop);
       };
       window.addEventListener('pointermove', move);
       window.addEventListener('pointerup', stop);
+      window.addEventListener('pointercancel', stop);
     },
     [size.width, onSize],
   );
