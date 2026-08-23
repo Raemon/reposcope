@@ -34,6 +34,7 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
       .then((loaded) => {
         setPull(loaded);
         setSha(loaded.commits[loaded.commits.length - 1]?.sha ?? null);
+        setCommitSize((size) => ({ ...size, open: loaded.commits.length > 1 }));
       })
       .catch((issue: unknown) => {
         if (!controller.signal.aborted) setError(issue instanceof Error ? issue.message : String(issue));
