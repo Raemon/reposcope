@@ -41,11 +41,14 @@ export function HeaderMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((held) => !held)}
-        className={`rounded border border-btn-edge px-2 py-1 text-[10px] uppercase tracking-[0.18em] ${
-          open ? 'bg-btn-active text-accent' : 'text-ink-dim hover:bg-btn-hover hover:text-ink'
+        className={`flex max-w-[22rem] items-baseline gap-1.5 rounded border border-btn-edge px-2 py-1 text-[11px] ${
+          open ? 'bg-btn-active text-accent' : 'text-ink hover:bg-btn-hover'
         }`}
       >
-        {label} ▾
+        <span className="truncate">{label}</span>
+        <span aria-hidden className="shrink-0 text-[9px] text-ink-dim">
+          ▾
+        </span>
       </button>
       {open && (
         <div

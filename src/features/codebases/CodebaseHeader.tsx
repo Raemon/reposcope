@@ -6,6 +6,7 @@ import { CodebaseList } from './CodebaseList';
 import { HeaderMenu } from './HeaderMenu';
 import { sidebarGroups } from './sidebarGroups';
 import { useSourceResults } from './useSourceResults';
+import { ScopeMark } from '@/features/brand/ScopeMark';
 import { PullRequestMenu } from '@/features/pull-requests/PullRequestMenu';
 import { parseRepoLink, type RepoRef } from '@/features/sources/parseRepoLink';
 import { ThemeToggle } from '@/features/theme/ThemeToggle';
@@ -15,17 +16,12 @@ export function CodebaseHeader() {
   const pathname = usePathname();
   const reading = repoBeingRead(pathname);
   return (
-    <header className="flex items-center gap-2 border-b border-panel-edge bg-panel px-2 py-1">
+    <header className="flex items-center gap-3 border-b border-panel-edge bg-panel px-3 py-1.5">
+      <Link href="/" aria-label="reposcope home" className="shrink-0">
+        <ScopeMark size={64} title="reposcope home" />
+      </Link>
       <CodebaseMenu reading={reading} />
       {reading && <PullRequestMenu repo={reading} />}
-      <Link href="/" className="text-sm text-accent">
-        reposcope
-      </Link>
-      {reading && (
-        <Link href={`/repo/${reading.owner}/${reading.name}`} className="min-w-0 truncate text-[11px] text-ink-dim">
-          {reading.owner}/{reading.name}
-        </Link>
-      )}
       <div className="ml-auto">
         <ThemeToggle />
       </div>
@@ -41,7 +37,7 @@ function CodebaseMenu({ reading }: { reading: RepoRef | null }) {
   const connected = sources.some((source) => source.kind === 'viewer');
 
   return (
-    <HeaderMenu label="Codebases" width="w-80">
+    <HeaderMenu label={reading ? `${reading.owner}/${reading.name}` : 'Codebases'} width="w-80">
       {() => (
         <>
           {!ready ? (

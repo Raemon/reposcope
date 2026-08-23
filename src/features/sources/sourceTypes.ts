@@ -56,13 +56,3 @@ export function normalizeSources(sources: CodebaseSource[]): CodebaseSource[] {
   }
   return kept.slice(0, MAX_SOURCES);
 }
-
-export function coversRepo(sources: CodebaseSource[], owner: string, name: string): boolean {
-  const ownerKey = owner.toLowerCase();
-  const nameKey = name.toLowerCase();
-  return sources.some((source) => {
-    if (source.kind === 'owner') return source.login.toLowerCase() === ownerKey;
-    if (source.kind === 'repo') return source.owner.toLowerCase() === ownerKey && source.name.toLowerCase() === nameKey;
-    return false;
-  });
-}
