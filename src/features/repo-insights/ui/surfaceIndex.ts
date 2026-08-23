@@ -203,11 +203,11 @@ function runtimeItems(surface: RepoSurfacePayload): SurfaceItem[] {
 }
 
 function modelItems(surface: RepoSurfacePayload): SurfaceItem[] {
-  return surface.insights.models.map((model) => ({
+  return surface.insights.schema.models.map((model) => ({
     kind: model.kind,
     label: model.name,
-    detail: `${model.fields.length} fields · ${shortLocation(model.at)}`,
-    viewId: 'models' as const,
+    detail: `${model.callsites} refs · ${model.fields.length} fields · ${shortLocation(model.at)}`,
+    viewId: 'schema' as const,
   }));
 }
 

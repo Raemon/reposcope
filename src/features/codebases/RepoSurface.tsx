@@ -6,7 +6,7 @@ import { ApiEndpointDocumentation } from '@/features/api-surface/ApiEndpointDocu
 import { ApiTypeDocumentation } from '@/features/api-surface/ApiTypeDocumentation';
 import { AppRouteDocumentation } from '@/features/api-surface/AppRouteDocumentation';
 import { ActivityView } from '@/features/repo-insights/ui/ActivityView';
-import { DataModelsView } from '@/features/repo-insights/ui/DataModelsView';
+import { SchemaView } from '@/features/repo-insights/ui/SchemaView';
 import { DependenciesView } from '@/features/repo-insights/ui/DependenciesView';
 import { EntryPointsView } from '@/features/repo-insights/ui/EntryPointsView';
 import { JumpPalette } from '@/features/repo-insights/ui/JumpPalette';
@@ -212,8 +212,8 @@ function ActiveView({
       return <DependenciesView manifests={insights.dependencies} />;
     case 'runtime':
       return <RuntimeView runtime={insights.runtime} />;
-    case 'models':
-      return <DataModelsView models={insights.models} />;
+    case 'schema':
+      return <SchemaView schema={insights.schema} />;
     case 'tests':
       return <TestsView tests={insights.tests} reveal={reveal} />;
     case 'activity':
