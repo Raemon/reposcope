@@ -9,6 +9,11 @@ export function FilterField({
   ref,
   onFocus,
   onKeyDown,
+  role,
+  label,
+  expanded,
+  controls,
+  activeRow,
   className = 'mb-2 w-64',
 }: {
   value: string;
@@ -17,6 +22,11 @@ export function FilterField({
   ref?: RefObject<HTMLInputElement | null>;
   onFocus?: () => void;
   onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
+  role?: string;
+  label?: string;
+  expanded?: boolean;
+  controls?: string;
+  activeRow?: string;
   className?: string;
 }) {
   return (
@@ -27,6 +37,11 @@ export function FilterField({
       onChange={(event) => onChange(event.target.value)}
       onFocus={onFocus}
       onKeyDown={onKeyDown}
+      role={role}
+      aria-label={label}
+      aria-expanded={expanded}
+      aria-controls={controls}
+      aria-activedescendant={activeRow}
       placeholder={placeholder}
       className={`rounded border border-btn-edge bg-field px-2 py-1 font-mono text-[11px] text-ink placeholder:text-ink-dim focus:outline-none focus:ring-1 focus:ring-accent ${className}`}
     />

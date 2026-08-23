@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { TreeBranchLabel, TreeLeafLabel } from '@/features/api-surface/TreeRowLabel';
 import { Chip } from './Chip';
 import { InsightPanel, InsightSection } from './InsightSection';
@@ -35,7 +35,7 @@ function TestArea({ area, files, reveal }: { area: string; files: TestFile[]; re
 
   useEffect(() => {
     if (holdsReveal) setOpen(true);
-  }, [holdsReveal]);
+  }, [reveal]);
 
   return (
     <>
@@ -53,15 +53,19 @@ function TestArea({ area, files, reveal }: { area: string; files: TestFile[]; re
 function TestFileRows({ file, reveal }: { file: TestFile; reveal: string | null }) {
   const revealed = file.file === reveal;
   const [open, setOpen] = useState(revealed);
+  const row = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
-    if (revealed) setOpen(true);
-  }, [revealed]);
+    if (!revealed) return;
+    setOpen(true);
+    row.current?.scrollIntoView({ block: 'center' });
+  }, [reveal]);
 
   return (
     <>
       <TreeBranchLabel open={open} onToggle={() => setOpen(!open)} depth={1} label={file.file}>
         <span
+          ref={row}
           data-reveal={revealed ? 'true' : undefined}
           className={`flex min-w-0 items-baseline gap-2 py-0.5 ${revealed ? 'rounded-sm bg-procgen px-1 ring-1 ring-accent' : ''}`}
         >

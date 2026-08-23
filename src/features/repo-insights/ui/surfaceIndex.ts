@@ -1,13 +1,13 @@
 import type { RepoSurfacePayload } from '@/features/codebases/repoSurfacePayload';
 import { surfaceViewLabels, type SurfaceViewId } from './surfaceViews';
-import type { MapNode, SourceLocation } from '../insightTypes';
+import { locationTarget } from '../sourceTarget';
+import type { MapNode } from '../insightTypes';
 
 export interface SurfaceItem {
   kind: string;
   label: string;
   detail: string;
   viewId: SurfaceViewId;
-  at?: SourceLocation;
   target?: string;
 }
 
@@ -35,24 +35,10 @@ export function surfaceIndex(surface: RepoSurfacePayload): SurfaceItem[] {
   ];
 }
 
-export function locationTarget(at: { file: string; line: number }): string {
-  return `${at.file}:${at.line}`;
-}
-
 function shortLocation(at: { file: string; line: number }): string {
   const segments = at.file.split('/');
   const file = segments.length <= 2 ? at.file : `…/${segments.slice(-2).join('/')}`;
   return `${file}:${at.line}`;
-}
-
-export function targetHoldsPath(target: string | null, path: string): boolean {
-  if (target === null || path === '') return false;
-  const held = target.split(':')[0]!;
-  return held === path || held.startsWith(`${path}/`);
-}
-
-export function surfaceQuery(params: URLSearchParams): string {
-  return params.toString().replace(/%2F/g, '/').replace(/%3A/g, ':');
 }
 
 export function searchSurface(items: SurfaceItem[], query: string): SurfaceGroup[] {
@@ -96,10 +82,9 @@ function rankOf(item: SurfaceItem, needle: string): number | null {
 function endpointItems(surface: RepoSurfacePayload): SurfaceItem[] {
   return surface.endpoints.map((endpoint) => ({
     kind: endpoint.method,
-    label: `${endpoint.method} ${endpoint.path}`,
+    label: endpoint.path,
     detail: `${endpoint.code.symbol} · ${shortLocation(endpoint.code)}`,
     viewId: 'api' as const,
-    at: endpoint.code,
     target: locationTarget(endpoint.code),
   }));
 }
@@ -126,7 +111,6 @@ function typeItems(surface: RepoSurfacePayload): SurfaceItem[] {
         label: entry.name,
         detail: `${section.title} · ${shortLocation(entry)}`,
         viewId: 'api',
-        at: entry,
       });
     }
   }
@@ -139,7 +123,6 @@ function entryPointItems(surface: RepoSurfacePayload): SurfaceItem[] {
     label: `${entry.method} ${entry.name}`.trim(),
     detail: `${entry.framework} · ${shortLocation(entry.at)}`,
     viewId: 'entry' as const,
-    at: entry.at,
   }));
 }
 
@@ -164,7 +147,6 @@ function mapItems(map: MapNode): SurfaceItem[] {
         label: symbol.name,
         detail: shortLocation(symbol.at),
         viewId: 'map',
-        at: symbol.at,
         target: locationTarget(symbol.at),
       });
     }
@@ -191,14 +173,12 @@ function runtimeItems(surface: RepoSurfacePayload): SurfaceItem[] {
       label: held.name,
       detail: held.documented ? 'documented' : `${held.sites.length} reads · undocumented`,
       viewId: 'runtime' as const,
-      at: held.sites[0],
     })),
     ...ports.map((held) => ({
       kind: 'port',
       label: `:${held.port}`,
       detail: shortLocation(held.at),
       viewId: 'runtime' as const,
-      at: held.at,
     })),
     ...scripts.map((script) => ({
       kind: 'script',
@@ -227,7 +207,6 @@ function modelItems(surface: RepoSurfacePayload): SurfaceItem[] {
     label: model.name,
     detail: `${model.fields.length} fields · ${shortLocation(model.at)}`,
     viewId: 'models' as const,
-    at: model.at,
   }));
 }
 

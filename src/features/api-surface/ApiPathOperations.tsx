@@ -1,22 +1,31 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { ApiCallTreeTrigger, type ApiCallTreeRoot } from './ApiCallTreeTooltip';
+import { locationTarget } from '@/features/repo-insights/sourceTarget';
 import type { ApiEndpoint } from './apiEndpointTypes';
 
 export function ApiPathOperations({
   endpoints,
   methods,
   label,
-  revealed,
+  reveal,
 }: {
   endpoints: ApiEndpoint[];
   methods: string[];
   label: ReactNode;
-  revealed: boolean;
+  reveal: string | null;
 }) {
+  const row = useRef<HTMLTableRowElement>(null);
+  const revealed = endpoints.some((endpoint) => locationTarget(endpoint.code) === reveal);
+
+  useEffect(() => {
+    if (revealed) row.current?.scrollIntoView({ block: 'center' });
+  }, [reveal]);
+
   return (
     <tr
+      ref={row}
       data-reveal={revealed ? 'true' : undefined}
       className={`border-b border-panel-edge/70 last:border-b-0 ${revealed ? 'bg-procgen ring-1 ring-inset ring-accent' : 'bg-btn/18'}`}
     >

@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { TreeBranchLabel, TreeLeafLabel } from '@/features/api-surface/TreeRowLabel';
 import { Chip } from './Chip';
 import { InsightPanel, InsightSection } from './InsightSection';
 import { MeterBar } from './MeterBar';
 import { SourceRef } from './SourceRef';
-import { locationTarget, targetHoldsPath } from './surfaceIndex';
-import type { MapNode } from '../insightTypes';
+import { locationTarget, targetHoldsPath } from '../sourceTarget';
+import type { MapNode, MapSymbol } from '../insightTypes';
 
 const REVEALED_ROW = 'rounded-sm bg-procgen px-1 ring-1 ring-accent';
 
@@ -33,36 +33,50 @@ function MapNodeRows({ node, depth, reveal }: { node: MapNode; depth: number; re
   return (
     <>
       {node.children.map((child) => <MapBranch key={child.path} node={child} depth={depth} reveal={reveal} />)}
-      {node.symbols.map((symbol) => {
-        const revealed = locationTarget(symbol.at) === reveal;
-        return (
-          <TreeLeafLabel key={locationTarget(symbol.at)} depth={depth} glyph="·">
-            <span
-              data-reveal={revealed ? 'true' : undefined}
-              className={`flex items-baseline gap-2 py-0.5 ${revealed ? REVEALED_ROW : ''}`}
-            >
-              <Chip>{symbol.kind}</Chip>
-              <span className="font-mono text-[11px] text-ink">{symbol.name}</span>
-              <SourceRef at={symbol.at} />
-            </span>
-          </TreeLeafLabel>
-        );
-      })}
+      {node.symbols.map((symbol) => (
+        <MapSymbolRow key={locationTarget(symbol.at)} symbol={symbol} depth={depth} reveal={reveal} />
+      ))}
     </>
+  );
+}
+
+function MapSymbolRow({ symbol, depth, reveal }: { symbol: MapSymbol; depth: number; reveal: string | null }) {
+  const row = useRef<HTMLSpanElement>(null);
+  const revealed = locationTarget(symbol.at) === reveal;
+
+  useEffect(() => {
+    if (revealed) row.current?.scrollIntoView({ block: 'center' });
+  }, [reveal]);
+
+  return (
+    <TreeLeafLabel depth={depth} glyph="·">
+      <span
+        ref={row}
+        data-reveal={revealed ? 'true' : undefined}
+        className={`flex items-baseline gap-2 py-0.5 ${revealed ? REVEALED_ROW : ''}`}
+      >
+        <Chip>{symbol.kind}</Chip>
+        <span className="font-mono text-[11px] text-ink">{symbol.name}</span>
+        <SourceRef at={symbol.at} />
+      </span>
+    </TreeLeafLabel>
   );
 }
 
 function MapBranch({ node, depth, reveal }: { node: MapNode; depth: number; reveal: string | null }) {
   const [open, setOpen] = useState(depth === 0 || targetHoldsPath(reveal, node.path));
+  const row = useRef<HTMLSpanElement>(null);
+  const hasContents = node.children.length > 0 || node.symbols.length > 0;
+  const revealed = node.path === reveal;
 
   useEffect(() => {
     if (targetHoldsPath(reveal, node.path)) setOpen(true);
+    if (revealed) row.current?.scrollIntoView({ block: 'center' });
   }, [reveal, node.path]);
 
-  const hasContents = node.children.length > 0 || node.symbols.length > 0;
-  const revealed = node.path === reveal;
   const label = (
     <span
+      ref={row}
       data-reveal={revealed ? 'true' : undefined}
       className={`flex min-w-0 items-baseline gap-2 py-0.5 ${revealed ? REVEALED_ROW : ''}`}
     >

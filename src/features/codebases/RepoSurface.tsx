@@ -16,7 +16,8 @@ import { RepoRefProvider } from '@/features/repo-insights/ui/SourceRef';
 import { StructureMapView } from '@/features/repo-insights/ui/StructureMapView';
 import { TestsView } from '@/features/repo-insights/ui/TestsView';
 import { ViewSwitcher } from '@/features/repo-insights/ui/ViewSwitcher';
-import { surfaceIndex, surfaceQuery, type SurfaceItem } from '@/features/repo-insights/ui/surfaceIndex';
+import { surfaceIndex, type SurfaceItem } from '@/features/repo-insights/ui/surfaceIndex';
+import { surfaceQuery } from '@/features/repo-insights/sourceTarget';
 import { defaultViewId, surfaceViews, type SurfaceViewId } from '@/features/repo-insights/ui/surfaceViews';
 import type { RepoSurfacePayload } from '@/features/codebases/repoSurfacePayload';
 import { ApiClientError, apiJson } from '@/features/sources/apiClient';
@@ -111,15 +112,6 @@ function SurfaceBody({ surface, heading }: { surface: RepoSurfacePayload; headin
   const reveal = searchParams.get('at');
   const items = useMemo(() => surfaceIndex(surface), [surface]);
 
-  useEffect(() => {
-    if (!reveal) return;
-    const timer = setTimeout(
-      () => document.querySelector('[data-reveal="true"]')?.scrollIntoView({ block: 'center' }),
-      60,
-    );
-    return () => clearTimeout(timer);
-  }, [reveal, shown]);
-
   const hrefFor = (id: SurfaceViewId, target?: string) => {
     const params = new URLSearchParams(searchParams);
     params.delete('at');
@@ -139,8 +131,9 @@ function SurfaceBody({ surface, heading }: { surface: RepoSurfacePayload; headin
   };
 
   const selectItem = (item: SurfaceItem) => {
-    if (item.viewId === shown && (item.target ?? null) === reveal) return;
+    const standing = item.viewId === shown && (item.target ?? null) === reveal;
     window.history.pushState(null, '', jumpHref(item));
+    if (standing) document.querySelector('[data-reveal="true"]')?.scrollIntoView({ block: 'center' });
   };
 
   const { languages } = surface.insights;

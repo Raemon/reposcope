@@ -5,7 +5,7 @@ import { ApiCallTreeTrigger } from './ApiCallTreeTooltip';
 import { ApiPathOperations, callTreeRoot } from './ApiPathOperations';
 import { ChainChevron, TreeBranchLabel, TreeLeafLabel, startsOpen } from './TreeRowLabel';
 import { displayApiPath, type ApiEndpointGroup } from './apiEndpointGroups';
-import { locationTarget } from '@/features/repo-insights/ui/surfaceIndex';
+import { locationTarget } from '@/features/repo-insights/sourceTarget';
 
 export function ApiEndpointTree({
   groups,
@@ -40,11 +40,10 @@ function GroupRows({
   const [open, setOpen] = useState(startsOpen(depth) || holdsReveal);
   const { chain, tail } = layerChain(group);
   const branch = tail.children.length > 0;
-  const revealed = tail.endpoints.some((endpoint) => locationTarget(endpoint.code) === reveal);
 
   useEffect(() => {
     if (holdsReveal) setOpen(true);
-  }, [holdsReveal]);
+  }, [reveal]);
 
   const name = (
     <span className="flex min-w-0 items-center gap-1.5">
@@ -66,7 +65,7 @@ function GroupRows({
   return (
     <>
       {tail.endpoints.length > 0 ? (
-        <ApiPathOperations endpoints={tail.endpoints} methods={methods} label={label} revealed={revealed} />
+        <ApiPathOperations endpoints={tail.endpoints} methods={methods} label={label} reveal={reveal} />
       ) : (
         <PathLayerRow methods={methods} label={label} />
       )}

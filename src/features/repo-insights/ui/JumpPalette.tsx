@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { Chip } from './Chip';
 import { FilterField } from './FilterField';
 import { searchSurface, type SurfaceGroup, type SurfaceItem } from './surfaceIndex';
@@ -19,6 +19,9 @@ export function JumpPalette({
   const [active, setActive] = useState(0);
   const field = useRef<HTMLInputElement>(null);
   const panel = useRef<HTMLDivElement>(null);
+  const base = useId();
+  const panelId = `${base}-results`;
+  const rowId = (index: number) => `${base}-row-${index}`;
 
   const groups = useMemo(() => searchSurface(items, query), [items, query]);
   const rows = useMemo(() => groups.flatMap((group) => group.items), [groups]);
@@ -32,7 +35,8 @@ export function JumpPalette({
         target instanceof HTMLElement &&
         (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
       const summoned = event.key === 'k' && (event.metaKey || event.ctrlKey);
-      if (!summoned && (event.key !== '/' || typing)) return;
+      const slashed = event.key === '/' && !typing && !event.metaKey && !event.ctrlKey && !event.altKey;
+      if (!summoned && !slashed) return;
       event.preventDefault();
       field.current?.focus();
       field.current?.select();
@@ -89,12 +93,20 @@ export function JumpPalette({
         }}
         onFocus={() => setOpen(true)}
         onKeyDown={steer}
+        role="combobox"
+        label="Jump to anything in this repository"
+        expanded={shown}
+        controls={shown ? panelId : undefined}
+        activeRow={shown && rows.length > 0 ? rowId(cursor) : undefined}
         placeholder="jump to anything — press /"
         className="w-72"
       />
       {shown ? (
         <div
           ref={panel}
+          id={panelId}
+          role="listbox"
+          aria-label="Jump results"
           className="absolute right-0 top-full z-40 mt-1 max-h-[60vh] w-[min(34rem,80vw)] overflow-y-auto rounded-md border border-btn-edge bg-tip py-1 shadow-[0_8px_28px_rgba(20,30,50,0.18)]"
         >
           {groups.length === 0 ? (
@@ -106,6 +118,7 @@ export function JumpPalette({
                 group={group}
                 rows={rows}
                 cursor={cursor}
+                rowId={rowId}
                 hrefOf={hrefOf}
                 onHover={setActive}
                 onChoose={choose}
@@ -122,6 +135,7 @@ function JumpGroup({
   group,
   rows,
   cursor,
+  rowId,
   hrefOf,
   onHover,
   onChoose,
@@ -129,6 +143,7 @@ function JumpGroup({
   group: SurfaceGroup;
   rows: SurfaceItem[];
   cursor: number;
+  rowId: (index: number) => string;
   hrefOf: (item: SurfaceItem) => string;
   onHover: (index: number) => void;
   onChoose: (item: SurfaceItem) => void;
@@ -140,7 +155,8 @@ function JumpGroup({
         const index = rows.indexOf(item);
         return (
           <JumpRow
-            key={`${item.label}${item.detail}`}
+            key={`${item.viewId}:${item.label}:${item.detail}`}
+            id={rowId(index)}
             item={item}
             current={index === cursor}
             href={hrefOf(item)}
@@ -157,12 +173,14 @@ function JumpGroup({
 }
 
 function JumpRow({
+  id,
   item,
   current,
   href,
   onHover,
   onChoose,
 }: {
+  id: string;
   item: SurfaceItem;
   current: boolean;
   href: string;
@@ -171,9 +189,12 @@ function JumpRow({
 }) {
   return (
     <a
+      id={id}
+      role="option"
+      aria-selected={current}
       href={href}
       data-active={current}
-      onMouseEnter={onHover}
+      onMouseMove={onHover}
       onMouseDown={(event) => event.preventDefault()}
       onClick={(event) => {
         if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
