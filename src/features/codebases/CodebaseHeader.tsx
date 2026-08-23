@@ -7,6 +7,7 @@ import { HeaderMenu } from './HeaderMenu';
 import { sidebarGroups } from './sidebarGroups';
 import { useSourceResults } from './useSourceResults';
 import { ScopeMark } from '@/features/brand/ScopeMark';
+import { CurrentPullTitle } from '@/features/pull-requests/CurrentPullTitle';
 import { PullRequestMenu } from '@/features/pull-requests/PullRequestMenu';
 import { parseRepoLink, type RepoRef } from '@/features/sources/parseRepoLink';
 import { ThemeToggle } from '@/features/theme/ThemeToggle';
@@ -15,13 +16,15 @@ import { clearGithubToken, removeSource, useGithubToken, useSources, useStoreRea
 export function CodebaseHeader() {
   const pathname = usePathname();
   const reading = repoBeingRead(pathname);
+  const pullNumber = pullBeingRead(pathname);
   return (
     <header className="flex items-center gap-3 border-b border-panel-edge bg-panel px-3 py-1.5">
       <Link href="/" aria-label="reposcope home" className="shrink-0">
         <ScopeMark size={64} title="reposcope home" />
       </Link>
       <CodebaseMenu reading={reading} />
-      {reading && <PullRequestMenu repo={reading} />}
+      {reading &&
+        (pullNumber === null ? <PullRequestMenu repo={reading} /> : <CurrentPullTitle number={pullNumber} />)}
       <div className="ml-auto">
         <ThemeToggle />
       </div>
@@ -93,6 +96,11 @@ function ReadingRow({ reading }: { reading: RepoRef }) {
       </div>
     </nav>
   );
+}
+
+function pullBeingRead(pathname: string): number | null {
+  const match = pathname.match(/^\/repo\/[^/]+\/[^/]+\/pull\/([0-9]{1,9})(?:\/|$)/);
+  return match?.[1] ? Number(match[1]) : null;
 }
 
 function repoBeingRead(pathname: string): RepoRef | null {

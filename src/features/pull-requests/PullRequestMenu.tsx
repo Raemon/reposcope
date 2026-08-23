@@ -18,7 +18,7 @@ export function PullRequestMenu({ repo }: { repo: RepoRef }) {
   );
 }
 
-function PullRequestList({ repo }: { repo: RepoRef }) {
+export function PullRequestList({ repo }: { repo: RepoRef }) {
   const ready = useStoreReady();
   const token = useGithubToken();
   const pathname = usePathname();

@@ -26,6 +26,7 @@ export interface ChangedFile {
 
 export interface PullRequestCommits {
   pull: PullRequestSummary;
+  body: string | null;
   baseRef: string;
   headRef: string;
   additions: number;
@@ -33,9 +34,18 @@ export interface PullRequestCommits {
   commits: CommitSummary[];
 }
 
+export interface PullComment {
+  id: number;
+  author: string;
+  createdAt: string;
+  body: string;
+  path: string | null;
+}
+
 interface GithubPull {
   number: number;
   title: string;
+  body?: string | null;
   user: { login: string } | null;
   updated_at: string;
   draft?: boolean;
@@ -43,6 +53,14 @@ interface GithubPull {
   head: { ref: string };
   additions?: number;
   deletions?: number;
+}
+
+interface GithubComment {
+  id: number;
+  user: { login: string } | null;
+  created_at: string;
+  body?: string;
+  path?: string;
 }
 
 interface GithubChangedFile {
@@ -79,6 +97,7 @@ export async function describePullRequest(owner: string, name: string, number: n
   ]);
   return {
     pull: summarizePull(pull),
+    body: pull.body ?? null,
     baseRef: pull.base.ref,
     headRef: pull.head.ref,
     additions: pull.additions ?? 0,
@@ -99,6 +118,14 @@ export async function listPullRequestFiles(owner: string, name: string, number: 
   return files;
 }
 
+export async function listPullComments(owner: string, name: string, number: number): Promise<PullComment[]> {
+  const [conversation, review] = await Promise.all([
+    githubJson<GithubComment[]>(`${API}/repos/${owner}/${name}/issues/${number}/comments?per_page=100`),
+    githubJson<GithubComment[]>(`${API}/repos/${owner}/${name}/pulls/${number}/comments?per_page=100`),
+  ]);
+  return [...conversation, ...review].map(pullComment).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
 export async function listCommitFiles(owner: string, name: string, sha: string): Promise<ChangedFile[]> {
   const commit = await githubJson<GithubCommit>(`${API}/repos/${owner}/${name}/commits/${sha}`);
   return (commit.files ?? []).map(changedFile);
@@ -112,6 +139,16 @@ function changedFile(file: GithubChangedFile): ChangedFile {
     additions: file.additions,
     deletions: file.deletions,
     patch: file.patch ?? null,
+  };
+}
+
+function pullComment(comment: GithubComment): PullComment {
+  return {
+    id: comment.id,
+    author: comment.user?.login ?? '',
+    createdAt: comment.created_at,
+    body: comment.body ?? '',
+    path: comment.path ?? null,
   };
 }
 

@@ -77,19 +77,17 @@ export function ColumnHeader({
   onCollapse: () => void;
 }) {
   return (
-    <header className="flex items-center gap-1.5 border-b border-panel-edge bg-panel px-1.5 py-[1px]">
+    <button
+      type="button"
+      onClick={onCollapse}
+      aria-label={`Collapse ${title}`}
+      className="flex w-full shrink-0 items-center gap-1.5 border-b border-panel-edge bg-panel px-1.5 py-[1px] text-left hover:bg-btn-hover"
+    >
       <span aria-hidden className="shrink-0 text-[11px] leading-4 text-ink-dim">{icon}</span>
-      <h2 className="shrink-0 text-[10px] uppercase tracking-[0.18em] text-ink-dim">{title}</h2>
+      <span className="shrink-0 text-[10px] uppercase tracking-[0.18em] text-ink-dim">{title}</span>
       {note && <span className="min-w-0 flex-1 truncate text-[10px] text-ink-dim">{note}</span>}
-      <button
-        type="button"
-        onClick={onCollapse}
-        aria-label={`Collapse ${title}`}
-        className="ml-auto shrink-0 px-1 text-[11px] leading-none text-ink-dim hover:text-ink"
-      >
-        ‹
-      </button>
-    </header>
+      <span aria-hidden className="ml-auto shrink-0 px-1 text-[11px] leading-none text-ink-dim">‹</span>
+    </button>
   );
 }
 

@@ -3,9 +3,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChangeCounts } from './ChangeCounts';
 import { DiffPanes, type DiffPanesHandle } from './DiffPanes';
+import { PullDiscussion } from './PullDiscussion';
+import { PullRequestList } from './PullRequestMenu';
 import { ResizableColumn, type ColumnSize } from './ResizableColumn';
+import { setCurrentPull } from './currentPullStore';
 import type { ChangedFile, PullRequestCommits } from './pullRequests';
-import { timeAgo } from '@/features/repo-insights/ui/timeAgo';
 import { RelativeTime } from '@/features/surface-ui/RelativeTime';
 import { apiJson } from '@/features/sources/apiClient';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
@@ -22,9 +24,13 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
   const [selection, setSelection] = useState<string>(WHOLE_PULL);
   const [files, setFiles] = useState<ChangedFile[] | null>(null);
   const [path, setPath] = useState<string | null>(null);
+  const [listSize, setListSize] = useState<ColumnSize>({ width: 300, open: false });
+  const [discussionSize, setDiscussionSize] = useState<ColumnSize>({ width: 320, open: false });
   const [commitSize, setCommitSize] = useState<ColumnSize>({ width: 260, open: true });
   const [fileSize, setFileSize] = useState<ColumnSize>({ width: 280, open: true });
   const diffPanes = useRef<DiffPanesHandle>(null);
+
+  useEffect(() => () => setCurrentPull(null), []);
 
   useEffect(() => {
     if (!ready) return;
@@ -32,6 +38,7 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
     setPull(null);
     setError(null);
     setSelection(WHOLE_PULL);
+    setCurrentPull(null);
     apiJson<PullRequestCommits>(
       `/api/github/pull?owner=${encodeURIComponent(owner)}&name=${encodeURIComponent(repo)}&number=${number}`,
       token,
@@ -39,6 +46,7 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
     )
       .then((loaded) => {
         setPull(loaded);
+        setCurrentPull(loaded);
         setCommitSize((size) => ({ ...size, open: loaded.commits.length > 1 }));
       })
       .catch((issue: unknown) => {
@@ -74,14 +82,13 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="flex items-baseline gap-2 border-b border-panel-edge bg-panel px-2 py-[2px] text-[11px] leading-4">
-        <span className="shrink-0 text-accent">#{pull.pull.number}</span>
-        <span className="min-w-0 flex-1 truncate text-ink">{pull.pull.title}</span>
-        <span className="shrink-0 text-[9px] text-ink-dim">
-          {pull.pull.author} · {pull.headRef} → {pull.baseRef} · {timeAgo(pull.pull.updatedAt)}
-        </span>
-      </header>
       <div className="flex min-h-0 flex-1">
+        <ResizableColumn icon="⇅" title="pull requests" size={listSize} onSize={setListSize}>
+          <PullRequestList repo={{ owner, name: repo }} />
+        </ResizableColumn>
+        <ResizableColumn icon="❝" title="discussion" size={discussionSize} onSize={setDiscussionSize}>
+          <PullDiscussion owner={owner} repo={repo} number={number} author={pull.pull.author} body={pull.body} />
+        </ResizableColumn>
         <ResizableColumn icon="◆" title={`commits · ${pull.commits.length}`} size={commitSize} onSize={setCommitSize}>
           <button
             type="button"
