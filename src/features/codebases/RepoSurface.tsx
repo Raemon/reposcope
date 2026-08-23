@@ -106,7 +106,7 @@ function ElapsedNote() {
 
   useEffect(() => {
     const startedAt = Date.now();
-    const ticker = setInterval(() => setSeconds(Math.round((Date.now() - startedAt) / 1000)), 1000);
+    const ticker = setInterval(() => setSeconds(Math.floor((Date.now() - startedAt) / 1000)), 1000);
     return () => clearInterval(ticker);
   }, []);
 

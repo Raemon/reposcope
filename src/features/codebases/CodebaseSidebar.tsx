@@ -78,8 +78,12 @@ function ReadingRow({ reading }: { reading: RepoRef }) {
 }
 
 function repoBeingRead(pathname: string): RepoRef | null {
-  const segments = pathname.match(/^\/repo\/([^/]+)\/([^/]+)$/);
+  const segments = pathname.match(/^\/repo\/([^/]+)\/([^/]+)\/?$/);
   if (!segments?.[1] || !segments[2]) return null;
-  const parsed = parseRepoLink(`${decodeURIComponent(segments[1])}/${decodeURIComponent(segments[2])}`);
-  return parsed.ok ? parsed.value : null;
+  try {
+    const parsed = parseRepoLink(`${decodeURIComponent(segments[1])}/${decodeURIComponent(segments[2])}`);
+    return parsed.ok ? parsed.value : null;
+  } catch {
+    return null;
+  }
 }
