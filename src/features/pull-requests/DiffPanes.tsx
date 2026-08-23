@@ -98,7 +98,7 @@ function FileDiff({ patch }: { patch: string }) {
           className="relative flex shrink-0 flex-col border-r border-panel-edge"
           style={{ width: addedOpen ? removedSize.width : undefined, flex: addedOpen ? undefined : '1 1 0%' }}
         >
-          <ColumnHeader icon="−" title="removed" onCollapse={() => setRemovedSize({ ...removedSize, open: false })} />
+          <ColumnHeader icon="−" title="removed" hideTitle onCollapse={() => setRemovedSize({ ...removedSize, open: false })} />
           <DiffSide rows={rows} side="left" labels />
           {addedOpen && <DragHandle onPointerDown={startDrag} />}
         </section>
@@ -107,7 +107,7 @@ function FileDiff({ patch }: { patch: string }) {
       )}
       {addedOpen ? (
         <section className="flex min-w-0 flex-1 flex-col">
-          <ColumnHeader icon="+" title="added" onCollapse={() => setAddedOpen(false)} />
+          <ColumnHeader icon="+" title="added" hideTitle onCollapse={() => setAddedOpen(false)} />
           <DiffSide rows={rows} side="right" labels={!removedSize.open} />
         </section>
       ) : (
