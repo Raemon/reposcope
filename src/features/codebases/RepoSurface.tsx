@@ -21,8 +21,7 @@ import { surfaceQuery } from '@/features/repo-insights/sourceTarget';
 import { defaultViewId, surfaceViews, type SurfaceViewId } from '@/features/repo-insights/ui/surfaceViews';
 import type { RepoSurfacePayload } from '@/features/codebases/repoSurfacePayload';
 import { ApiClientError, apiJson } from '@/features/sources/apiClient';
-import { addSource, useGithubToken, useSources, useStoreReady } from '@/features/sources/sourceStore';
-import { coversRepo } from '@/features/sources/sourceTypes';
+import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 
 type SurfaceState =
   | { state: 'loading' }
@@ -41,7 +40,6 @@ export function SurfaceLoading({ heading }: { heading: string }) {
 export function RepoSurface({ owner, repo }: { owner: string; repo: string }) {
   const ready = useStoreReady();
   const token = useGithubToken();
-  const sources = useSources();
   const [held, setHeld] = useState<SurfaceState>({ state: 'loading' });
   const heading = `${owner}/${repo}`;
 
@@ -63,16 +61,6 @@ export function RepoSurface({ owner, repo }: { owner: string; repo: string }) {
     return () => controller.abort();
   }, [owner, repo, token, ready]);
 
-  const offer = ready && !coversRepo(sources, owner, repo) && (
-    <button
-      type="button"
-      onClick={() => addSource({ kind: 'repo', owner, name: repo })}
-      className="mb-3 rounded border border-btn-edge bg-btn px-2 py-0.5 text-[10px] text-ink-dim hover:bg-btn-hover hover:text-ink"
-    >
-      + add to sidebar
-    </button>
-  );
-
   if (held.state === 'loading') return <SurfaceLoading heading={heading} />;
   if (held.state === 'error' && held.status === 404) {
     return (
@@ -89,7 +77,6 @@ export function RepoSurface({ owner, repo }: { owner: string; repo: string }) {
   if (held.state === 'error') {
     return (
       <section className="max-w-2xl">
-        {offer}
         <h1 className="text-xl text-accent">{heading}</h1>
         <p className="mt-2 rounded border border-error-edge bg-error-bg px-3 py-2 text-xs text-error-ink">
           {held.message}
@@ -99,7 +86,6 @@ export function RepoSurface({ owner, repo }: { owner: string; repo: string }) {
   }
   return (
     <RepoRefProvider owner={owner} repo={repo}>
-      {offer}
       <SurfaceBody surface={held.surface} />
     </RepoRefProvider>
   );
