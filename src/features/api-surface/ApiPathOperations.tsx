@@ -8,13 +8,18 @@ export function ApiPathOperations({
   endpoints,
   methods,
   label,
+  revealed,
 }: {
   endpoints: ApiEndpoint[];
   methods: string[];
   label: ReactNode;
+  revealed: boolean;
 }) {
   return (
-    <tr className="border-b border-panel-edge/70 bg-btn/18 last:border-b-0">
+    <tr
+      data-reveal={revealed ? 'true' : undefined}
+      className={`border-b border-panel-edge/70 last:border-b-0 ${revealed ? 'bg-procgen ring-1 ring-inset ring-accent' : 'bg-btn/18'}`}
+    >
       <th scope="row" className="h-7 whitespace-nowrap py-0 pl-2 pr-2.5 text-left font-normal">{label}</th>
       {methods.map((method, index) => {
         const endpoint = endpoints.find((candidate) => candidate.method === method);
