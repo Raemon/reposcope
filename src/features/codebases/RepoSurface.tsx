@@ -15,7 +15,7 @@ import { RepoRefProvider } from '@/features/repo-insights/ui/SourceRef';
 import { StructureMapView } from '@/features/repo-insights/ui/StructureMapView';
 import { TestsView } from '@/features/repo-insights/ui/TestsView';
 import { ViewSwitcher } from '@/features/repo-insights/ui/ViewSwitcher';
-import { defaultViewId, isSurfaceViewId, surfaceViews, type SurfaceViewId } from '@/features/repo-insights/ui/surfaceViews';
+import { defaultViewId, surfaceViews, type SurfaceViewId } from '@/features/repo-insights/ui/surfaceViews';
 import type { RepoSurfacePayload } from '@/features/codebases/repoSurfacePayload';
 import { ApiClientError, apiJson } from '@/features/sources/apiClient';
 import { addSource, useGithubToken, useSources, useStoreReady } from '@/features/sources/sourceStore';
@@ -25,6 +25,10 @@ type SurfaceState =
   | { state: 'loading' }
   | { state: 'error'; status: number; message: string }
   | { state: 'ready'; surface: RepoSurfacePayload };
+
+export function SurfaceLoading() {
+  return <p className="text-xs text-ink-dim">Fetching and parsing the repository…</p>;
+}
 
 export function RepoSurface({ owner, repo }: { owner: string; repo: string }) {
   const ready = useStoreReady();
@@ -61,7 +65,7 @@ export function RepoSurface({ owner, repo }: { owner: string; repo: string }) {
     </button>
   );
 
-  if (held.state === 'loading') return <p className="text-xs text-ink-dim">Fetching and parsing the repository…</p>;
+  if (held.state === 'loading') return <SurfaceLoading />;
   if (held.state === 'error' && held.status === 404) {
     return (
       <section className="max-w-2xl">
@@ -99,10 +103,8 @@ function SurfaceBody({ surface, heading }: { surface: RepoSurfacePayload; headin
   const searchParams = useSearchParams();
   const fallback = defaultViewId(views);
   const requested = searchParams.get('view');
-  const shown =
-    requested && isSurfaceViewId(requested) && views.some((view) => view.id === requested && view.available)
-      ? requested
-      : fallback;
+  const match = views.find((view) => view.id === requested && view.available);
+  const shown = match?.id ?? fallback;
 
   const viewHref = (id: SurfaceViewId) => {
     const params = new URLSearchParams(searchParams);
@@ -113,9 +115,8 @@ function SurfaceBody({ surface, heading }: { surface: RepoSurfacePayload; headin
   };
 
   const selectView = (id: SurfaceViewId) => {
-    const href = viewHref(id);
-    if (href === `${window.location.pathname}${window.location.search}`) return;
-    window.history.pushState(null, '', href);
+    if (id === shown) return;
+    window.history.pushState(null, '', viewHref(id));
   };
 
   const { languages } = surface.insights;

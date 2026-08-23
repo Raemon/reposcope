@@ -1,6 +1,5 @@
 'use client';
 
-import type { MouseEvent } from 'react';
 import { HoverCardTrigger } from '@/features/api-surface/HoverCard';
 import type { SurfaceView, SurfaceViewId } from './surfaceViews';
 
@@ -76,8 +75,8 @@ function ViewTab({
     <a
       href={href}
       aria-current={current ? 'page' : undefined}
-      onClick={(event: MouseEvent<HTMLAnchorElement>) => {
-        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+      onClick={(event) => {
+        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
         event.preventDefault();
         onSelect(view.id);
       }}
