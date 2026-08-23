@@ -29,6 +29,7 @@ interface FoundModel {
   fields: ModelField[];
   at: SourceLocation;
   priority: number;
+  storedIn?: string;
 }
 
 interface SchemaFileHit {
@@ -47,7 +48,9 @@ export function buildSchemaSurface(files: CodebaseFile[]): SchemaSurface {
     if (found.length >= DISCOVERY_LIMIT) break;
     inspectFile(source, found, hits);
   }
-  const models = countCallsites(dedupe(found), files)
+  const tables = dedupe(found);
+  const documents = storedDocumentModels(files, tables, hits);
+  const models = countCallsites(documents.length > 0 ? dedupe([...tables, ...documents]) : tables, files)
     .sort(
       (left, right) =>
         right.callsites - left.callsites ||
@@ -173,7 +176,7 @@ function dirOf(path: string): string {
 // declaration file are skipped.
 // ---------------------------------------------------------------------------
 
-const GENERIC_NAMES = new Set(['Model', 'Base', 'Entity', 'Schema', 'Migration', 'Application', 'Record', 'Table']);
+const GENERIC_NAMES = new Set(['Model', 'Base', 'Entity', 'Schema', 'Migration', 'Application', 'Record', 'Table', 'Map', 'List', 'State', 'Data']);
 
 const TOKEN = /[A-Za-z_][A-Za-z0-9_]*/g;
 const QUOTES = "'\"`";
@@ -184,6 +187,7 @@ function countCallsites(models: FoundModel[], files: CodebaseFile[]): SchemaMode
     kind: model.kind,
     fields: model.fields,
     at: model.at,
+    storedIn: model.storedIn ?? null,
     callsites: 0,
     callsiteFiles: 0,
     sites: [],
@@ -268,6 +272,7 @@ function identifierVariants(model: FoundModel): string[] {
     if (name.length >= 3 && /[A-Z]/.test(name) && !GENERIC_NAMES.has(name)) variants.add(name);
   };
   add(model.name);
+  if (model.kind === 'document') return [...variants];
   add(model.name.replace(/(?:Entity|Model|Schema)$/, ''));
   add(pascalSingular(model.name));
   if (model.table) add(pascalSingular(model.table));
@@ -345,6 +350,7 @@ function dedupe(models: FoundModel[]): FoundModel[] {
       ...winner,
       table: winner.table ?? loser.table,
       varName: winner.varName ?? loser.varName,
+      storedIn: winner.storedIn ?? loser.storedIn,
       fields: winner.fields.length > 0 ? winner.fields : loser.fields,
     });
   }
@@ -662,6 +668,155 @@ function objectLiteralFields(file: ScannedFile, openLine: number): ModelField[] 
     }
   }
   return fields;
+}
+
+// ---------------------------------------------------------------------------
+// Stored JSON documents. When a table with almost no columns carries a JSON
+// column (procgen's `Doc { name, json }`), the database has delegated its
+// schema to application types. The real models are found by locating a
+// document registry: a TypeScript interface or union whose name signals
+// storage (Stored*, Persisted*, *DocumentContents, or the store model's own
+// name) and whose entries mostly resolve to object types declared in the
+// repo. Each entry becomes a `document` model — named by its payload type,
+// carrying the payload's fields, counted by references like any table.
+// ---------------------------------------------------------------------------
+
+const MAX_DOCUMENTS = 80;
+const STORAGE_NAME = /stored|persisted|saved|serialized|document/i;
+const UI_CONTAINER = /(?:Props|Options|Config|Args|Params|Context|Handlers|Events|Refs)$/;
+const TYPE_WRAPPERS = new Set(['Record', 'Partial', 'Readonly', 'Required', 'Pick', 'Omit', 'Array', 'ReadonlyArray', 'Map', 'Set', 'Promise', 'Maybe', 'NonNullable']);
+
+interface DocumentContainer {
+  file: ScannedFile;
+  line: number;
+  name: string;
+  entries: { key: string; ref: string }[];
+}
+
+function storedDocumentModels(files: CodebaseFile[], models: FoundModel[], hits: SchemaFileHit[]): FoundModel[] {
+  const store = models.find(
+    (model) => model.fields.length > 0 && model.fields.length <= 6 && model.fields.some((field) => /json/i.test(field.type)),
+  );
+  if (!store) return [];
+  const storedIn = `${store.name}.${store.fields.find((field) => /json/i.test(field.type))!.name}`;
+  const { declarations, containers } = scanTypeDeclarations(files, normalizedName(store.name));
+  const documents = new Map<string, FoundModel>();
+  const added = new Map<string, number>();
+  for (const container of containers) {
+    const resolved = container.entries
+      .map((entry) => ({ ...entry, payload: payloadTypeOf(entry.ref, declarations) }))
+      .filter((entry, at, all) => all.findIndex((held) => held.key === entry.key) === at);
+    const payloads = resolved.filter((entry) => entry.payload !== null).length;
+    if (payloads < 3 || payloads * 2 < resolved.length) continue;
+    let grew = 0;
+    for (const entry of resolved) {
+      if (documents.size >= MAX_DOCUMENTS) break;
+      const declared = entry.payload ? declarations.get(entry.payload)! : null;
+      const model: FoundModel = {
+        name: entry.payload ?? entry.key,
+        table: entry.payload === null || entry.payload === entry.key ? null : entry.key,
+        varName: null,
+        kind: 'document',
+        fields: declared ? typeScriptFields(declared.file, declared.line) : [],
+        at: declared ? locationAt(declared.file, declared.line) : locationAt(container.file, container.line),
+        priority: MODEL_CLASS,
+        storedIn,
+      };
+      const key = normalizedName(model.name);
+      const held = documents.get(key);
+      if (!held) grew += 1;
+      if (!held || model.fields.length > held.fields.length) documents.set(key, model);
+    }
+    if (grew > 0) added.set(container.file.path, (added.get(container.file.path) ?? 0) + grew);
+  }
+  for (const [path, models_] of added) {
+    hits.push({ path, kind: 'document', signal: `JSON document registry — payload types stored in ${storedIn}`, migration: false, models: models_ });
+  }
+  return [...documents.values()];
+}
+
+function scanTypeDeclarations(
+  files: CodebaseFile[],
+  storeStem: string,
+): { declarations: Map<string, { file: ScannedFile; line: number }>; containers: DocumentContainer[] } {
+  const declarations = new Map<string, { file: ScannedFile; line: number }>();
+  const containers: DocumentContainer[] = [];
+  const containerName = (name: string) =>
+    !UI_CONTAINER.test(name) && (STORAGE_NAME.test(name) || normalizedName(name) === storeStem);
+  for (const source of files) {
+    if (!/\.(?:ts|tsx|mts)$/.test(source.path)) continue;
+    if (isTestPath(source.path) || isGeneratedPath(source.path) || isMigrationPath(source.path)) continue;
+    if (!source.source.includes('interface ') && !source.source.includes('type ')) continue;
+    const file = scanned(source);
+    file.lines.forEach((line, at) => {
+      const decl = line.match(/^(?:export\s+)?(?:declare\s+)?(?:interface\s+([A-Z]\w*)|type\s+([A-Z]\w*)\s*=\s*\{)/);
+      const name = decl?.[1] ?? decl?.[2];
+      if (name) {
+        if (!declarations.has(name)) declarations.set(name, { file, line: at });
+        if (containerName(name)) {
+          const entries = objectTypeEntries(file, at);
+          if (entries.length >= 3) containers.push({ file, line: at, name, entries });
+        }
+        return;
+      }
+      const union = line.match(/^(?:export\s+)?type\s+([A-Z]\w*)\s*=\s*(.*)$/);
+      if (union && containerName(union[1]!)) {
+        const members = unionMembers(file, at, union[2]!);
+        if (members.length >= 3) {
+          containers.push({ file, line: at, name: union[1]!, entries: members.map((member) => ({ key: member, ref: member })) });
+        }
+      }
+    });
+  }
+  return { declarations, containers };
+}
+
+function objectTypeEntries(file: ScannedFile, openLine: number): { key: string; ref: string }[] {
+  const entries: { key: string; ref: string }[] = [];
+  let bodyIndent: number | null = null;
+  for (let scan = openLine + 1; scan < Math.min(openLine + BLOCK_LIMIT, file.lines.length); scan += 1) {
+    const row = file.lines[scan]!;
+    if (/^\}/.test(row)) break;
+    if (row.trim() === '') continue;
+    const indent = row.match(/^\s*/)![0].length;
+    bodyIndent ??= indent;
+    if (indent !== bodyIndent) continue;
+    const entry = row.match(/^\s+(?:readonly\s+)?['"]?(\w+)['"]?\??\s*:\s*([^;]+);?\s*$/);
+    if (!entry || entry[2]!.includes('=>') || entry[2]!.trimStart().startsWith('(')) continue;
+    entries.push({ key: entry[1]!, ref: entry[2]!.trim() });
+  }
+  return entries;
+}
+
+function unionMembers(file: ScannedFile, openLine: number, rest: string): string[] {
+  let joined = rest;
+  for (let scan = openLine + 1; scan < Math.min(openLine + 40, file.lines.length); scan += 1) {
+    const row = file.lines[scan]!.trim();
+    if (!row.startsWith('|')) break;
+    joined += ` ${row}`;
+  }
+  return joined
+    .split('|')
+    .map((part) => part.trim().replace(/;$/, ''))
+    .filter((part) => /^[A-Z]\w*$/.test(part));
+}
+
+function payloadTypeOf(ref: string, declarations: Map<string, { file: ScannedFile; line: number }>): string | null {
+  const generic = ref.indexOf('<');
+  const scopes = generic >= 0 ? [ref.slice(generic + 1), ref] : [ref];
+  for (const scope of scopes) {
+    for (const token of scope.match(/[A-Z]\w*/g) ?? []) {
+      if (TYPE_WRAPPERS.has(token)) continue;
+      if (declarations.has(token)) return token;
+    }
+  }
+  return null;
+}
+
+function typeScriptFields(file: ScannedFile, line: number): ModelField[] {
+  return objectTypeEntries(file, line)
+    .slice(0, MAX_FIELDS)
+    .map((entry) => ({ name: entry.key, type: entry.ref.length > 30 ? `${entry.ref.slice(0, 30)}…` : entry.ref }));
 }
 
 function mongooseModels(file: ScannedFile, found: FoundModel[]): void {
