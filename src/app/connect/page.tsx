@@ -15,5 +15,5 @@ export default function ConnectPage() {
     window.history.replaceState(null, '', '/connect');
     router.replace(token ? '/' : `/?error=${encodeURIComponent('GitHub sign-in returned no token')}`);
   }, [router]);
-  return <p className="text-xs text-ink-dim">Connecting GitHub…</p>;
+  return <p className="p-6 text-xs text-ink-dim">Connecting GitHub…</p>;
 }

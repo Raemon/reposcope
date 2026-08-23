@@ -18,7 +18,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       <body className="h-full bg-bg font-mono text-ink">
         <div className="flex h-full flex-col">
           <CodebaseHeader />
-          <main className="min-h-0 flex-1 overflow-auto p-6">{children}</main>
+          <main className="min-h-0 flex-1 overflow-auto">{children}</main>
         </div>
       </body>
     </html>
