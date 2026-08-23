@@ -2,7 +2,7 @@
 
 import { createContext, useContext, type ReactNode } from 'react';
 import { HoverCardTrigger } from './HoverCard';
-import type { SourceLocation } from '@/features/repo-insights/insightTypes';
+import type { SourceLocation } from './sourceLocation';
 
 export const RepoRefContext = createContext<{ owner: string; repo: string } | null>(null);
 

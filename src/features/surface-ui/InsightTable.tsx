@@ -16,7 +16,7 @@ export function InsightTable({
       <caption className="sr-only">{caption}</caption>
       {colgroup ? (
         <colgroup>
-          {columns.map((column) => <col key={column} />)}
+          {columns.map((_column, index) => <col key={index} />)}
         </colgroup>
       ) : null}
       <thead className="sr-only">

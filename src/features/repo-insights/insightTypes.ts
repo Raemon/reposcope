@@ -1,8 +1,6 @@
-export interface SourceLocation {
-  file: string;
-  line: number;
-  excerpt: string;
-}
+import type { SourceLocation } from '@/features/surface-ui/sourceLocation';
+
+export type { SourceLocation };
 
 export type EntryPointKind = 'http' | 'websocket' | 'graphql' | 'cli';
 

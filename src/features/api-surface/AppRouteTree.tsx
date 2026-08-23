@@ -2,7 +2,7 @@
 
 import { Fragment, useState } from 'react';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
-import { ChainChevron, TreeBranchLabel, TreeLeafLabel, startsOpen } from '@/features/surface-ui/TreeRowLabel';
+import { ChainChevron, NESTED_GLYPH, TreeBranchLabel, TreeLeafLabel, startsOpen } from '@/features/surface-ui/TreeRowLabel';
 import type { AppRoute, AppRouteApiCall, AppRouteComponent } from './appRouteCatalog';
 
 export function AppRouteTree({ routes }: { routes: AppRoute[] }) {
@@ -91,7 +91,7 @@ function AppRouteComponentRow({
               {name}
             </TreeBranchLabel>
           ) : (
-            <TreeLeafLabel depth={depth} glyph="↳">{name}</TreeLeafLabel>
+            <TreeLeafLabel depth={depth} glyph={NESTED_GLYPH}>{name}</TreeLeafLabel>
           )}
         </td>
         <CallChipsCell calls={chainCalls(chain)} />
