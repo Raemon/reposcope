@@ -14,7 +14,7 @@ interface TipPosition {
 export type TipPlacement = 'side' | 'below';
 
 const OFFSCREEN: TipPosition = { left: -9999, top: -9999 };
-const HOVER_INTENT_MS = 100;
+const HOVER_INTENT_MS = 500;
 const HOVER_GRACE_MS = 220;
 
 export function HoverCardTrigger({
@@ -56,6 +56,7 @@ export function HoverCardTrigger({
   }, [clearTimers]);
 
   const scheduleHide = useCallback(() => {
+    clearTimeout(timers.current.reach);
     clearTimeout(timers.current.hide);
     timers.current.hide = setTimeout(hide, HOVER_GRACE_MS);
   }, [hide]);
