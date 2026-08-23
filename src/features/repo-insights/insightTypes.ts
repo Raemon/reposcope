@@ -84,11 +84,27 @@ export interface ModelField {
   type: string;
 }
 
-export interface DataModel {
+export interface SchemaModel {
   name: string;
   kind: string;
   fields: ModelField[];
   at: SourceLocation;
+  callsites: number;
+  callsiteFiles: number;
+  sites: SourceLocation[];
+}
+
+export interface SchemaFileGroup {
+  label: string;
+  kind: string;
+  signal: string;
+  files: number;
+  models: number;
+}
+
+export interface SchemaSurface {
+  files: SchemaFileGroup[];
+  models: SchemaModel[];
 }
 
 export interface TestCase {
@@ -124,7 +140,7 @@ export interface RepoInsights {
   map: MapNode;
   dependencies: DependencyManifest[];
   runtime: RuntimeSurface;
-  models: DataModel[];
+  schema: SchemaSurface;
   tests: TestSurface;
   activity: ActivitySummary | null;
 }

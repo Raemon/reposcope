@@ -1,5 +1,5 @@
 import { buildDependencySurface } from './dependencySurface';
-import { discoverDataModels } from './dataModels';
+import { buildSchemaSurface } from './schemaSurface';
 import { discoverEntryPoints } from './entryPoints';
 import { buildRuntimeSurface } from './runtimeSurface';
 import { buildStructureMap } from './structureMap';
@@ -17,7 +17,7 @@ export function buildRepoInsights(codebase: Codebase, endpoints: ApiEndpoint[]):
     map: buildStructureMap(codebase.inventory, codebase.files),
     dependencies: buildDependencySurface(codebase.files, codebase.inventory),
     runtime: buildRuntimeSurface(codebase.files, codebase.inventory),
-    models: discoverDataModels(codebase.files),
+    schema: buildSchemaSurface(codebase.files),
     tests: buildTestSurface(codebase.files),
   };
 }

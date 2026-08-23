@@ -6,7 +6,7 @@ export type SurfaceViewId =
   | 'map'
   | 'dependencies'
   | 'runtime'
-  | 'models'
+  | 'schema'
   | 'tests'
   | 'activity';
 
@@ -16,7 +16,7 @@ export const surfaceViewLabels: Record<SurfaceViewId, string> = {
   map: 'Map',
   dependencies: 'Dependencies',
   runtime: 'Runtime',
-  models: 'Data models',
+  schema: 'Schema',
   tests: 'Tests',
   activity: 'Activity',
 };
@@ -51,9 +51,9 @@ export function surfaceViews(surface: RepoSurfacePayload): SurfaceView[] {
     view('runtime', runtimeCount,
       'No environment variables, ports, scripts, workflows, or container files were detected.',
       'What it needs to run: env vars, ports, runnable scripts, CI workflows, containers.'),
-    view('models', insights.models.length,
-      'No database schemas or ORM models (Prisma, SQL, Django, SQLAlchemy, ActiveRecord, gorm, drizzle…) were detected.',
-      'What it stores: every table and ORM model with its fields.'),
+    view('schema', insights.schema.models.length,
+      'No database schema was detected: no Prisma or GraphQL schema files, SQL DDL or migrations, or ORM models (Django, SQLAlchemy, ActiveRecord, TypeORM, Sequelize, gorm/xorm, drizzle, mongoose…).',
+      'The schema: every table, model, and type — ordered by how often the rest of the code references it.'),
     view('tests', insights.tests.caseCount,
       'No test files with recognizable test cases were found.',
       'What behavior is pinned down: each test file and the cases it declares.'),
