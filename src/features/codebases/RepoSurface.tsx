@@ -29,8 +29,13 @@ type SurfaceState =
   | { state: 'error'; status: number; message: string }
   | { state: 'ready'; surface: RepoSurfacePayload };
 
-export function SurfaceLoading() {
-  return <p className="text-xs text-ink-dim">Fetching and parsing the repository…</p>;
+export function SurfaceLoading({ heading }: { heading: string }) {
+  return (
+    <section className="max-w-2xl">
+      <h1 className="text-xl text-accent">{heading}</h1>
+      <ElapsedNote key={heading} />
+    </section>
+  );
 }
 
 export function RepoSurface({ owner, repo }: { owner: string; repo: string }) {
@@ -68,7 +73,7 @@ export function RepoSurface({ owner, repo }: { owner: string; repo: string }) {
     </button>
   );
 
-  if (held.state === 'loading') return <SurfaceLoading />;
+  if (held.state === 'loading') return <SurfaceLoading heading={heading} />;
   if (held.state === 'error' && held.status === 404) {
     return (
       <section className="max-w-2xl">
@@ -97,6 +102,29 @@ export function RepoSurface({ owner, repo }: { owner: string; repo: string }) {
       {offer}
       <SurfaceBody surface={held.surface} heading={heading} />
     </RepoRefProvider>
+  );
+}
+
+const PATIENCE_SECONDS = 20;
+
+function ElapsedNote() {
+  const [seconds, setSeconds] = useState(0);
+
+  useEffect(() => {
+    const startedAt = Date.now();
+    const ticker = setInterval(() => setSeconds(Math.floor((Date.now() - startedAt) / 1000)), 1000);
+    return () => clearInterval(ticker);
+  }, []);
+
+  return (
+    <>
+      <p className="mt-2 text-xs leading-5 text-ink-dim">Fetching and parsing the repository… {seconds}s</p>
+      {seconds >= PATIENCE_SECONDS && (
+        <p className="mt-1 text-xs leading-5 text-ink-dim">
+          Large repositories take a while: every file is read and parsed before anything is drawn.
+        </p>
+      )}
+    </>
   );
 }
 
