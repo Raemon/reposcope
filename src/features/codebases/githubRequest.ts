@@ -9,9 +9,23 @@ export class GithubRequestError extends Error {
   }
 }
 
+export interface FreshJson<T> {
+  value: T;
+  etag: string | null;
+}
+
 export async function githubJson<T>(url: string): Promise<T> {
   const response = await githubFetch(url);
   return (await response.json()) as T;
+}
+
+export async function githubJsonIfChanged<T>(url: string, etag: string | null): Promise<FreshJson<T> | null> {
+  const headers = githubHeaders('application/vnd.github+json');
+  if (etag) headers['If-None-Match'] = etag;
+  const response = await fetch(url, { headers });
+  if (response.status === 304) return null;
+  if (!response.ok) throw new GithubRequestError(response.status, describeFailure(response, url));
+  return { value: (await response.json()) as T, etag: response.headers.get('etag') };
 }
 
 export async function githubBytes(url: string): Promise<Uint8Array> {

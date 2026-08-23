@@ -1,4 +1,7 @@
+import type { CommitInfo } from '@/features/codebases/repoHead';
 import type { SourceLocation } from '@/features/surface-ui/sourceLocation';
+
+export type { CommitInfo };
 
 export type EntryPointKind = 'http' | 'websocket' | 'graphql' | 'cli';
 
@@ -123,13 +126,6 @@ export interface TestFile {
 export interface TestSurface {
   files: TestFile[];
   caseCount: number;
-}
-
-export interface CommitInfo {
-  sha: string;
-  message: string;
-  author: string;
-  date: string;
 }
 
 export interface ActivitySummary {

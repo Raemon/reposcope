@@ -4,7 +4,7 @@ import { useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { ChangeCounts } from './ChangeCounts';
 import { ColumnHeader, CollapsedColumn, DragHandle, useDragWidth, type ColumnSize } from './ResizableColumn';
 import { splitDiff, type DiffCell, type DiffRow } from './splitDiff';
-import type { CommitFile } from './pullRequests';
+import type { ChangedFile } from './pullRequests';
 
 const ROW = 'flex h-[15px] items-center gap-1 leading-[15px]';
 const GUTTER = 'w-[38px] shrink-0 select-none pr-1 text-right text-[9px] text-ink-dim';
@@ -14,7 +14,7 @@ export interface DiffPanesHandle {
   scrollToFile: (path: string) => void;
 }
 
-export function DiffPanes({ files, ref }: { files: CommitFile[] | null; ref?: Ref<DiffPanesHandle> }) {
+export function DiffPanes({ files, ref }: { files: ChangedFile[] | null; ref?: Ref<DiffPanesHandle> }) {
   const scroller = useRef<HTMLDivElement | null>(null);
   const sections = useRef(new Map<string, HTMLElement>());
 
@@ -59,7 +59,7 @@ function animateScrollTop(container: HTMLElement, target: number) {
   requestAnimationFrame(step);
 }
 
-function FileSection({ file, sectionRef }: { file: CommitFile; sectionRef: (node: HTMLElement | null) => void }) {
+function FileSection({ file, sectionRef }: { file: ChangedFile; sectionRef: (node: HTMLElement | null) => void }) {
   const [open, setOpen] = useState(true);
   return (
     <section ref={sectionRef} className="border-b border-panel-edge">
