@@ -1,20 +1,34 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { ApiCallTreeTrigger, type ApiCallTreeRoot } from './ApiCallTreeTooltip';
+import { locationTarget } from '@/features/repo-insights/sourceTarget';
 import type { ApiEndpoint } from './apiEndpointTypes';
 
 export function ApiPathOperations({
   endpoints,
   methods,
   label,
+  reveal,
 }: {
   endpoints: ApiEndpoint[];
   methods: string[];
   label: ReactNode;
+  reveal: string | null;
 }) {
+  const row = useRef<HTMLTableRowElement>(null);
+  const revealed = endpoints.some((endpoint) => locationTarget(endpoint.code) === reveal);
+
+  useEffect(() => {
+    if (revealed) row.current?.scrollIntoView({ block: 'center' });
+  }, [reveal]);
+
   return (
-    <tr className="border-b border-panel-edge/70 bg-btn/18 last:border-b-0">
+    <tr
+      ref={row}
+      data-reveal={revealed ? 'true' : undefined}
+      className={`border-b border-panel-edge/70 last:border-b-0 ${revealed ? 'bg-procgen ring-1 ring-inset ring-accent' : 'bg-btn/18'}`}
+    >
       <th scope="row" className="h-7 whitespace-nowrap py-0 pl-2 pr-2.5 text-left font-normal">{label}</th>
       {methods.map((method, index) => {
         const endpoint = endpoints.find((candidate) => candidate.method === method);

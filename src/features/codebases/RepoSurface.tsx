@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { usePathname, useSearchParams } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
 import { ApiEndpointDocumentation } from '@/features/api-surface/ApiEndpointDocumentation';
 import { ApiTypeDocumentation } from '@/features/api-surface/ApiTypeDocumentation';
 import { AppRouteDocumentation } from '@/features/api-surface/AppRouteDocumentation';
@@ -8,12 +9,15 @@ import { ActivityView } from '@/features/repo-insights/ui/ActivityView';
 import { DataModelsView } from '@/features/repo-insights/ui/DataModelsView';
 import { DependenciesView } from '@/features/repo-insights/ui/DependenciesView';
 import { EntryPointsView } from '@/features/repo-insights/ui/EntryPointsView';
+import { JumpPalette } from '@/features/repo-insights/ui/JumpPalette';
 import { MeterBar } from '@/features/repo-insights/ui/MeterBar';
 import { RuntimeView } from '@/features/repo-insights/ui/RuntimeView';
 import { RepoRefProvider } from '@/features/repo-insights/ui/SourceRef';
 import { StructureMapView } from '@/features/repo-insights/ui/StructureMapView';
 import { TestsView } from '@/features/repo-insights/ui/TestsView';
 import { ViewSwitcher } from '@/features/repo-insights/ui/ViewSwitcher';
+import { surfaceIndex, type SurfaceItem } from '@/features/repo-insights/ui/surfaceIndex';
+import { surfaceQuery } from '@/features/repo-insights/sourceTarget';
 import { defaultViewId, surfaceViews, type SurfaceViewId } from '@/features/repo-insights/ui/surfaceViews';
 import type { RepoSurfacePayload } from '@/features/codebases/repoSurfacePayload';
 import { ApiClientError, apiJson } from '@/features/sources/apiClient';
@@ -24,6 +28,15 @@ type SurfaceState =
   | { state: 'loading' }
   | { state: 'error'; status: number; message: string }
   | { state: 'ready'; surface: RepoSurfacePayload };
+
+export function SurfaceLoading({ heading }: { heading: string }) {
+  return (
+    <section className="max-w-2xl">
+      <h1 className="text-xl text-accent">{heading}</h1>
+      <ElapsedNote key={heading} />
+    </section>
+  );
+}
 
 export function RepoSurface({ owner, repo }: { owner: string; repo: string }) {
   const ready = useStoreReady();
@@ -60,14 +73,7 @@ export function RepoSurface({ owner, repo }: { owner: string; repo: string }) {
     </button>
   );
 
-  if (held.state === 'loading') {
-    return (
-      <section className="max-w-2xl">
-        <h1 className="text-xl text-accent">{heading}</h1>
-        <ElapsedNote key={heading} />
-      </section>
-    );
-  }
+  if (held.state === 'loading') return <SurfaceLoading heading={heading} />;
   if (held.state === 'error' && held.status === 404) {
     return (
       <section className="max-w-2xl">
@@ -124,12 +130,44 @@ function ElapsedNote() {
 
 function SurfaceBody({ surface, heading }: { surface: RepoSurfacePayload; heading: string }) {
   const views = surfaceViews(surface);
-  const [active, setActive] = useState<SurfaceViewId>(() => defaultViewId(views));
-  const shown = views.find((view) => view.id === active && view.available) ? active : defaultViewId(views);
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const fallback = defaultViewId(views);
+  const requested = searchParams.get('view');
+  const match = views.find((view) => view.id === requested && view.available);
+  const shown = match?.id ?? fallback;
+
+  const reveal = searchParams.get('at');
+  const items = useMemo(() => surfaceIndex(surface), [surface]);
+
+  const hrefFor = (id: SurfaceViewId, target?: string) => {
+    const params = new URLSearchParams(searchParams);
+    params.delete('at');
+    if (id === fallback) params.delete('view');
+    else params.set('view', id);
+    if (target) params.set('at', target);
+    const query = surfaceQuery(params);
+    return query ? `${pathname}?${query}` : pathname;
+  };
+
+  const viewHref = (id: SurfaceViewId) => hrefFor(id);
+  const jumpHref = (item: SurfaceItem) => hrefFor(item.viewId, item.target);
+
+  const selectView = (id: SurfaceViewId) => {
+    if (id === shown && reveal === null) return;
+    window.history.pushState(null, '', viewHref(id));
+  };
+
+  const selectItem = (item: SurfaceItem) => {
+    const standing = item.viewId === shown && (item.target ?? null) === reveal;
+    window.history.pushState(null, '', jumpHref(item));
+    if (standing) document.querySelector('[data-reveal="true"]')?.scrollIntoView({ block: 'center' });
+  };
+
   const { languages } = surface.insights;
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+      <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1">
         <p className="text-[10px] uppercase tracking-[0.18em] text-ink-dim">{surface.read}</p>
         {languages.length > 0 ? (
           <span className="flex items-center gap-2">
@@ -146,20 +184,36 @@ function SurfaceBody({ surface, heading }: { surface: RepoSurfacePayload; headin
             </span>
           </span>
         ) : null}
+        <JumpPalette items={items} hrefOf={jumpHref} onSelect={selectItem} />
       </div>
-      <ViewSwitcher views={views} active={shown} onSelect={setActive} />
-      <ActiveView id={shown} surface={surface} heading={heading} />
+      <ViewSwitcher views={views} active={shown} viewHref={viewHref} onSelect={selectView} />
+      <ActiveView id={shown} surface={surface} heading={heading} reveal={reveal} />
     </div>
   );
 }
 
-function ActiveView({ id, surface, heading }: { id: SurfaceViewId; surface: RepoSurfacePayload; heading: string }) {
+function ActiveView({
+  id,
+  surface,
+  heading,
+  reveal,
+}: {
+  id: SurfaceViewId;
+  surface: RepoSurfacePayload;
+  heading: string;
+  reveal: string | null;
+}) {
   const { insights } = surface;
   switch (id) {
     case 'api':
       return (
         <div className="flex flex-wrap items-start gap-8">
-          <ApiEndpointDocumentation endpoints={surface.endpoints} heading={heading} summary="Traced from the source" />
+          <ApiEndpointDocumentation
+            endpoints={surface.endpoints}
+            heading={heading}
+            summary="Traced from the source"
+            reveal={reveal}
+          />
           <ApiTypeDocumentation sections={surface.typeSections} />
           <AppRouteDocumentation routes={surface.routes} />
         </div>
@@ -167,7 +221,7 @@ function ActiveView({ id, surface, heading }: { id: SurfaceViewId; surface: Repo
     case 'entry':
       return <EntryPointsView entryPoints={insights.entryPoints} deepCount={surface.endpoints.length} />;
     case 'map':
-      return <StructureMapView map={insights.map} />;
+      return <StructureMapView map={insights.map} reveal={reveal} />;
     case 'dependencies':
       return <DependenciesView manifests={insights.dependencies} />;
     case 'runtime':
@@ -175,7 +229,7 @@ function ActiveView({ id, surface, heading }: { id: SurfaceViewId; surface: Repo
     case 'models':
       return <DataModelsView models={insights.models} />;
     case 'tests':
-      return <TestsView tests={insights.tests} />;
+      return <TestsView tests={insights.tests} reveal={reveal} />;
     case 'activity':
       return insights.activity ? <ActivityView activity={insights.activity} /> : null;
   }

@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { TreeBranchLabel, TreeLeafLabel } from '@/features/api-surface/TreeRowLabel';
 import { Chip } from './Chip';
 import { InsightPanel, InsightSection } from './InsightSection';
 import type { TestFile, TestSurface } from '../insightTypes';
 
-export function TestsView({ tests }: { tests: TestSurface }) {
+export function TestsView({ tests, reveal }: { tests: TestSurface; reveal: string | null }) {
   const areas = new Map<string, TestFile[]>();
   for (const file of tests.files) {
     const area = file.file.includes('/') ? file.file.split('/')[0]! : '(root)';
@@ -22,15 +22,21 @@ export function TestsView({ tests }: { tests: TestSurface }) {
       as="h1"
     >
       <InsightPanel className="px-2 py-1.5">
-        {[...areas].map(([area, files]) => <TestArea key={area} area={area} files={files} />)}
+        {[...areas].map(([area, files]) => <TestArea key={area} area={area} files={files} reveal={reveal} />)}
       </InsightPanel>
     </InsightSection>
   );
 }
 
-function TestArea({ area, files }: { area: string; files: TestFile[] }) {
+function TestArea({ area, files, reveal }: { area: string; files: TestFile[]; reveal: string | null }) {
   const [open, setOpen] = useState(true);
   const total = files.reduce((sum, file) => sum + file.caseCount, 0);
+  const holdsReveal = files.some((file) => file.file === reveal);
+
+  useEffect(() => {
+    if (holdsReveal) setOpen(true);
+  }, [reveal]);
+
   return (
     <>
       <TreeBranchLabel open={open} onToggle={() => setOpen(!open)} depth={0} label={area}>
@@ -39,17 +45,30 @@ function TestArea({ area, files }: { area: string; files: TestFile[] }) {
           <span className="font-mono text-[10px] text-ink-dim">{total} cases · {files.length} files</span>
         </span>
       </TreeBranchLabel>
-      {open ? files.map((file) => <TestFileRows key={file.file} file={file} />) : null}
+      {open ? files.map((file) => <TestFileRows key={file.file} file={file} reveal={reveal} />) : null}
     </>
   );
 }
 
-function TestFileRows({ file }: { file: TestFile }) {
-  const [open, setOpen] = useState(false);
+function TestFileRows({ file, reveal }: { file: TestFile; reveal: string | null }) {
+  const revealed = file.file === reveal;
+  const [open, setOpen] = useState(revealed);
+  const row = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (!revealed) return;
+    setOpen(true);
+    row.current?.scrollIntoView({ block: 'center' });
+  }, [reveal]);
+
   return (
     <>
       <TreeBranchLabel open={open} onToggle={() => setOpen(!open)} depth={1} label={file.file}>
-        <span className="flex min-w-0 items-baseline gap-2 py-0.5">
+        <span
+          ref={row}
+          data-reveal={revealed ? 'true' : undefined}
+          className={`flex min-w-0 items-baseline gap-2 py-0.5 ${revealed ? 'rounded-sm bg-procgen px-1 ring-1 ring-accent' : ''}`}
+        >
           <span className="truncate font-mono text-[11px] text-ink">{file.file}</span>
           <Chip>{file.framework}</Chip>
           <span className="whitespace-nowrap font-mono text-[10px] text-ink-dim">{file.caseCount}</span>
