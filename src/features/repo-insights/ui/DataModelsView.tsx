@@ -1,8 +1,8 @@
 'use client';
 
-import { Chip } from './Chip';
-import { InsightPanel, InsightSection } from './InsightSection';
-import { SourceRef } from './SourceRef';
+import { Chip } from '@/features/surface-ui/Chip';
+import { InsightPanel, InsightSection } from '@/features/surface-ui/InsightSection';
+import { SourceRef } from '@/features/surface-ui/SourceRef';
 import type { DataModel } from '../insightTypes';
 
 export function DataModelsView({ models }: { models: DataModel[] }) {

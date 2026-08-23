@@ -1,8 +1,8 @@
 'use client';
 
 import { Fragment, useState } from 'react';
-import { HoverCardTrigger } from './HoverCard';
-import { ChainChevron, TreeBranchLabel, TreeLeafLabel, startsOpen } from './TreeRowLabel';
+import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
+import { ChainChevron, TreeBranchLabel, TreeLeafLabel, startsOpen } from '@/features/surface-ui/TreeRowLabel';
 import type { AppRoute, AppRouteApiCall, AppRouteComponent } from './appRouteCatalog';
 
 export function AppRouteTree({ routes }: { routes: AppRoute[] }) {

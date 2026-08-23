@@ -1,11 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { TreeBranchLabel, TreeLeafLabel } from '@/features/api-surface/TreeRowLabel';
-import { Chip } from './Chip';
-import { InsightPanel, InsightSection } from './InsightSection';
-import { MeterBar } from './MeterBar';
-import { SourceRef } from './SourceRef';
+import { TreeBranchLabel, TreeLeafLabel } from '@/features/surface-ui/TreeRowLabel';
+import { Chip } from '@/features/surface-ui/Chip';
+import { InsightPanel, InsightSection } from '@/features/surface-ui/InsightSection';
+import { MeterBar } from '@/features/surface-ui/MeterBar';
+import { SourceRef } from '@/features/surface-ui/SourceRef';
 import type { MapNode } from '../insightTypes';
 
 export function StructureMapView({ map }: { map: MapNode }) {

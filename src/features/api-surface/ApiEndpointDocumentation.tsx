@@ -1,6 +1,7 @@
 import { apiMethodColumns, groupApiEndpoints } from './apiEndpointGroups';
 import { ApiEndpointTree } from './ApiEndpointTree';
-import { InsightPanel, InsightSection } from '@/features/repo-insights/ui/InsightSection';
+import { InsightPanel, InsightSection } from '@/features/surface-ui/InsightSection';
+import { InsightTable } from '@/features/surface-ui/InsightTable';
 import type { ApiEndpoint } from './apiEndpointTypes';
 
 export function ApiEndpointDocumentation({
@@ -27,22 +28,9 @@ export function ApiEndpointDocumentation({
       as="h1"
     >
       <InsightPanel>
-        <table className="table-auto border-collapse">
-          <caption className="sr-only">API endpoints grouped by URL layer</caption>
-          <colgroup>
-            <col />
-            {methods.map((method) => <col key={method} />)}
-          </colgroup>
-          <thead className="sr-only">
-            <tr>
-              <th scope="col">Path</th>
-              {methods.map((method) => <th key={method} scope="col">{method}</th>)}
-            </tr>
-          </thead>
-          <tbody>
-            <ApiEndpointTree groups={groups} methods={methods} />
-          </tbody>
-        </table>
+        <InsightTable caption="API endpoints grouped by URL layer" columns={['Path', ...methods]} colgroup>
+          <ApiEndpointTree groups={groups} methods={methods} />
+        </InsightTable>
       </InsightPanel>
     </InsightSection>
   );

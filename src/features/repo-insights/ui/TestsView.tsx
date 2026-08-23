@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { TreeBranchLabel, TreeLeafLabel } from '@/features/api-surface/TreeRowLabel';
-import { Chip } from './Chip';
-import { InsightPanel, InsightSection } from './InsightSection';
+import { TreeBranchLabel, TreeLeafLabel } from '@/features/surface-ui/TreeRowLabel';
+import { Chip } from '@/features/surface-ui/Chip';
+import { InsightPanel, InsightSection } from '@/features/surface-ui/InsightSection';
 import type { TestFile, TestSurface } from '../insightTypes';
 
 export function TestsView({ tests }: { tests: TestSurface }) {

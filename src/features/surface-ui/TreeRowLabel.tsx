@@ -2,7 +2,9 @@
 
 import type { MouseEvent, ReactNode } from 'react';
 
-const INDENT_PX = 12;
+export const INDENT_PX = 12;
+export const ROOT_GLYPH = '•';
+export const NESTED_GLYPH = '↳';
 
 export function TreeBranchLabel({
   open,

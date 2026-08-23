@@ -1,5 +1,6 @@
 import { AppRouteTree } from './AppRouteTree';
-import { InsightPanel, InsightSection } from '@/features/repo-insights/ui/InsightSection';
+import { InsightPanel, InsightSection } from '@/features/surface-ui/InsightSection';
+import { InsightTable } from '@/features/surface-ui/InsightTable';
 import type { AppRoute, AppRouteComponent } from './appRouteCatalog';
 
 export function AppRouteDocumentation({ routes }: { routes: AppRoute[] }) {
@@ -14,18 +15,12 @@ export function AppRouteDocumentation({ routes }: { routes: AppRoute[] }) {
       stat={`${routes.length} routes · ${componentCount} components`}
     >
       <InsightPanel>
-        <table className="table-auto border-collapse">
-          <caption className="sr-only">URL routes, their nested components, and the API calls those components make</caption>
-          <thead className="sr-only">
-            <tr>
-              <th scope="col">Component</th>
-              <th scope="col">API calls</th>
-            </tr>
-          </thead>
-          <tbody>
-            <AppRouteTree routes={routes} />
-          </tbody>
-        </table>
+        <InsightTable
+          caption="URL routes, their nested components, and the API calls those components make"
+          columns={['Component', 'API calls']}
+        >
+          <AppRouteTree routes={routes} />
+        </InsightTable>
       </InsightPanel>
     </InsightSection>
   );

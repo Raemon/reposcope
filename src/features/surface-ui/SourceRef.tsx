@@ -1,8 +1,8 @@
 'use client';
 
 import { createContext, useContext, type ReactNode } from 'react';
-import { HoverCardTrigger } from '@/features/api-surface/HoverCard';
-import type { SourceLocation } from '../insightTypes';
+import { HoverCardTrigger } from './HoverCard';
+import type { SourceLocation } from '@/features/repo-insights/insightTypes';
 
 export const RepoRefContext = createContext<{ owner: string; repo: string } | null>(null);
 

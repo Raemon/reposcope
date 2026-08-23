@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Chip } from './Chip';
-import { EmptyNote } from './EmptyNote';
-import { FilterField, matchesFilter } from './FilterField';
-import { InsightPanel, InsightSection } from './InsightSection';
+import { Chip } from '@/features/surface-ui/Chip';
+import { EmptyNote } from '@/features/surface-ui/EmptyNote';
+import { FilterField, matchesFilter } from '@/features/surface-ui/FilterField';
+import { InsightPanel, InsightSection } from '@/features/surface-ui/InsightSection';
+import { InsightTable } from '@/features/surface-ui/InsightTable';
 import type { DependencyManifest } from '../insightTypes';
 
 export function DependenciesView({ manifests }: { manifests: DependencyManifest[] }) {
@@ -44,29 +45,21 @@ function ManifestPanel({ manifest, filter }: { manifest: DependencyManifest; fil
         {manifest.lockfile ? ` · locked (${manifest.lockfile})` : ' · no lockfile'}
       </p>
       <InsightPanel>
-        <table className="table-auto border-collapse">
-          <caption className="sr-only">Dependencies declared in {manifest.file}</caption>
-          <thead className="sr-only">
-            <tr>
-              <th scope="col">Package</th>
-              <th scope="col">Version</th>
-              <th scope="col">Group</th>
-              <th scope="col">Imported in</th>
+        <InsightTable
+          caption={`Dependencies declared in ${manifest.file}`}
+          columns={['Package', 'Version', 'Group', 'Imported in']}
+        >
+          {shown.map((entry) => (
+            <tr key={`${entry.group} ${entry.name}`} className="border-b border-panel-edge last:border-b-0">
+              <td className="py-1 pl-2 pr-3 font-mono text-[11px] leading-5 text-ink">{entry.name}</td>
+              <td className="py-1 pr-3 font-mono text-[10px] text-ink-dim">{entry.version || '*'}</td>
+              <td className="py-1 pr-3">{entry.group === 'dev' ? <Chip>dev</Chip> : <Chip tone="accent">runtime</Chip>}</td>
+              <td className="py-1 pr-2 text-right font-mono text-[10px] text-ink-dim">
+                {entry.usedIn > 0 ? `${entry.usedIn} ${entry.usedIn === 1 ? 'file' : 'files'}` : '—'}
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {shown.map((entry) => (
-              <tr key={`${entry.group} ${entry.name}`} className="border-b border-panel-edge last:border-b-0">
-                <td className="py-1 pl-2 pr-3 font-mono text-[11px] leading-5 text-ink">{entry.name}</td>
-                <td className="py-1 pr-3 font-mono text-[10px] text-ink-dim">{entry.version || '*'}</td>
-                <td className="py-1 pr-3">{entry.group === 'dev' ? <Chip>dev</Chip> : <Chip tone="accent">runtime</Chip>}</td>
-                <td className="py-1 pr-2 text-right font-mono text-[10px] text-ink-dim">
-                  {entry.usedIn > 0 ? `${entry.usedIn} ${entry.usedIn === 1 ? 'file' : 'files'}` : '—'}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+          ))}
+        </InsightTable>
       </InsightPanel>
     </div>
   );
