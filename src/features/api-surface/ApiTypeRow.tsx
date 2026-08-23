@@ -14,28 +14,42 @@ export function ApiTypeRow({ entry, returnedBy }: { entry: ApiTypeEntry; returne
   return (
     <tr className="border-b border-panel-edge/70 last:border-b-0">
       <td className="h-7 w-px py-0 pl-4 pr-1 align-middle">
-        <span
-          className={`text-[9px] tracking-[0.08em] ${entry.reachedByApi ? 'text-accent opacity-70' : 'text-ink opacity-30'}`}
-          title={entry.kind}
-        >
-          {KIND_MARK[entry.kind]}
-        </span>
+        <ApiTypeKindMark entry={entry} />
       </td>
       <td className="h-7 whitespace-nowrap py-0 pl-1.5 pr-2 align-middle">
-        <HoverCardTrigger
-          label={`${entry.file}:${entry.line}`}
-          card={<TypeCard entry={entry} returnedBy={returnedBy} />}
-          className="min-w-0"
-        >
-          <code className={`truncate text-[11px] ${entry.reachedByApi ? 'text-ink' : 'text-ink-dim'}`}>
-            {entry.name}
-          </code>
-        </HoverCardTrigger>
-        {returnedBy.length > 0 ? (
-          <span className="ml-2 font-mono text-[9px] text-ink-dim">{returnSummary(returnedBy)}</span>
-        ) : null}
+        <ApiTypeName entry={entry} returnedBy={returnedBy} />
       </td>
     </tr>
+  );
+}
+
+export function ApiTypeKindMark({ entry }: { entry: ApiTypeEntry }) {
+  return (
+    <span
+      className={`text-[9px] tracking-[0.08em] ${entry.reachedByApi ? 'text-accent opacity-70' : 'text-ink opacity-30'}`}
+      title={entry.kind}
+    >
+      {KIND_MARK[entry.kind]}
+    </span>
+  );
+}
+
+export function ApiTypeName({ entry, returnedBy }: { entry: ApiTypeEntry; returnedBy: ApiTypeReturn[] }) {
+  return (
+    <>
+      <HoverCardTrigger
+        label={`${entry.file}:${entry.line}`}
+        card={<TypeCard entry={entry} returnedBy={returnedBy} />}
+        className="min-w-0"
+      >
+        <code className={`truncate text-[11px] ${entry.reachedByApi ? 'text-ink' : 'text-ink-dim'}`}>
+          {entry.name}
+        </code>
+      </HoverCardTrigger>
+      {returnedBy.length > 0 ? (
+        <span className="ml-2 font-mono text-[9px] text-ink-dim">{returnSummary(returnedBy)}</span>
+      ) : null}
+    </>
   );
 }
 

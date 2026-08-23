@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { Fragment, useState, type ReactNode } from 'react';
 import { ApiCallTreeTrigger } from './ApiCallTreeTooltip';
 import { ApiPathOperations, callTreeRoot } from './ApiPathOperations';
-import { TreeBranchLabel, TreeLeafLabel, startsOpen } from './TreeRowLabel';
+import { ChainChevron, TreeBranchLabel, TreeLeafLabel, startsOpen } from './TreeRowLabel';
 import { displayApiPath, type ApiEndpointGroup } from './apiEndpointGroups';
 
 export function ApiEndpointTree({ groups, methods }: { groups: ApiEndpointGroup[]; methods: string[] }) {
@@ -16,10 +16,20 @@ export function ApiEndpointTree({ groups, methods }: { groups: ApiEndpointGroup[
 
 function GroupRows({ group, methods, depth }: { group: ApiEndpointGroup; methods: string[]; depth: number }) {
   const [open, setOpen] = useState(startsOpen(depth));
-  const branch = group.children.length > 0;
-  const name = <PathName group={group} />;
+  const { chain, tail } = layerChain(group);
+  const branch = tail.children.length > 0;
+  const name = (
+    <span className="flex min-w-0 items-center gap-1.5">
+      {chain.map((layer, index) => (
+        <Fragment key={layer.path}>
+          {index > 0 ? <ChainChevron /> : null}
+          <PathName group={layer} />
+        </Fragment>
+      ))}
+    </span>
+  );
   const label = branch ? (
-    <TreeBranchLabel open={open} onToggle={() => setOpen((held) => !held)} depth={depth} label={group.path}>
+    <TreeBranchLabel open={open} onToggle={() => setOpen((held) => !held)} depth={depth} label={tail.path}>
       {name}
     </TreeBranchLabel>
   ) : (
@@ -27,16 +37,28 @@ function GroupRows({ group, methods, depth }: { group: ApiEndpointGroup; methods
   );
   return (
     <>
-      {group.endpoints.length > 0 ? (
-        <ApiPathOperations endpoints={group.endpoints} methods={methods} label={label} />
+      {tail.endpoints.length > 0 ? (
+        <ApiPathOperations endpoints={tail.endpoints} methods={methods} label={label} />
       ) : (
         <PathLayerRow methods={methods} label={label} />
       )}
       {open && branch
-        ? group.children.map((child) => <GroupRows key={child.path} group={child} methods={methods} depth={depth + 1} />)
+        ? tail.children.map((child) => <GroupRows key={child.path} group={child} methods={methods} depth={depth + 1} />)
         : null}
     </>
   );
+}
+
+function layerChain(group: ApiEndpointGroup): { chain: ApiEndpointGroup[]; tail: ApiEndpointGroup } {
+  const chain = [group];
+  let tail = group;
+  while (tail.endpoints.length === 0) {
+    const lone = tail.children.length === 1 ? tail.children[0] : undefined;
+    if (!lone) break;
+    tail = lone;
+    chain.push(tail);
+  }
+  return { chain, tail };
 }
 
 function PathName({ group }: { group: ApiEndpointGroup }) {

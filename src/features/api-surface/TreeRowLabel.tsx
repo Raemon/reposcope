@@ -39,6 +39,10 @@ export function TreeBranchLabel({
   );
 }
 
+export function ChainChevron() {
+  return <span aria-hidden="true" className="shrink-0 text-[10px] text-ink-dim">›</span>;
+}
+
 export function TreeLeafLabel({
   depth,
   glyph,
