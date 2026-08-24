@@ -2,9 +2,11 @@
 
 import { useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { ChangeCounts } from './ChangeCounts';
+import { ImageDiff } from './ImageDiff';
+import { isImagePath } from './imageFiles';
 import { DragHandle, useDragWidth, type ColumnSize } from './ResizableColumn';
 import { splitDiff, type DiffCell, type DiffRow } from './splitDiff';
-import type { ChangedFile } from './pullRequests';
+import type { ChangedFile, ChangedFileSet } from './pullRequests';
 
 const ROW = 'flex h-[15px] items-center gap-1 leading-[15px]';
 const GUTTER = 'w-[38px] shrink-0 select-none pr-1 text-right text-[9px] text-ink-dim';
@@ -14,7 +16,17 @@ export interface DiffPanesHandle {
   scrollToFile: (path: string) => void;
 }
 
-export function DiffPanes({ files, ref }: { files: ChangedFile[] | null; ref?: Ref<DiffPanesHandle> }) {
+export function DiffPanes({
+  owner,
+  repo,
+  fileSet,
+  ref,
+}: {
+  owner: string;
+  repo: string;
+  fileSet: ChangedFileSet | null;
+  ref?: Ref<DiffPanesHandle>;
+}) {
   const scroller = useRef<HTMLDivElement | null>(null);
   const sections = useRef(new Map<string, HTMLElement>());
 
@@ -28,14 +40,18 @@ export function DiffPanes({ files, ref }: { files: ChangedFile[] | null; ref?: R
     },
   }));
 
-  if (!files) return <Note text="Loading…" />;
-  if (files.length === 0) return <Note text="No files changed" />;
+  if (!fileSet) return <Note text="Loading…" />;
+  if (fileSet.files.length === 0) return <Note text="No files changed" />;
   return (
     <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
-      {files.map((file) => (
+      {fileSet.files.map((file) => (
         <FileSection
           key={file.filename}
+          owner={owner}
+          repo={repo}
           file={file}
+          baseRef={fileSet.baseRef}
+          headRef={fileSet.headRef}
           sectionRef={(node) => {
             if (node) sections.current.set(file.filename, node);
             else sections.current.delete(file.filename);
@@ -59,7 +75,21 @@ function animateScrollTop(container: HTMLElement, target: number) {
   requestAnimationFrame(step);
 }
 
-function FileSection({ file, sectionRef }: { file: ChangedFile; sectionRef: (node: HTMLElement | null) => void }) {
+function FileSection({
+  owner,
+  repo,
+  file,
+  baseRef,
+  headRef,
+  sectionRef,
+}: {
+  owner: string;
+  repo: string;
+  file: ChangedFile;
+  baseRef: string;
+  headRef: string;
+  sectionRef: (node: HTMLElement | null) => void;
+}) {
   const [open, setOpen] = useState(true);
   return (
     <section ref={sectionRef} className="border-b border-panel-edge">
@@ -79,10 +109,39 @@ function FileSection({ file, sectionRef }: { file: ChangedFile; sectionRef: (nod
         <span className="shrink-0 text-[9px] uppercase tracking-[0.18em] text-ink-dim">{file.status}</span>
         <ChangeCounts additions={file.additions} deletions={file.deletions} />
       </button>
-      {open &&
-        (file.patch ? <FileDiff patch={file.patch} /> : <Note text={`${file.status} — no textual diff`} />)}
+      {open && <FileBody owner={owner} repo={repo} file={file} baseRef={baseRef} headRef={headRef} />}
     </section>
   );
+}
+
+function FileBody({
+  owner,
+  repo,
+  file,
+  baseRef,
+  headRef,
+}: {
+  owner: string;
+  repo: string;
+  file: ChangedFile;
+  baseRef: string;
+  headRef: string;
+}) {
+  if (isImagePath(file.filename)) {
+    return (
+      <>
+        <ImageDiff
+          owner={owner}
+          repo={repo}
+          before={file.status === 'added' ? null : { ref: baseRef, path: file.previousFilename ?? file.filename }}
+          after={file.status === 'removed' ? null : { ref: headRef, path: file.filename }}
+        />
+        {file.patch && <FileDiff patch={file.patch} />}
+      </>
+    );
+  }
+  if (file.patch) return <FileDiff patch={file.patch} />;
+  return <Note text={`${file.status} — no textual diff`} />;
 }
 
 function FileDiff({ patch }: { patch: string }) {

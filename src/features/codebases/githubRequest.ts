@@ -52,13 +52,13 @@ export async function githubGraphql<T>(query: string, variables: Record<string, 
   return payload.data as T;
 }
 
-export async function githubBytes(url: string): Promise<Uint8Array> {
-  const response = await githubFetch(url);
+export async function githubBytes(url: string, accept = 'application/vnd.github+json'): Promise<Uint8Array> {
+  const response = await githubFetch(url, accept);
   return new Uint8Array(await response.arrayBuffer());
 }
 
-async function githubFetch(url: string): Promise<Response> {
-  const response = await fetch(url, { headers: githubHeaders('application/vnd.github+json') });
+async function githubFetch(url: string, accept = 'application/vnd.github+json'): Promise<Response> {
+  const response = await fetch(url, { headers: githubHeaders(accept) });
   if (response.ok) return response;
   throw new GithubRequestError(response.status, describeFailure(response, url));
 }
