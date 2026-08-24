@@ -3,6 +3,7 @@
 import { useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { ChangeCounts } from './ChangeCounts';
 import { DragHandle, useDragWidth, type ColumnSize } from './ResizableColumn';
+import { sortByFolder } from './fileTree';
 import { splitDiff, type DiffCell, type DiffRow } from './splitDiff';
 import type { ChangedFile } from './pullRequests';
 
@@ -32,7 +33,7 @@ export function DiffPanes({ files, ref }: { files: ChangedFile[] | null; ref?: R
   if (files.length === 0) return <Note text="No files changed" />;
   return (
     <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
-      {files.map((file) => (
+      {sortByFolder(files).map((file) => (
         <FileSection
           key={file.filename}
           file={file}
