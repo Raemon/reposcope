@@ -1,6 +1,7 @@
 'use client';
 
 import type { MouseEvent, ReactNode } from 'react';
+import { SELECTABLE_TEXT, useSelectableClick } from './selectableClick';
 
 export const INDENT_PX = 12;
 export const ROOT_GLYPH = '•';
@@ -22,11 +23,12 @@ export function TreeBranchLabel({
   const toggleFromOwnCell = (event: MouseEvent<HTMLDivElement>) => {
     if (event.currentTarget.contains(event.target as Node)) onToggle();
   };
+  const rowClick = useSelectableClick<HTMLDivElement>(toggleFromOwnCell);
   return (
     <div
-      className="flex cursor-pointer select-none items-center gap-2"
+      className={`flex cursor-pointer items-center gap-2 ${SELECTABLE_TEXT}`}
       style={{ paddingLeft: `${depth * INDENT_PX}px` }}
-      onClick={toggleFromOwnCell}
+      {...rowClick}
     >
       <button
         type="button"

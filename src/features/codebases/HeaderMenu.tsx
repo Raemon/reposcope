@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { SELECTABLE_TEXT, useSelectableClick } from '@/features/surface-ui/selectableClick';
 
 export function HeaderMenu({
   label,
@@ -15,6 +16,8 @@ export function HeaderMenu({
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const menu = useRef<HTMLDivElement>(null);
+
+  const labelClick = useSelectableClick<HTMLButtonElement>(() => setOpen((held) => !held));
 
   useEffect(() => setOpen(false), [pathname]);
 
@@ -40,8 +43,8 @@ export function HeaderMenu({
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
-        onClick={() => setOpen((held) => !held)}
-        className={`flex max-w-[22rem] items-baseline gap-1.5 rounded border border-btn-edge px-2 py-1 text-[11px] ${
+        {...labelClick}
+        className={`flex max-w-[22rem] items-baseline gap-1.5 rounded border border-btn-edge px-2 py-1 text-[11px] ${SELECTABLE_TEXT} ${
           open ? 'bg-btn-active text-accent' : 'text-ink hover:bg-btn-hover'
         }`}
       >

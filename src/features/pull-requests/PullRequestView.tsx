@@ -9,6 +9,7 @@ import { ResizableColumn, type ColumnSize } from './ResizableColumn';
 import { setCurrentPull } from './currentPullStore';
 import type { ChangedFile, PullRequestCommits } from './pullRequests';
 import { RelativeTime } from '@/features/surface-ui/RelativeTime';
+import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 import { apiJson } from '@/features/sources/apiClient';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 
@@ -90,25 +91,23 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
           <PullDiscussion owner={owner} repo={repo} number={number} author={pull.pull.author} body={pull.body} />
         </ResizableColumn>
         <ResizableColumn icon="◆" title={`commits · ${pull.commits.length}`} size={commitSize} onSize={setCommitSize}>
-          <button
-            type="button"
-            onClick={() => setSelection(WHOLE_PULL)}
+          <SelectableRow
+            onActivate={() => setSelection(WHOLE_PULL)}
             className={`${ROW} ${selection === WHOLE_PULL ? 'bg-btn-active text-accent' : 'text-ink hover:bg-btn-hover'}`}
           >
             <span className="min-w-0 flex-1 truncate">all changes</span>
             <ChangeCounts additions={pull.additions} deletions={pull.deletions} />
-          </button>
+          </SelectableRow>
           {pull.commits.map((commit) => (
-            <button
+            <SelectableRow
               key={commit.sha}
-              type="button"
-              onClick={() => setSelection(commit.sha)}
+              onActivate={() => setSelection(commit.sha)}
               className={`${ROW} ${commit.sha === selection ? 'bg-btn-active text-accent' : 'text-ink hover:bg-btn-hover'}`}
             >
               <span className="shrink-0 text-[9px] text-ink-dim/50">{commit.sha.slice(0, 7)}</span>
               <span className="min-w-0 flex-1 truncate">{commit.message}</span>
               <RelativeTime iso={commit.date} className="shrink-0 text-[9px] text-ink-dim" />
-            </button>
+            </SelectableRow>
           ))}
         </ResizableColumn>
         <ResizableColumn icon="▤" title={`files · ${files?.length ?? 0}`} size={fileSize} onSize={setFileSize}>
@@ -118,10 +117,9 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
             <p className="px-1.5 py-[1px] text-[11px] leading-4 text-ink-dim">Loading…</p>
           ) : (
             files.map((candidate) => (
-              <button
+              <SelectableRow
                 key={candidate.filename}
-                type="button"
-                onClick={() => {
+                onActivate={() => {
                   setPath(candidate.filename);
                   diffPanes.current?.scrollToFile(candidate.filename);
                 }}
@@ -132,7 +130,7 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
               >
                 <span className="min-w-0 flex-1 truncate">{candidate.filename}</span>
                 <ChangeCounts additions={candidate.additions} deletions={candidate.deletions} />
-              </button>
+              </SelectableRow>
             ))
           )}
         </ResizableColumn>
