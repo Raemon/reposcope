@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import { plural } from './ColumnPreview';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 
 const MIN_WIDTH = 140;
@@ -45,34 +46,42 @@ export function DragHandle({ onPointerDown }: { onPointerDown: (event: ReactPoin
 }
 
 export function CollapsedColumn({
-  title,
+  noun,
+  label,
+  count,
   icon,
+  preview,
   onExpand,
 }: {
-  title: string;
+  noun: string;
+  label: string;
+  count?: number;
   icon: string;
+  preview?: ReactNode;
   onExpand: () => void;
 }) {
   return (
     <button
       type="button"
       onClick={onExpand}
-      aria-label={`Expand ${title}`}
-      className="flex w-6 shrink-0 flex-col items-center gap-1 border-r border-panel-edge bg-panel py-1 text-[10px] uppercase tracking-[0.18em] text-ink-dim hover:bg-btn-hover hover:text-ink"
+      aria-label={`Expand ${label}`}
+      className="flex w-7 min-h-0 shrink-0 flex-col items-center gap-1 border-r border-panel-edge bg-panel py-1 text-[10px] uppercase tracking-[0.18em] text-ink-dim hover:bg-btn-hover hover:text-ink"
     >
-      <span aria-hidden className="text-[11px] leading-none">{icon}</span>
-      <span className="[writing-mode:vertical-rl]">{title}</span>
+      <span aria-hidden className="shrink-0 text-[11px] leading-none">{icon}</span>
+      {count !== undefined && <span className="shrink-0 text-[10px] leading-none tabular-nums text-ink">{count}</span>}
+      <span className="max-h-[40%] shrink-0 overflow-hidden [writing-mode:vertical-rl]">{noun}</span>
+      {preview}
     </button>
   );
 }
 
 export function ColumnHeader({
-  title,
+  label,
   icon,
   note,
   onCollapse,
 }: {
-  title: string;
+  label: string;
   icon: string;
   note?: string;
   onCollapse: () => void;
@@ -80,11 +89,11 @@ export function ColumnHeader({
   return (
     <SelectableRow
       onActivate={onCollapse}
-      label={`Collapse ${title}`}
+      label={`Collapse ${label}`}
       className="flex w-full shrink-0 items-center gap-1.5 border-b border-panel-edge bg-panel px-1.5 py-[1px] text-left hover:bg-btn-hover"
     >
       <span aria-hidden className="shrink-0 text-[11px] leading-4 text-ink-dim">{icon}</span>
-      <span className="shrink-0 text-[10px] uppercase tracking-[0.18em] text-ink-dim">{title}</span>
+      <span className="shrink-0 text-[10px] uppercase tracking-[0.18em] text-ink-dim">{label}</span>
       {note && <span className="min-w-0 flex-1 truncate text-[10px] text-ink-dim">{note}</span>}
       <span aria-hidden className="ml-auto shrink-0 px-1 text-[11px] leading-none text-ink-dim">‹</span>
     </SelectableRow>
@@ -93,27 +102,43 @@ export function ColumnHeader({
 
 export function ResizableColumn({
   title,
+  count,
   icon,
   note,
+  preview,
   size,
   onSize,
   children,
 }: {
   title: string;
+  count?: number;
   icon: string;
   note?: string;
+  preview?: ReactNode;
   size: ColumnSize;
   onSize: (next: ColumnSize) => void;
   children: ReactNode;
 }) {
   const startDrag = useDragWidth(size, onSize);
-  if (!size.open) return <CollapsedColumn title={title} icon={icon} onExpand={() => onSize({ ...size, open: true })} />;
+  const noun = count === undefined ? title : plural(title, count);
+  const label = count === undefined ? noun : `${count} ${noun}`;
+  if (!size.open)
+    return (
+      <CollapsedColumn
+        noun={noun}
+        label={label}
+        count={count}
+        icon={icon}
+        preview={preview}
+        onExpand={() => onSize({ ...size, open: true })}
+      />
+    );
   return (
     <section
       className="relative flex min-h-0 shrink-0 flex-col border-r border-panel-edge bg-panel"
       style={{ width: size.width }}
     >
-      <ColumnHeader title={title} icon={icon} note={note} onCollapse={() => onSize({ ...size, open: false })} />
+      <ColumnHeader label={label} icon={icon} note={note} onCollapse={() => onSize({ ...size, open: false })} />
       <div className="min-h-0 flex-1 overflow-auto">{children}</div>
       <DragHandle onPointerDown={startDrag} />
     </section>
