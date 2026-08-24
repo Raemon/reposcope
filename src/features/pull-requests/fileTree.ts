@@ -1,3 +1,4 @@
+import { isImagePath } from './imageFiles';
 import type { ChangedFile } from './pullRequests';
 
 export interface FolderGroup {
@@ -26,7 +27,16 @@ export function groupByFolder(files: ChangedFile[]): FolderGroup[] {
       folder,
       files: [...group].sort((a, b) => baseName(a.filename).localeCompare(baseName(b.filename))),
     }))
-    .sort((a, b) => a.folder.localeCompare(b.folder));
+    .sort(byImageOnlyLast);
+}
+
+function holdsOnlyImages(group: FolderGroup): boolean {
+  return group.files.every((file) => isImagePath(file.filename));
+}
+
+function byImageOnlyLast(a: FolderGroup, b: FolderGroup): number {
+  const rank = Number(holdsOnlyImages(a)) - Number(holdsOnlyImages(b));
+  return rank || a.folder.localeCompare(b.folder);
 }
 
 export function sortByFolder(files: ChangedFile[]): ChangedFile[] {
