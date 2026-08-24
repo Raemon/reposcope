@@ -239,13 +239,16 @@ export async function commitFileEdit(
   edit: FileEdit,
 ): Promise<EditResult> {
   if (!userGithubToken()) throw new GithubRequestError(401, 'Connect GitHub before committing');
-  const pull = await githubJson<GithubPull>(`${API}/repos/${owner}/${name}/pulls/${number}`);
+  const pull = await githubJson<GithubPull>(`${API}/repos/${owner}/${name}/pulls/${number}`, true);
   if (pull.state !== 'open') throw new GithubRequestError(409, `Pull request #${number} is ${pull.state}`);
-  await requireChangedFile(owner, name, number, edit.path);
+  const changed = await listPullRequestFiles(owner, name, number);
+  if (!changed.files.some((file) => file.filename === edit.path)) {
+    throw new GithubRequestError(422, `${edit.path} is not among the files this pull request changes`);
+  }
   const target = pull.head.repo?.full_name ?? `${owner}/${name}`;
   const branch = pull.head.ref;
   const contents = `${API}/repos/${target}/contents/${encodePath(edit.path)}`;
-  const held = await githubJson<GithubFileContents>(`${contents}?ref=${encodeURIComponent(branch)}`);
+  const held = await githubJson<GithubFileContents>(`${contents}?ref=${encodeURIComponent(branch)}`, true);
   const commit = await githubSend<{ commit?: { sha?: string } }>(contents, 'PUT', {
     message: edit.message,
     content: Buffer.from(spliceLines(decodeContents(held), edit), 'utf8').toString('base64'),
@@ -254,13 +257,6 @@ export async function commitFileEdit(
   });
   await dropGithubCache(owner, name);
   return { sha: commit.commit?.sha ?? '', branch };
-}
-
-async function requireChangedFile(owner: string, name: string, number: number, path: string): Promise<void> {
-  const changed = await listPullRequestFiles(owner, name, number);
-  if (!changed.files.some((file) => file.filename === path)) {
-    throw new GithubRequestError(422, `${path} is not among the files this pull request changes`);
-  }
 }
 
 function decodeContents(held: GithubFileContents): string {

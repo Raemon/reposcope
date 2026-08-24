@@ -17,8 +17,8 @@ const STALE_ON_STATUS = [403, 408, 429, 500, 502, 503, 504];
 
 const inFlight = new Map<string, Promise<CachedResponse>>();
 
-export async function githubJson<T>(url: string): Promise<T> {
-  return JSON.parse(decodeBody(await cachedResponse(url, ACCEPT)).toString('utf8')) as T;
+export async function githubJson<T>(url: string, fresh = false): Promise<T> {
+  return JSON.parse(decodeBody(await cachedResponse(url, ACCEPT, fresh)).toString('utf8')) as T;
 }
 
 export async function githubBytes(url: string, accept = ACCEPT): Promise<Uint8Array> {
@@ -56,11 +56,11 @@ export async function githubGraphql<T>(query: string, variables: Record<string, 
   return payload.data as T;
 }
 
-async function cachedResponse(url: string, accept: string): Promise<CachedResponse> {
+async function cachedResponse(url: string, accept: string, fresh = false): Promise<CachedResponse> {
   const scope = scopeOf(url);
   const key = cacheKey([githubTokenIdentity(), url, accept]);
   const held = await readCachedResponse(scope, key);
-  if (held && Date.now() - held.storedAt < freshnessOf(url)) return held;
+  if (held && !fresh && Date.now() - held.storedAt < freshnessOf(url)) return held;
   return shareInFlight(scope + key, () => revalidate(url, accept, scope, key, held));
 }
 

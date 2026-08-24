@@ -1,19 +1,14 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { commitMessageFor, editableBlockAt, type EditableBlock } from './editableBlocks';
+import type { PullRequestSummary } from './pullRequests';
 import type { DiffRow } from './splitDiff';
 import { apiPostJson } from '@/features/sources/apiClient';
-
-interface EditablePull {
-  number: number;
-  title: string;
-}
 
 export interface HunkEdit {
   block: EditableBlock;
   draft: string;
-  height: number;
 }
 
 export function useHunkEdit({
@@ -28,7 +23,7 @@ export function useHunkEdit({
 }: {
   owner: string;
   repo: string;
-  pull: EditablePull | null;
+  pull: PullRequestSummary | null;
   rows: DiffRow[];
   filename: string;
   patch: string;
@@ -40,30 +35,28 @@ export function useHunkEdit({
   const [committing, setCommitting] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
 
-  useEffect(() => {
-    setEdit(null);
+  const dismissModal = () => {
     setMessage(null);
     setFailure(null);
-  }, [patch, filename]);
+  };
 
-  const setHeight = useCallback((height: number) => {
-    setEdit((was) => (was && was.height !== height ? { ...was, height } : was));
-  }, []);
+  const close = () => {
+    setEdit(null);
+    dismissModal();
+  };
+
+  useEffect(close, [patch, filename]);
 
   function begin(rowIndex: number) {
-    if (!pull || edit) return;
+    if (!pull || (edit && edit.draft !== edit.block.text)) return;
     const block = editableBlockAt(rows, rowIndex);
-    if (block) setEdit({ block, draft: block.text, height: 0 });
+    if (block) setEdit({ block, draft: block.text });
   }
 
   function askToCommit() {
     if (!edit || !pull) return;
-    if (edit.draft === edit.block.text) {
-      setEdit(null);
-      return;
-    }
-    setFailure(null);
-    setMessage(commitMessageFor(pull, edit.block.text, edit.draft));
+    if (edit.draft === edit.block.text) close();
+    else setMessage(commitMessageFor(pull, edit.block.text, edit.draft));
   }
 
   async function commit() {
@@ -83,8 +76,7 @@ export function useHunkEdit({
           message,
         },
       );
-      setEdit(null);
-      setMessage(null);
+      close();
       onCommitted?.();
     } catch (issue: unknown) {
       setFailure(issue instanceof Error ? issue.message : String(issue));
@@ -101,17 +93,9 @@ export function useHunkEdit({
     begin,
     askToCommit,
     commit,
-    setHeight,
+    close,
+    dismissModal,
     setDraft: (draft: string) => setEdit((was) => (was ? { ...was, draft } : was)),
     setMessage,
-    close: () => {
-      setEdit(null);
-      setMessage(null);
-      setFailure(null);
-    },
-    dismissModal: () => {
-      setMessage(null);
-      setFailure(null);
-    },
   };
 }

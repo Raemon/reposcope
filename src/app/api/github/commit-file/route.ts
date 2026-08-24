@@ -3,7 +3,7 @@ import { apiRoute, requireParam } from '@/features/github-auth/apiRoute';
 import { commitFileEdit, type FileEdit } from '@/features/pull-requests/pullRequests';
 import { LOGIN_PATTERN, REPO_NAME_PATTERN } from '@/features/sources/sourceTypes';
 
-const NUMBER_PATTERN = /^[0-9]{1,9}$/;
+const NUMBER_PATTERN = /^[1-9][0-9]{0,8}$/;
 const PATH_PATTERN = /^(?!\/)(?!.*(?:^|\/)\.\.(?:\/|$))[^\0]{1,1024}$/;
 const MAX_EDIT_BYTES = 200_000;
 const MAX_MESSAGE_CHARS = 2_000;
@@ -26,13 +26,22 @@ function fileEdit(body: unknown): FileEdit {
   const startLine = counting(edit?.startLine, 'startLine');
   const endLine = counting(edit?.endLine, 'endLine');
   if (endLine < startLine) throw new GithubRequestError(400, 'endLine precedes startLine');
-  const updated = text(edit?.updated, 'updated', true);
-  if (Buffer.byteLength(updated, 'utf8') > MAX_EDIT_BYTES) throw new GithubRequestError(413, 'Edit is too large');
-  const original = text(edit?.original, 'original', true);
-  if (Buffer.byteLength(original, 'utf8') > MAX_EDIT_BYTES) throw new GithubRequestError(413, 'Edit is too large');
   const message = text(edit?.message, 'message');
   if (message.length > MAX_MESSAGE_CHARS) throw new GithubRequestError(413, 'Commit message is too long');
-  return { path, startLine, endLine, original, updated, message };
+  return {
+    path,
+    startLine,
+    endLine,
+    original: bounded(edit?.original, 'original'),
+    updated: bounded(edit?.updated, 'updated'),
+    message,
+  };
+}
+
+function bounded(value: unknown, name: string): string {
+  const given = text(value, name, true);
+  if (Buffer.byteLength(given, 'utf8') > MAX_EDIT_BYTES) throw new GithubRequestError(413, `${name} is too large`);
+  return given;
 }
 
 function text(value: unknown, name: string, allowEmpty = false): string {

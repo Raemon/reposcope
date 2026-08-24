@@ -2,12 +2,12 @@
 
 import {
   Fragment,
-  useEffect,
+  createContext,
+  useContext,
   useImperativeHandle,
   useMemo,
   useRef,
   useState,
-  type CSSProperties,
   type ReactNode,
   type Ref,
 } from 'react';
@@ -21,12 +21,13 @@ import { isImagePath } from './imageFiles';
 import { DragHandle, useDragWidth, type ColumnSize } from './ResizableColumn';
 import { sortByFolder } from './fileTree';
 import { splitDiff, type DiffCell, type DiffRow } from './splitDiff';
-import { langForPath, tokenizeCode, type ThemedToken } from './diffHighlight';
+import { CodeTokens, langForPath, useTokenized, type ThemedToken } from './diffHighlight';
 import type { ChangedFile, ChangedFileSet, PullRequestSummary } from './pullRequests';
 import { useGithubToken } from '@/features/sources/sourceStore';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 
 const ROW_HEIGHT = 15;
+const SAVE_BAR = 28;
 const ROW = 'flex h-[15px] items-center gap-1 leading-[15px]';
 const GUTTER = 'w-[38px] shrink-0 select-none pr-1 text-right text-[9px] text-ink-dim';
 const SCROLL_MS = 100;
@@ -34,6 +35,8 @@ const SCROLL_MS = 100;
 export interface DiffPanesHandle {
   scrollToFile: (path: string) => void;
 }
+
+const EditTarget = createContext<{ pull: PullRequestSummary; onCommitted?: () => void } | null>(null);
 
 export function DiffPanes({
   owner,
@@ -66,24 +69,24 @@ export function DiffPanes({
   if (!fileSet) return <Note text="Loading…" />;
   if (fileSet.files.length === 0) return <Note text="No files changed" />;
   return (
-    <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
-      {sortByFolder(fileSet.files).map((file) => (
-        <FileSection
-          key={file.filename}
-          owner={owner}
-          repo={repo}
-          file={file}
-          baseRef={fileSet.baseRef}
-          headRef={fileSet.headRef}
-          editablePull={editablePull}
-          onCommitted={onCommitted}
-          sectionRef={(node) => {
-            if (node) sections.current.set(file.filename, node);
-            else sections.current.delete(file.filename);
-          }}
-        />
-      ))}
-    </div>
+    <EditTarget value={editablePull && { pull: editablePull, onCommitted }}>
+      <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
+        {sortByFolder(fileSet.files).map((file) => (
+          <FileSection
+            key={file.filename}
+            owner={owner}
+            repo={repo}
+            file={file}
+            baseRef={fileSet.baseRef}
+            headRef={fileSet.headRef}
+            sectionRef={(node) => {
+              if (node) sections.current.set(file.filename, node);
+              else sections.current.delete(file.filename);
+            }}
+          />
+        ))}
+      </div>
+    </EditTarget>
   );
 }
 
@@ -106,8 +109,6 @@ function FileSection({
   file,
   baseRef,
   headRef,
-  editablePull,
-  onCommitted,
   sectionRef,
 }: {
   owner: string;
@@ -115,8 +116,6 @@ function FileSection({
   file: ChangedFile;
   baseRef: string;
   headRef: string;
-  editablePull: PullRequestSummary | null;
-  onCommitted?: () => void;
   sectionRef: (node: HTMLElement | null) => void;
 }) {
   const [open, setOpen] = useState(true);
@@ -137,17 +136,7 @@ function FileSection({
         <span className="shrink-0 text-[9px] uppercase tracking-[0.18em] text-ink-dim">{file.status}</span>
         <ChangeCounts additions={file.additions} deletions={file.deletions} />
       </SelectableRow>
-      {open && (
-        <FileBody
-          owner={owner}
-          repo={repo}
-          file={file}
-          baseRef={baseRef}
-          headRef={headRef}
-          editablePull={editablePull}
-          onCommitted={onCommitted}
-        />
-      )}
+      {open && <FileBody owner={owner} repo={repo} file={file} baseRef={baseRef} headRef={headRef} />}
     </section>
   );
 }
@@ -158,16 +147,12 @@ function FileBody({
   file,
   baseRef,
   headRef,
-  editablePull,
-  onCommitted,
 }: {
   owner: string;
   repo: string;
   file: ChangedFile;
   baseRef: string;
   headRef: string;
-  editablePull: PullRequestSummary | null;
-  onCommitted?: () => void;
 }) {
   const diff = file.patch ? (
     <FileDiff
@@ -175,8 +160,6 @@ function FileBody({
       repo={repo}
       patch={file.patch}
       filename={file.filename}
-      editablePull={editablePull}
-      onCommitted={onCommitted}
     />
   ) : null;
   if (isImagePath(file.filename)) {
@@ -201,24 +184,22 @@ function FileDiff({
   repo,
   patch,
   filename,
-  editablePull,
-  onCommitted,
 }: {
   owner: string;
   repo: string;
   patch: string;
   filename: string;
-  editablePull: PullRequestSummary | null;
-  onCommitted?: () => void;
 }) {
   const token = useGithubToken();
+  const target = useContext(EditTarget);
   const [removedSize, setRemovedSize] = useState<ColumnSize>({ width: 520, open: true });
   const startDrag = useDragWidth(removedSize, setRemovedSize);
 
   const rows = useMemo(() => splitDiff(patch), [patch]);
-  const tokens = useDiffTokens(patch, filename);
-  const pull = editablePull;
-  const hunk = useHunkEdit({ owner, repo, pull, rows, filename, patch, token, onCommitted });
+  const tokens = useDiffTokens(rows, filename);
+  const pull = target?.pull ?? null;
+  const hunk = useHunkEdit({ owner, repo, pull, rows, filename, patch, token, onCommitted: target?.onCommitted });
+  const covered = hunk.edit ? coveredHeight(hunk.edit.block) : 0;
 
   return (
     <div className="flex">
@@ -226,7 +207,7 @@ function FileDiff({
         className="relative flex shrink-0 flex-col border-r border-panel-edge"
         style={{ width: removedSize.width }}
       >
-        <DiffSide rows={rows} side="left" labels tokens={tokens?.left ?? null} spacer={spacerFor(hunk.edit)} />
+        <DiffSide rows={rows} side="left" labels tokens={tokens.left} spacer={spacerFor(hunk.edit)} />
         <DragHandle onPointerDown={startDrag} />
       </section>
       <section className="flex min-w-0 flex-1 flex-col">
@@ -234,7 +215,7 @@ function FileDiff({
           rows={rows}
           side="right"
           labels={false}
-          tokens={tokens?.right ?? null}
+          tokens={tokens.right}
           editable={pull !== null}
           onEditBlock={hunk.begin}
           editedRows={hunk.edit?.block ?? null}
@@ -244,11 +225,11 @@ function FileDiff({
                 value={hunk.edit.draft}
                 lang={langForPath(filename)}
                 caretLine={hunk.edit.block.caretLine}
+                minHeight={covered}
                 saving={hunk.committing}
                 onChange={hunk.setDraft}
                 onSave={hunk.askToCommit}
                 onCancel={hunk.askToCommit}
-                onHeight={hunk.setHeight}
               />
             )
           }
@@ -270,10 +251,15 @@ function FileDiff({
   );
 }
 
+function coveredHeight(block: EditableBlock): number {
+  return (block.lastRow - block.firstRow + 1) * ROW_HEIGHT;
+}
+
 function spacerFor(edit: HunkEdit | null): { afterRow: number; height: number } | null {
-  if (!edit || edit.height === 0) return null;
-  const replaced = (edit.block.lastRow - edit.block.firstRow + 1) * ROW_HEIGHT;
-  return { afterRow: edit.block.lastRow, height: Math.max(0, edit.height - replaced) };
+  if (!edit) return null;
+  const covered = coveredHeight(edit.block);
+  const drawn = Math.max(covered, edit.draft.split('\n').length * ROW_HEIGHT + SAVE_BAR);
+  return { afterRow: edit.block.lastRow, height: drawn - covered };
 }
 
 interface SideTokens {
@@ -281,122 +267,85 @@ interface SideTokens {
   right: (ThemedToken[] | null)[];
 }
 
-function useDiffTokens(patch: string, filename: string): SideTokens | null {
-  const [tokens, setTokens] = useState<SideTokens | null>(null);
-  useEffect(() => {
-    setTokens(null);
-    const lang = langForPath(filename);
-    if (!lang) return;
-    let cancelled = false;
-    const rows = splitDiff(patch);
-    const textOf = (cells: (DiffCell | null)[]) =>
-      cells
-        .filter((cell): cell is DiffCell => cell !== null)
-        .map((cell) => cell.text)
-        .join('\n');
-    Promise.all([
-      tokenizeCode(textOf(rows.map((row) => row.left)), lang),
-      tokenizeCode(textOf(rows.map((row) => row.right)), lang),
-    ]).then(([leftLines, rightLines]) => {
-      if (cancelled || (!leftLines && !rightLines)) return;
-      const left: (ThemedToken[] | null)[] = [];
-      const right: (ThemedToken[] | null)[] = [];
-      let leftIndex = 0;
-      let rightIndex = 0;
-      for (const row of rows) {
-        left.push(row.left && leftLines ? (leftLines[leftIndex] ?? null) : null);
-        if (row.left) leftIndex += 1;
-        right.push(row.right && rightLines ? (rightLines[rightIndex] ?? null) : null);
-        if (row.right) rightIndex += 1;
-      }
-      setTokens({ left, right });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [patch, filename]);
-  return tokens;
+function useDiffTokens(rows: DiffRow[], filename: string): SideTokens {
+  const lang = langForPath(filename);
+  const left = useTokenized(useMemo(() => sideText(rows, 'left'), [rows]), lang);
+  const right = useTokenized(useMemo(() => sideText(rows, 'right'), [rows]), lang);
+  return useMemo(
+    () => ({ left: alignToRows(rows, 'left', left), right: alignToRows(rows, 'right', right) }),
+    [rows, left, right],
+  );
 }
 
-function DiffSide({
-  rows,
-  side,
-  labels,
-  tokens,
-  editable = false,
-  onEditBlock,
-  editor,
-  editedRows,
-  spacer,
-}: {
+function sideText(rows: DiffRow[], side: 'left' | 'right'): string {
+  return rows
+    .map((row) => row[side])
+    .filter((cell): cell is DiffCell => cell !== null)
+    .map((cell) => cell.text)
+    .join('\n');
+}
+
+function alignToRows(rows: DiffRow[], side: 'left' | 'right', lines: ThemedToken[][] | null) {
+  let index = 0;
+  return rows.map((row) => (row[side] ? (lines?.[index++] ?? null) : null));
+}
+
+interface SideProps {
   rows: DiffRow[];
   side: 'left' | 'right';
   labels: boolean;
-  tokens: (ThemedToken[] | null)[] | null;
+  tokens: (ThemedToken[] | null)[];
   editable?: boolean;
   onEditBlock?: (rowIndex: number) => void;
   editor?: ReactNode;
   editedRows?: EditableBlock | null;
   spacer?: { afterRow: number; height: number } | null;
-}) {
-  const band = (from: number, to: number) => (
-    <DiffRows
-      rows={rows.slice(from, to)}
-      offset={from}
-      side={side}
-      labels={labels}
-      tokens={tokens}
-      editable={editable}
-      onEditBlock={onEditBlock}
-      spacer={spacer}
-    />
-  );
-  if (!editedRows) return band(0, rows.length);
+}
+
+function DiffSide(props: SideProps) {
+  const { rows, editedRows, editor } = props;
+  if (!editedRows) return <DiffRows {...props} from={0} to={rows.length} />;
   return (
     <div className="min-w-0 flex-1">
-      {editedRows.firstRow > 0 && band(0, editedRows.firstRow)}
+      <DiffRows {...props} from={0} to={editedRows.firstRow} />
       {editor}
-      {editedRows.lastRow + 1 < rows.length && band(editedRows.lastRow + 1, rows.length)}
+      <DiffRows {...props} from={editedRows.lastRow + 1} to={rows.length} />
     </div>
   );
 }
 
 function DiffRows({
   rows,
-  offset,
+  from,
+  to,
   side,
   labels,
   tokens,
   editable,
   onEditBlock,
   spacer,
-}: {
-  rows: DiffRow[];
-  offset: number;
-  side: 'left' | 'right';
-  labels: boolean;
-  tokens: (ThemedToken[] | null)[] | null;
-  editable: boolean;
-  onEditBlock?: (rowIndex: number) => void;
-  spacer?: { afterRow: number; height: number } | null;
-}) {
+}: SideProps & { from: number; to: number }) {
+  if (from >= to) return null;
   return (
     <div className="min-w-0 flex-1 overflow-x-auto">
       <div className="w-max min-w-full">
-        {rows.map((row, index) => (
-          <Fragment key={offset + index}>
-            <DiffLine
-              row={row}
-              cell={side === 'left' ? row.left : row.right}
-              side={side}
-              labels={labels}
-              lineTokens={tokens?.[offset + index] ?? null}
-              editable={editable}
-              onEdit={onEditBlock ? () => onEditBlock(offset + index + (row.kind === 'hunk' ? 1 : 0)) : undefined}
-            />
-            {spacer?.afterRow === offset + index && <div style={{ height: spacer.height }} />}
-          </Fragment>
-        ))}
+        {rows.slice(from, to).map((row, offset) => {
+          const index = from + offset;
+          return (
+            <Fragment key={index}>
+              <DiffLine
+                row={row}
+                cell={row[side]}
+                side={side}
+                labels={labels}
+                lineTokens={tokens[index] ?? null}
+                editable={editable}
+                onEdit={onEditBlock && (() => onEditBlock(index + (row.kind === 'hunk' ? 1 : 0)))}
+              />
+              {spacer?.afterRow === index && <div style={{ height: spacer.height }} />}
+            </Fragment>
+          );
+        })}
       </div>
     </div>
   );
@@ -437,8 +386,7 @@ function DiffLine({
     );
   }
   if (!cell) return <div className={`${ROW} bg-procgen/40`} />;
-  const changed = row.kind === 'change';
-  const tone = !changed ? '' : side === 'left' ? 'bg-del-bg text-del-ink' : 'bg-add-bg text-add-ink';
+  const tone = row.kind !== 'change' ? '' : side === 'left' ? 'bg-del-bg text-del-ink' : 'bg-add-bg text-add-ink';
   const openable = editable && side === 'right';
   return (
     <div
@@ -447,13 +395,7 @@ function DiffLine({
     >
       <span className={GUTTER}>{cell.line}</span>
       <span className="diff-code whitespace-pre pr-2 text-[11px]">
-        {lineTokens?.length
-          ? lineTokens.map((token, index) => (
-              <span key={index} style={token.htmlStyle as CSSProperties}>
-                {token.content}
-              </span>
-            ))
-          : cell.text}
+        <CodeTokens tokens={lineTokens} text={cell.text} />
       </span>
     </div>
   );

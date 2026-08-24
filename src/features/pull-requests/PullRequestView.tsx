@@ -44,6 +44,8 @@ export function PullRequestView({
   const diffPanes = useRef<DiffPanesHandle>(null);
   const pullSource = `/api/github/pull?owner=${encodeURIComponent(owner)}&name=${encodeURIComponent(repo)}&number=${number}`;
   const fileSource = changedFileSource(owner, repo, number, selection);
+  const showing = useRef(fileSource);
+  showing.current = fileSource;
 
   useEffect(() => () => setCurrentPull(null), []);
 
@@ -84,16 +86,19 @@ export function PullRequestView({
   }, [fileSource, token, ready]);
 
   async function reloadInPlace() {
+    const asked = fileSource;
     try {
       const [loadedPull, loadedFiles] = await Promise.all([
         apiJson<PullRequestCommits>(pullSource, token),
         apiJson<ChangedFileSet>(fileSource, token),
       ]);
+      if (asked !== showing.current) return;
       setPull(loadedPull);
       setCurrentPull(loadedPull);
       setFileSet(loadedFiles);
     } catch (issue: unknown) {
-      setFileError(issue instanceof Error ? issue.message : String(issue));
+      if (asked !== showing.current) return;
+      setFileError(`Commit saved; reloading the diff failed: ${issue instanceof Error ? issue.message : String(issue)}`);
     }
   }
 

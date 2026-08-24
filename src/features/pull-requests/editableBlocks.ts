@@ -33,7 +33,7 @@ function withinHunk(row: DiffRow | undefined): boolean {
   return row !== undefined && row.kind !== 'hunk';
 }
 
-export function changedCharacters(before: string, after: string): { removed: string; added: string } {
+function changedCharacters(before: string, after: string): { removed: string; added: string } {
   const was = [...before];
   const now = [...after];
   let start = 0;
