@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { apiJson } from './apiClient';
 import { readBrowserCache, writeBrowserCache } from './browserCache';
+import { confirmJson, reviseJson, useOptimisticChanges } from './optimisticJson';
 
 export interface CachedJson<T> {
   data: T | null;
@@ -29,6 +30,7 @@ export function useCachedJson<T>(
   key: string | null = path,
 ): CachedJson<T> {
   const [held, setHeld] = useState<HeldJson<T> | null>(null);
+  const changes = useOptimisticChanges();
   const asked = useRef<Asked>({ path, key, token });
   asked.current = { path, key, token };
 
@@ -50,7 +52,8 @@ export function useCachedJson<T>(
   }, [path, key, token, ready]);
 
   const reload = () => reloadHeld<T>({ path, key, token }, asked, setHeld);
-  if (held !== null && held.key === key) return { data: held.data, fresh: held.fresh, error: held.error, reload };
+  if (held !== null && held.key === key)
+    return { data: reviseJson(key, held.data, changes), fresh: held.fresh, error: held.error, reload };
   return { ...NOTHING, reload };
 }
 
@@ -82,6 +85,7 @@ function requestJson<T>(path: string, token: string | null, key: string): Promis
   const request = apiJson<T>(path, token)
     .then((data) => {
       writeBrowserCache(cacheName(key, token), data);
+      confirmJson(key, data);
       return data;
     })
     .finally(() => inFlight.delete(flight));

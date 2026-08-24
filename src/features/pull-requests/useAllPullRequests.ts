@@ -9,7 +9,7 @@ import { useGithubToken, useSources, useStoreReady } from '@/features/sources/so
 import { useCachedJson } from '@/features/sources/useCachedJson';
 
 const MAX_REPOS = 60;
-const CACHE_KEY = 'all-pulls';
+export const ALL_PULLS_KEY = 'all-pulls';
 
 export interface AllPullRequests {
   scanning: boolean;
@@ -27,7 +27,7 @@ export function useAllPullRequests(): AllPullRequests {
   const repos = useMemo(() => knownRepos(groups), [groups]);
   const target = repos.map((repo) => `${repo.owner}/${repo.name}`).join(',');
   const path = target === '' ? null : `/api/github/all-pulls?repos=${encodeURIComponent(target)}`;
-  const { data, fresh, error } = useCachedJson<CrossRepoPulls>(path, token, ready, CACHE_KEY);
+  const { data, fresh, error } = useCachedJson<CrossRepoPulls>(path, token, ready, ALL_PULLS_KEY);
 
   return {
     scanning: !ready || groups.some((group) => group.loading) || (path !== null && !fresh),

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useCurrentPull } from './currentPullStore';
-import { announceMerge } from './mergeSignal';
+import { expectMergedPull } from './mergeOptimism';
 import type { MergeResult } from './pullRequests';
 import { apiPost } from '@/features/sources/apiClient';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
@@ -13,12 +13,11 @@ export function MergePullButton({ repo, number }: { repo: RepoRef; number: numbe
   const held = useCurrentPull();
   const pull = held && held.pull.number === number ? held : null;
   const [merging, setMerging] = useState(false);
-  const [merged, setMerged] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const closed = pull !== null && pull.pull.state !== 'open';
   const conflicted = pull?.conflicted ?? false;
-  const done = merged || (pull?.pull.merged ?? false);
+  const done = pull?.pull.merged ?? false;
 
   async function merge() {
     setMerging(true);
@@ -29,8 +28,7 @@ export function MergePullButton({ repo, number }: { repo: RepoRef; number: numbe
         token,
       );
       if (result.merged) {
-        setMerged(true);
-        announceMerge();
+        expectMergedPull(repo.owner, repo.name, number);
       } else {
         setError(result.message || 'Merge refused');
       }
