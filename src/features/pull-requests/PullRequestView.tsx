@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { ChangeCounts } from './ChangeCounts';
+import { ChangedFileTree } from './ChangedFileTree';
 import { DiffPanes, type DiffPanesHandle } from './DiffPanes';
 import { PullDiscussion } from './PullDiscussion';
 import { PullRequestList } from './PullRequestMenu';
@@ -116,22 +117,14 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
           ) : fileSet === null ? (
             <p className="px-1.5 py-[1px] text-[11px] leading-4 text-ink-dim">Loading…</p>
           ) : (
-            fileSet.files.map((candidate) => (
-              <SelectableRow
-                key={candidate.filename}
-                onActivate={() => {
-                  setPath(candidate.filename);
-                  diffPanes.current?.scrollToFile(candidate.filename);
-                }}
-                title={candidate.filename}
-                className={`${ROW} ${
-                  candidate.filename === path ? 'bg-btn-active text-accent' : 'text-ink hover:bg-btn-hover'
-                }`}
-              >
-                <span className="min-w-0 flex-1 truncate">{candidate.filename}</span>
-                <ChangeCounts additions={candidate.additions} deletions={candidate.deletions} />
-              </SelectableRow>
-            ))
+            <ChangedFileTree
+              files={fileSet.files}
+              selected={path}
+              onSelect={(filename) => {
+                setPath(filename);
+                diffPanes.current?.scrollToFile(filename);
+              }}
+            />
           )}
         </ResizableColumn>
         {fileError !== null ? (

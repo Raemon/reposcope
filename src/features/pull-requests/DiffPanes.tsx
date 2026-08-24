@@ -5,6 +5,7 @@ import { ChangeCounts } from './ChangeCounts';
 import { ImageDiff } from './ImageDiff';
 import { isImagePath } from './imageFiles';
 import { DragHandle, useDragWidth, type ColumnSize } from './ResizableColumn';
+import { sortByFolder } from './fileTree';
 import { splitDiff, type DiffCell, type DiffRow } from './splitDiff';
 import { langForPath, tokenizeCode, type ThemedToken } from './diffHighlight';
 import type { ChangedFile, ChangedFileSet } from './pullRequests';
@@ -46,7 +47,7 @@ export function DiffPanes({
   if (fileSet.files.length === 0) return <Note text="No files changed" />;
   return (
     <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
-      {fileSet.files.map((file) => (
+      {sortByFolder(fileSet.files).map((file) => (
         <FileSection
           key={file.filename}
           owner={owner}
