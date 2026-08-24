@@ -8,7 +8,8 @@ export interface IntralineRanges {
   after: CharRange[];
 }
 
-const WORD = /\s+|[A-Za-z0-9_$]+|[^\s]/g;
+const WORD = /\s+|[A-Za-z0-9_$]+|[^\s]/gu;
+const MAX_LINE_LENGTH = 1000;
 const MAX_WORD_PAIRS = 40000;
 const MAX_CHANGED_SHARE = 0.7;
 
@@ -62,7 +63,6 @@ function lcsTable(before: Word[], after: Word[]): { table: Uint16Array; stride: 
   return { table, stride };
 }
 
-/** Word indices that differ, for the stretch between the shared prefix and suffix. */
 function diffWords(before: Word[], after: Word[]): { before: number[]; after: number[] } {
   const beforeChanged: number[] = [];
   const afterChanged: number[] = [];
@@ -113,6 +113,7 @@ function changedChars(ranges: CharRange[]): number {
  */
 export function intralineRanges(before: string, after: string): IntralineRanges | null {
   if (before === after || !before.trim() || !after.trim()) return null;
+  if (before.length > MAX_LINE_LENGTH || after.length > MAX_LINE_LENGTH) return null;
 
   const beforeWords = splitWords(before);
   const afterWords = splitWords(after);
