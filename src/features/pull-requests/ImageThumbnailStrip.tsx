@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { FilePreview } from './BlobImage';
+import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { ImageViewerModal } from './ImageViewerModal';
 import type { ChangedFile } from './pullRequests';
 import type { ImageGallery } from './imageView';
@@ -56,9 +57,19 @@ function ImageThumb({
   onOpen: () => void;
 }) {
   return (
-    <button type="button" title={file.filename} aria-label={file.filename} onClick={onOpen} className={thumbClass(active)}>
-      <FilePreview owner={gallery.owner} repo={gallery.repo} file={file} baseRef={gallery.baseRef} headRef={gallery.headRef} compact className="max-h-12 max-w-16 object-contain" />
-    </button>
+    <HoverCardTrigger label={file.filename} placement="below" width="wide" interactive={false} card={<ThumbPreviewCard gallery={gallery} file={file} />}>
+      <button type="button" aria-label={file.filename} onClick={onOpen} className={thumbClass(active)}>
+        <FilePreview owner={gallery.owner} repo={gallery.repo} file={file} baseRef={gallery.baseRef} headRef={gallery.headRef} compact className="max-h-12 max-w-16 object-contain" />
+      </button>
+    </HoverCardTrigger>
+  );
+}
+
+function ThumbPreviewCard({ gallery, file }: { gallery: ImageGallery; file: ChangedFile }) {
+  return (
+    <span className="flex items-center justify-center">
+      <FilePreview owner={gallery.owner} repo={gallery.repo} file={file} baseRef={gallery.baseRef} headRef={gallery.headRef} className="max-h-[60vh] max-w-full object-contain" />
+    </span>
   );
 }
 

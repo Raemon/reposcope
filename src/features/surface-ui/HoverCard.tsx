@@ -14,6 +14,8 @@ interface TipPosition {
 export type TipPlacement = 'side' | 'below';
 
 const OFFSCREEN: TipPosition = { left: -9999, top: -9999 };
+const CARD_WIDTHS = { default: 'max-w-[min(34rem,calc(100vw-1rem))]', wide: 'max-w-[min(56rem,calc(100vw-1rem))]' };
+export type TipWidth = keyof typeof CARD_WIDTHS;
 const HOVER_INTENT_MS = 500;
 const HOVER_GRACE_MS = 220;
 
@@ -24,6 +26,7 @@ export function HoverCardTrigger({
   className = '',
   placement = 'side',
   interactive = true,
+  width = 'default',
 }: {
   label: string;
   card: ReactNode;
@@ -31,6 +34,7 @@ export function HoverCardTrigger({
   className?: string;
   placement?: TipPlacement;
   interactive?: boolean;
+  width?: TipWidth;
 }) {
   const id = useId();
   const [anchor, setAnchor] = useState<DOMRect | null>(null);
@@ -98,6 +102,7 @@ export function HoverCardTrigger({
           label={label}
           anchor={anchor}
           placement={placement}
+          width={width}
           reachable={reachable && interactive}
           onEnter={clearTimers}
           onLeave={scheduleHide}
@@ -115,6 +120,7 @@ function HoverCardPopper({
   label,
   anchor,
   placement,
+  width,
   reachable,
   onEnter,
   onLeave,
@@ -125,6 +131,7 @@ function HoverCardPopper({
   label: string;
   anchor: DOMRect;
   placement: TipPlacement;
+  width: TipWidth;
   reachable: boolean;
   onEnter: () => void;
   onLeave: () => void;
@@ -144,7 +151,7 @@ function HoverCardPopper({
       style={position}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
-      className={`fixed z-50 w-max min-w-64 max-w-[min(34rem,calc(100vw-1rem))] overflow-hidden rounded-md bg-tip shadow-card ${reachable ? '' : 'pointer-events-none'}`}
+      className={`fixed z-50 w-max min-w-64 ${CARD_WIDTHS[width]} overflow-hidden rounded-md bg-tip shadow-card ${reachable ? '' : 'pointer-events-none'}`}
     >
       <div className="truncate border-b border-btn-edge px-3 py-2 font-mono text-[11px] text-accent">{label}</div>
       <div className="max-h-[65vh] overflow-y-auto px-3 py-2">{children}</div>
