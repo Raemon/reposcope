@@ -11,7 +11,7 @@ export function ThemeToggle() {
       onClick={() => setTheme(next)}
       title={`Switch to ${next} mode`}
       aria-label={`Switch to ${next} mode`}
-      className="shrink-0 rounded border border-btn-edge p-1.5 text-ink-dim hover:bg-btn-hover hover:text-ink"
+      className="shrink-0 rounded text-ink-dim hover:bg-btn-hover hover:text-ink"
     >
       {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
     </button>
