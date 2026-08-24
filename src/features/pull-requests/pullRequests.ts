@@ -1,5 +1,6 @@
 import { githubBytes, githubGraphql, githubJson, githubSend } from '@/features/codebases/githubRequest';
 import { imageTypeOf } from './imageFiles';
+import type { RepoRef } from '@/features/sources/parseRepoLink';
 
 export interface PullRequestSummary {
   number: number;
@@ -9,6 +10,16 @@ export interface PullRequestSummary {
   draft: boolean;
   state: string;
   merged: boolean;
+}
+
+export interface CrossRepoPull extends PullRequestSummary {
+  owner: string;
+  repo: string;
+}
+
+export interface CrossRepoPulls {
+  pulls: CrossRepoPull[];
+  failures: { repo: string; message: string }[];
 }
 
 export interface CommitSummary {
@@ -106,12 +117,36 @@ const API = 'https://api.github.com';
 const FILE_PAGE = 100;
 const MAX_FILE_PAGES = 10;
 const MAX_BLOB_BYTES = 6 * 1024 * 1024;
+export const MAX_SCANNED_REPOS = 60;
+const SCAN_WORKERS = 6;
 
 export async function listPullRequests(owner: string, name: string): Promise<PullRequestSummary[]> {
   const pulls = await githubJson<GithubPull[]>(
     `${API}/repos/${owner}/${name}/pulls?state=open&sort=updated&direction=desc&per_page=50`,
   );
   return pulls.map(summarizePull);
+}
+
+export async function listPullRequestsAcross(repos: RepoRef[]): Promise<CrossRepoPulls> {
+  const queue = repos.slice(0, MAX_SCANNED_REPOS);
+  const pulls: CrossRepoPull[] = [];
+  const failures: { repo: string; message: string }[] = [];
+  const scan = async () => {
+    for (let repo = queue.shift(); repo; repo = queue.shift()) {
+      try {
+        const found = await listPullRequests(repo.owner, repo.name);
+        pulls.push(...found.map((pull) => ({ ...pull, owner: repo.owner, repo: repo.name })));
+      } catch (error) {
+        failures.push({
+          repo: `${repo.owner}/${repo.name}`,
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(SCAN_WORKERS, queue.length) }, scan));
+  pulls.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  return { pulls, failures };
 }
 
 export async function describePullRequest(owner: string, name: string, number: number): Promise<PullRequestCommits> {

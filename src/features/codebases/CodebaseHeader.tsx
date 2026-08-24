@@ -15,16 +15,19 @@ import { SelectableLink } from '@/features/surface-ui/SelectableLink';
 import { ThemeToggle } from '@/features/theme/ThemeToggle';
 import { clearGithubToken, removeSource, useGithubToken, useSources, useStoreReady } from '@/features/sources/sourceStore';
 
+const ALL_PULLS = '/pulls';
+
 export function CodebaseHeader() {
   const pathname = usePathname();
   const reading = repoBeingRead(pathname);
   const pullNumber = pullBeingRead(pathname);
+  const readingAllPulls = pathname === ALL_PULLS;
   return (
     <header className="flex items-center gap-3 border-b border-panel-edge bg-panel px-3 py-1.5">
       <Link href="/" aria-label="reposcope home" className="shrink-0">
         <ScopeMark size={64} title="reposcope home" />
       </Link>
-      <CodebaseMenu reading={reading} />
+      <CodebaseMenu reading={reading} readingAllPulls={readingAllPulls} />
       {reading &&
         (pullNumber === null ? <PullRequestMenu repo={reading} /> : <CurrentPullTitle number={pullNumber} />)}
       <div className="ml-auto flex shrink-0 items-center gap-2">
@@ -35,7 +38,7 @@ export function CodebaseHeader() {
   );
 }
 
-function CodebaseMenu({ reading }: { reading: RepoRef | null }) {
+function CodebaseMenu({ reading, readingAllPulls }: { reading: RepoRef | null; readingAllPulls: boolean }) {
   const ready = useStoreReady();
   const sources = useSources();
   const token = useGithubToken();
@@ -43,9 +46,13 @@ function CodebaseMenu({ reading }: { reading: RepoRef | null }) {
   const connected = sources.some((source) => source.kind === 'viewer');
 
   return (
-    <HeaderMenu label={reading ? `${reading.owner}/${reading.name}` : 'Codebases'} width="w-80">
+    <HeaderMenu
+      label={readingAllPulls ? 'All pull requests' : reading ? `${reading.owner}/${reading.name}` : 'Codebases'}
+      width="w-80"
+    >
       {() => (
         <>
+          <AllPullsRow active={readingAllPulls} />
           {!ready ? (
             <p className="px-2 py-1 text-[11px] leading-4 text-ink-dim">Loading…</p>
           ) : sources.length === 0 ? (
@@ -80,6 +87,23 @@ function CodebaseMenu({ reading }: { reading: RepoRef | null }) {
         </>
       )}
     </HeaderMenu>
+  );
+}
+
+function AllPullsRow({ active }: { active: boolean }) {
+  return (
+    <SelectableLink
+      href={ALL_PULLS}
+      current={active}
+      className={`flex items-baseline gap-1.5 border-b border-panel-edge px-2 py-1 text-[11px] leading-4 ${
+        active ? 'bg-btn-active text-accent' : 'text-ink hover:bg-btn-hover'
+      }`}
+    >
+      <span className="shrink-0">All</span>
+      <span className="min-w-0 flex-1 truncate text-[9px] text-ink-dim">
+        open pull requests from every codebase, newest first
+      </span>
+    </SelectableLink>
   );
 }
 

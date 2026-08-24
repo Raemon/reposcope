@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { AllPullRequestList } from './AllPullRequestList';
 import { ChangeCounts } from './ChangeCounts';
 import { ChangedFileTree } from './ChangedFileTree';
 import { DiffPanes, type DiffPanesHandle } from './DiffPanes';
@@ -17,7 +18,17 @@ import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 const ROW = 'flex w-full items-baseline gap-1.5 px-1.5 py-[1px] text-left text-[11px] leading-4';
 const WHOLE_PULL = 'all';
 
-export function PullRequestView({ owner, repo, number }: { owner: string; repo: string; number: number }) {
+export function PullRequestView({
+  owner,
+  repo,
+  number,
+  acrossRepos = false,
+}: {
+  owner: string;
+  repo: string;
+  number: number;
+  acrossRepos?: boolean;
+}) {
   const ready = useStoreReady();
   const token = useGithubToken();
   const [pull, setPull] = useState<PullRequestCommits | null>(null);
@@ -26,7 +37,7 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
   const [selection, setSelection] = useState<string>(WHOLE_PULL);
   const [fileSet, setFileSet] = useState<ChangedFileSet | null>(null);
   const [path, setPath] = useState<string | null>(null);
-  const [listSize, setListSize] = useState<ColumnSize>({ width: 300, open: false });
+  const [listSize, setListSize] = useState<ColumnSize>({ width: acrossRepos ? 380 : 300, open: acrossRepos });
   const [discussionSize, setDiscussionSize] = useState<ColumnSize>({ width: 320, open: false });
   const [commitSize, setCommitSize] = useState<ColumnSize>({ width: 260, open: true });
   const [fileSize, setFileSize] = useState<ColumnSize>({ width: 280, open: true });
@@ -85,8 +96,13 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex min-h-0 flex-1">
-        <ResizableColumn icon="⇅" title="pull requests" size={listSize} onSize={setListSize}>
-          <PullRequestList repo={{ owner, name: repo }} />
+        <ResizableColumn
+          icon="⇅"
+          title={acrossRepos ? 'all pull requests' : 'pull requests'}
+          size={listSize}
+          onSize={setListSize}
+        >
+          {acrossRepos ? <AllPullRequestList /> : <PullRequestList repo={{ owner, name: repo }} />}
         </ResizableColumn>
         <ResizableColumn icon="❝" title="discussion" size={discussionSize} onSize={setDiscussionSize}>
           <PullDiscussion owner={owner} repo={repo} number={number} author={pull.pull.author} body={pull.body} />
