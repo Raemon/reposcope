@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { repoRoute } from './repoPaths';
 import type { SidebarGroup } from './sidebarGroups';
 import { removeSource } from '@/features/sources/sourceStore';
 import type { CodebaseSource } from '@/features/sources/sourceTypes';
@@ -45,7 +46,7 @@ export function CodebaseList({ groups }: { groups: SidebarGroup[] }) {
               </p>
             )}
             {group.repos.map((repo) => {
-              const href = `/repo/${repo.owner}/${repo.name}`;
+              const href = repoRoute(repo.owner, repo.name);
               const activeLink = pathname === href;
               return (
                 <div
