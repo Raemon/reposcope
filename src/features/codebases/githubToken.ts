@@ -1,15 +1,19 @@
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { createHash } from 'node:crypto';
 
-const requestToken = new AsyncLocalStorage<string | null>();
-const rejectedTokens = new Set<string>();
+interface GithubAuth {
+  token: string | null;
+  rejected: Set<string>;
+}
+
+const requestAuth = new AsyncLocalStorage<GithubAuth>();
 
 export function withGithubToken<T>(token: string | null, work: () => Promise<T>): Promise<T> {
-  return requestToken.run(token, work);
+  return requestAuth.run({ token, rejected: new Set() }, work);
 }
 
 export function userGithubToken(): string | null {
-  return requestToken.getStore() ?? null;
+  return requestAuth.getStore()?.token ?? null;
 }
 
 export function githubToken(): string | null {
@@ -19,12 +23,12 @@ export function githubToken(): string | null {
 }
 
 export function rejectGithubToken(token: string): void {
-  rejectedTokens.add(token);
+  requestAuth.getStore()?.rejected.add(token);
 }
 
 export function userGithubTokenRejected(): boolean {
-  const token = userGithubToken();
-  return token !== null && rejectedTokens.has(token);
+  const auth = requestAuth.getStore();
+  return auth?.token != null && auth.rejected.has(auth.token);
 }
 
 export function githubTokenIdentity(): string {
@@ -33,5 +37,6 @@ export function githubTokenIdentity(): string {
 }
 
 function usable(token: string | null | undefined): string | null {
-  return token && !rejectedTokens.has(token) ? token : null;
+  const rejected = requestAuth.getStore()?.rejected;
+  return token && !rejected?.has(token) ? token : null;
 }
