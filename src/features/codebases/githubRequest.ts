@@ -18,11 +18,11 @@ const STALE_ON_STATUS = [403, 408, 429, 500, 502, 503, 504];
 const inFlight = new Map<string, Promise<CachedResponse>>();
 
 export async function githubJson<T>(url: string): Promise<T> {
-  return JSON.parse(decodeBody(await cachedResponse(url)).toString('utf8')) as T;
+  return JSON.parse(decodeBody(await cachedResponse(url, ACCEPT)).toString('utf8')) as T;
 }
 
-export async function githubBytes(url: string): Promise<Uint8Array> {
-  return new Uint8Array(decodeBody(await cachedResponse(url)));
+export async function githubBytes(url: string, accept = ACCEPT): Promise<Uint8Array> {
+  return new Uint8Array(decodeBody(await cachedResponse(url, accept)));
 }
 
 export async function githubSend<T>(url: string, method: string, body: unknown): Promise<T> {
@@ -37,12 +37,27 @@ export async function githubSend<T>(url: string, method: string, body: unknown):
   return (await response.json()) as T;
 }
 
-async function cachedResponse(url: string): Promise<CachedResponse> {
+export async function githubGraphql<T>(query: string, variables: Record<string, unknown>): Promise<T> {
+  const url = 'https://api.github.com/graphql';
+  const response = await fetch(url, {
+    method: 'POST',
+    cache: 'no-store',
+    headers: { ...githubHeaders('application/json'), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query, variables }),
+  });
+  if (!response.ok) throw new GithubRequestError(response.status, await describeSendFailure(response, url));
+  const payload = (await response.json()) as { data?: T; errors?: { message?: string }[] };
+  const failure = payload.errors?.[0]?.message;
+  if (failure) throw new GithubRequestError(response.status, failure);
+  return payload.data as T;
+}
+
+async function cachedResponse(url: string, accept: string): Promise<CachedResponse> {
   const scope = scopeOf(url);
-  const key = cacheKey([githubTokenIdentity(), url, ACCEPT]);
+  const key = cacheKey([githubTokenIdentity(), url, accept]);
   const held = await readCachedResponse(scope, key);
   if (held && Date.now() - held.storedAt < freshnessOf(url)) return held;
-  return shareInFlight(scope + key, () => revalidate(url, scope, key, held));
+  return shareInFlight(scope + key, () => revalidate(url, accept, scope, key, held));
 }
 
 function shareInFlight(key: string, work: () => Promise<CachedResponse>): Promise<CachedResponse> {
@@ -55,11 +70,12 @@ function shareInFlight(key: string, work: () => Promise<CachedResponse>): Promis
 
 async function revalidate(
   url: string,
+  accept: string,
   scope: string,
   key: string,
   held: CachedResponse | null,
 ): Promise<CachedResponse> {
-  const response = await fetch(url, { cache: 'no-store', headers: conditionalHeaders(held) }).catch(() => null);
+  const response = await fetch(url, { cache: 'no-store', headers: conditionalHeaders(accept, held) }).catch(() => null);
   if (!response) {
     if (held) return held;
     throw new GithubRequestError(503, `GitHub is unreachable for ${url}`);
@@ -114,8 +130,8 @@ function pathOf(url: string): string {
   }
 }
 
-function conditionalHeaders(held: CachedResponse | null): Record<string, string> {
-  const headers = githubHeaders();
+function conditionalHeaders(accept: string, held: CachedResponse | null): Record<string, string> {
+  const headers = githubHeaders(accept);
   if (held?.etag) headers['If-None-Match'] = held.etag;
   else if (held?.lastModified) headers['If-Modified-Since'] = held.lastModified;
   return headers;
@@ -133,10 +149,10 @@ function describeFailure(response: Response, url: string): string {
   return `GitHub ${response.status} for ${url}`;
 }
 
-function githubHeaders(): Record<string, string> {
+function githubHeaders(accept = ACCEPT): Record<string, string> {
   const token = githubToken();
   return {
-    Accept: ACCEPT,
+    Accept: accept,
     'X-GitHub-Api-Version': '2022-11-28',
     'User-Agent': 'reposcope',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
