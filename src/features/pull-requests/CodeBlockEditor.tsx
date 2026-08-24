@@ -52,7 +52,7 @@ export function CodeBlockEditor({
   }, [onHeight]);
 
   return (
-    <div ref={frame} className="relative bg-field pb-5 text-ink ring-1 ring-inset ring-accent">
+    <div ref={frame} className="relative bg-field text-ink ring-1 ring-inset ring-accent">
       <div className="relative" style={{ height: textLines.length * LINE_HEIGHT }}>
         <pre ref={mirror} aria-hidden className={`${CODE} absolute inset-0 m-0 overflow-hidden`}>
           {textLines.map((text, index) => (
@@ -76,9 +76,11 @@ export function CodeBlockEditor({
           className={`${CODE} absolute inset-0 h-full w-full resize-none overflow-x-auto overflow-y-hidden border-0 bg-transparent font-mono text-transparent caret-ink outline-none`}
         />
       </div>
-      <button type="button" onClick={onSave} disabled={saving} className={`${SMALL_BUTTON} absolute bottom-1 right-1 z-10`}>
-        {saving ? 'Saving…' : 'Save'}
-      </button>
+      <div className="sticky bottom-0 z-10 flex justify-end p-1">
+        <button type="button" onClick={onSave} disabled={saving} className={SMALL_BUTTON} title="Save and commit (⌘⏎)">
+          {saving ? 'Saving…' : 'Save'}
+        </button>
+      </div>
     </div>
   );
 }
