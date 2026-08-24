@@ -7,7 +7,7 @@ export function openImageTab(dataUrl: string) {
 }
 
 function blobFromDataUrl(dataUrl: string): Blob {
-  const [header, base64] = dataUrl.split(',', 2);
+  const [header = '', base64 = ''] = dataUrl.split(',', 2);
   const type = header.slice('data:'.length).replace(';base64', '');
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
