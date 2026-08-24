@@ -2,10 +2,10 @@
 
 import { useEffect, useRef } from 'react';
 import { CodeTokens, useTokenized } from './diffHighlight';
+import { ROW_HEIGHT } from './diffMetrics';
 import { BUTTON } from '@/features/surface-ui/buttonStyles';
 
 const CODE = 'diff-code whitespace-pre pl-[42px] pr-24 text-[11px] leading-[15px]';
-const LINE_HEIGHT = 15;
 
 export function CodeBlockEditor({
   value,
@@ -15,7 +15,7 @@ export function CodeBlockEditor({
   saving,
   onChange,
   onSave,
-  onCancel,
+  onExit,
 }: {
   value: string;
   lang: string | null;
@@ -24,7 +24,7 @@ export function CodeBlockEditor({
   saving: boolean;
   onChange: (next: string) => void;
   onSave: () => void;
-  onCancel: () => void;
+  onExit: () => void;
 }) {
   const input = useRef<HTMLTextAreaElement | null>(null);
   const mirror = useRef<HTMLPreElement | null>(null);
@@ -42,7 +42,7 @@ export function CodeBlockEditor({
 
   return (
     <div className="relative flex flex-col bg-field text-ink ring-1 ring-inset ring-accent" style={{ minHeight }}>
-      <div className="relative" style={{ height: textLines.length * LINE_HEIGHT }}>
+      <div className="relative" style={{ height: textLines.length * ROW_HEIGHT }}>
         <pre ref={mirror} aria-hidden className={`${CODE} absolute inset-0 m-0 overflow-hidden`}>
           {textLines.map((text, index) => (
             <div key={index} className="h-[15px]">
@@ -61,7 +61,7 @@ export function CodeBlockEditor({
             if (mirror.current) mirror.current.scrollLeft = event.currentTarget.scrollLeft;
           }}
           onKeyDown={(event) => {
-            if (event.key === 'Escape') onCancel();
+            if (event.key === 'Escape') onExit();
             if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) onSave();
           }}
           className={`${CODE} absolute inset-0 h-full w-full resize-none overflow-x-auto overflow-y-hidden border-0 bg-transparent font-mono text-transparent caret-ink outline-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}

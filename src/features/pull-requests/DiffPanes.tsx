@@ -15,10 +15,11 @@ import { ChangeCounts } from './ChangeCounts';
 import { CodeBlockEditor } from './CodeBlockEditor';
 import { CommitEditModal } from './CommitEditModal';
 import { ImageDiff } from './ImageDiff';
-import type { EditableBlock } from './editableBlocks';
+import { hunkHasEditableLines, type EditableBlock } from './editableBlocks';
 import { useHunkEdit, type HunkEdit } from './useHunkEdit';
 import { isImagePath } from './imageFiles';
 import { DragHandle, useDragWidth, type ColumnSize } from './ResizableColumn';
+import { ROW_HEIGHT, SAVE_BAR } from './diffMetrics';
 import { sortByFolder } from './fileTree';
 import { splitDiff, type DiffCell, type DiffRow } from './splitDiff';
 import { CodeTokens, langForPath, useTokenized, type ThemedToken } from './diffHighlight';
@@ -26,8 +27,6 @@ import type { ChangedFile, ChangedFileSet, PullRequestSummary } from './pullRequ
 import { useGithubToken } from '@/features/sources/sourceStore';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 
-const ROW_HEIGHT = 15;
-const SAVE_BAR = 28;
 const ROW = 'flex h-[15px] items-center gap-1 leading-[15px]';
 const GUTTER = 'w-[38px] shrink-0 select-none pr-1 text-right text-[9px] text-ink-dim';
 const SCROLL_MS = 100;
@@ -36,7 +35,9 @@ export interface DiffPanesHandle {
   scrollToFile: (path: string) => void;
 }
 
-const EditTarget = createContext<{ pull: PullRequestSummary; onCommitted?: () => void } | null>(null);
+const EditTarget = createContext<{ pull: PullRequestSummary; headRef: string; onCommitted?: () => void } | null>(
+  null,
+);
 
 export function DiffPanes({
   owner,
@@ -69,7 +70,7 @@ export function DiffPanes({
   if (!fileSet) return <Note text="Loading…" />;
   if (fileSet.files.length === 0) return <Note text="No files changed" />;
   return (
-    <EditTarget value={editablePull && { pull: editablePull, onCommitted }}>
+    <EditTarget value={editablePull && { pull: editablePull, headRef: fileSet.headRef, onCommitted }}>
       <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
         {sortByFolder(fileSet.files).map((file) => (
           <FileSection
@@ -198,7 +199,17 @@ function FileDiff({
   const rows = useMemo(() => splitDiff(patch), [patch]);
   const tokens = useDiffTokens(rows, filename);
   const pull = target?.pull ?? null;
-  const hunk = useHunkEdit({ owner, repo, pull, rows, filename, patch, token, onCommitted: target?.onCommitted });
+  const hunk = useHunkEdit({
+    owner,
+    repo,
+    pull,
+    headRef: target?.headRef ?? '',
+    rows,
+    filename,
+    patch,
+    token,
+    onCommitted: target?.onCommitted,
+  });
   const covered = hunk.edit ? coveredHeight(hunk.edit.block) : 0;
 
   return (
@@ -222,6 +233,7 @@ function FileDiff({
           editor={
             hunk.edit && (
               <CodeBlockEditor
+                key={hunk.edit.block.firstRow}
                 value={hunk.edit.draft}
                 lang={langForPath(filename)}
                 caretLine={hunk.edit.block.caretLine}
@@ -229,7 +241,7 @@ function FileDiff({
                 saving={hunk.committing}
                 onChange={hunk.setDraft}
                 onSave={hunk.askToCommit}
-                onCancel={hunk.askToCommit}
+                onExit={hunk.askToCommit}
               />
             )
           }
@@ -340,7 +352,7 @@ function DiffRows({
                 labels={labels}
                 lineTokens={tokens[index] ?? null}
                 editable={editable}
-                onEdit={onEditBlock && (() => onEditBlock(index + (row.kind === 'hunk' ? 1 : 0)))}
+                onEdit={editStarter(rows, index, onEditBlock)}
               />
               {spacer?.afterRow === index && <div style={{ height: spacer.height }} />}
             </Fragment>
@@ -349,6 +361,13 @@ function DiffRows({
       </div>
     </div>
   );
+}
+
+function editStarter(rows: DiffRow[], index: number, onEditBlock?: (rowIndex: number) => void) {
+  if (!onEditBlock) return undefined;
+  const hunk = rows[index]?.kind === 'hunk';
+  if (hunk && !hunkHasEditableLines(rows, index)) return undefined;
+  return () => onEditBlock(index + (hunk ? 1 : 0));
 }
 
 function DiffLine({

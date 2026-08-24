@@ -4,6 +4,7 @@ import { commitFileEdit, type FileEdit } from '@/features/pull-requests/pullRequ
 import { LOGIN_PATTERN, REPO_NAME_PATTERN } from '@/features/sources/sourceTypes';
 
 const NUMBER_PATTERN = /^[1-9][0-9]{0,8}$/;
+const SHA_PATTERN = /^[0-9a-f]{40}$/;
 const PATH_PATTERN = /^(?!\/)(?!.*(?:^|\/)\.\.(?:\/|$))[^\0]{1,1024}$/;
 const MAX_EDIT_BYTES = 200_000;
 const MAX_MESSAGE_CHARS = 2_000;
@@ -28,8 +29,11 @@ function fileEdit(body: unknown): FileEdit {
   if (endLine < startLine) throw new GithubRequestError(400, 'endLine precedes startLine');
   const message = text(edit?.message, 'message');
   if (message.length > MAX_MESSAGE_CHARS) throw new GithubRequestError(413, 'Commit message is too long');
+  const headRef = text(edit?.headRef, 'headRef');
+  if (!SHA_PATTERN.test(headRef)) throw new GithubRequestError(400, 'Invalid headRef');
   return {
     path,
+    headRef,
     startLine,
     endLine,
     original: bounded(edit?.original, 'original'),

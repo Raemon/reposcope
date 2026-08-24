@@ -15,6 +15,7 @@ export function useHunkEdit({
   owner,
   repo,
   pull,
+  headRef,
   rows,
   filename,
   patch,
@@ -24,6 +25,7 @@ export function useHunkEdit({
   owner: string;
   repo: string;
   pull: PullRequestSummary | null;
+  headRef: string;
   rows: DiffRow[];
   filename: string;
   patch: string;
@@ -69,6 +71,7 @@ export function useHunkEdit({
         token,
         {
           path: filename,
+          headRef,
           startLine: edit.block.startLine,
           endLine: edit.block.endLine,
           original: edit.block.text,

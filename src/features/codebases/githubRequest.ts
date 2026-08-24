@@ -61,7 +61,7 @@ async function cachedResponse(url: string, accept: string, fresh = false): Promi
   const key = cacheKey([githubTokenIdentity(), url, accept]);
   const held = await readCachedResponse(scope, key);
   if (held && !fresh && Date.now() - held.storedAt < freshnessOf(url)) return held;
-  return shareInFlight(scope + key, () => revalidate(url, accept, scope, key, held));
+  return shareInFlight(scope + key + (fresh ? ':fresh' : ''), () => revalidate(url, accept, scope, key, held, fresh));
 }
 
 function shareInFlight(key: string, work: () => Promise<CachedResponse>): Promise<CachedResponse> {
@@ -78,15 +78,16 @@ async function revalidate(
   scope: string,
   key: string,
   held: CachedResponse | null,
+  fresh: boolean,
 ): Promise<CachedResponse> {
   const response = await fetch(url, { cache: 'no-store', headers: conditionalHeaders(accept, held) }).catch(() => null);
   if (!response) {
-    if (held) return held;
+    if (held && !fresh) return held;
     throw new GithubRequestError(503, `GitHub is unreachable for ${url}`);
   }
   if (response.status === 304 && held) return store(scope, key, { ...held, storedAt: Date.now() });
   if (!response.ok) {
-    if (held && STALE_ON_STATUS.includes(response.status)) return held;
+    if (held && !fresh && STALE_ON_STATUS.includes(response.status)) return held;
     throw new GithubRequestError(response.status, describeFailure(response, url));
   }
   return store(scope, key, await capture(response));

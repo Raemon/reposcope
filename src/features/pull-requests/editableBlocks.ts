@@ -29,6 +29,13 @@ export function editableBlockAt(rows: DiffRow[], index: number): EditableBlock |
   };
 }
 
+export function hunkHasEditableLines(rows: DiffRow[], hunkRow: number): boolean {
+  for (let index = hunkRow + 1; withinHunk(rows[index]); index += 1) {
+    if (rows[index]?.right) return true;
+  }
+  return false;
+}
+
 function withinHunk(row: DiffRow | undefined): boolean {
   return row !== undefined && row.kind !== 'hunk';
 }

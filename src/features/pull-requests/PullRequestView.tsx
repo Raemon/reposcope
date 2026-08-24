@@ -34,6 +34,7 @@ export function PullRequestView({
   const [pull, setPull] = useState<PullRequestCommits | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [selection, setSelection] = useState<string>(WHOLE_PULL);
   const [fileSet, setFileSet] = useState<ChangedFileSet | null>(null);
   const [path, setPath] = useState<string | null>(null);
@@ -88,9 +89,10 @@ export function PullRequestView({
   async function reloadInPlace() {
     const asked = fileSource;
     try {
+      setNotice(null);
       const [loadedPull, loadedFiles] = await Promise.all([
-        apiJson<PullRequestCommits>(pullSource, token),
-        apiJson<ChangedFileSet>(fileSource, token),
+        apiJson<PullRequestCommits>(`${pullSource}&fresh=1`, token),
+        apiJson<ChangedFileSet>(`${fileSource}&fresh=1`, token),
       ]);
       if (asked !== showing.current) return;
       setPull(loadedPull);
@@ -98,7 +100,7 @@ export function PullRequestView({
       setFileSet(loadedFiles);
     } catch (issue: unknown) {
       if (asked !== showing.current) return;
-      setFileError(`Commit saved; reloading the diff failed: ${issue instanceof Error ? issue.message : String(issue)}`);
+      setNotice(`Commit saved; reloading the diff failed: ${issue instanceof Error ? issue.message : String(issue)}`);
     }
   }
 
@@ -158,14 +160,17 @@ export function PullRequestView({
         {fileError !== null ? (
           <p className="flex-1 px-2 py-1 text-[11px] text-error-ink">{fileError}</p>
         ) : (
-          <DiffPanes
-            ref={diffPanes}
-            owner={owner}
-            repo={repo}
-            fileSet={fileSet}
-            editablePull={editablePull(pull.pull, selection)}
-            onCommitted={reloadInPlace}
-          />
+          <div className="flex min-w-0 flex-1 flex-col">
+            {notice !== null && <p className="shrink-0 px-2 py-1 text-[11px] text-error-ink">{notice}</p>}
+            <DiffPanes
+              ref={diffPanes}
+              owner={owner}
+              repo={repo}
+              fileSet={fileSet}
+              editablePull={editablePull(pull.pull, selection)}
+              onCommitted={reloadInPlace}
+            />
+          </div>
         )}
       </div>
     </div>
