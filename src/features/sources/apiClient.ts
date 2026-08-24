@@ -1,3 +1,6 @@
+import { GITHUB_AUTH_HEADER, GITHUB_AUTH_REJECTED } from '@/features/github-auth/githubAuthHeader';
+import { clearGithubToken, removeSource } from './sourceStore';
+
 export class ApiClientError extends Error {
   constructor(
     readonly status: number,
@@ -20,6 +23,7 @@ function authHeaders(token: string | null): Record<string, string> {
 }
 
 async function readJson<T>(response: Response): Promise<T> {
+  dropRejectedGithubToken(response);
   const body: unknown = await response.json().catch(() => null);
   if (response.ok) return body as T;
   const message =
@@ -27,4 +31,10 @@ async function readJson<T>(response: Response): Promise<T> {
       ? (body as { error: string }).error
       : `Request failed (${response.status})`;
   throw new ApiClientError(response.status, message);
+}
+
+function dropRejectedGithubToken(response: Response): void {
+  if (response.headers.get(GITHUB_AUTH_HEADER) !== GITHUB_AUTH_REJECTED) return;
+  clearGithubToken();
+  removeSource({ kind: 'viewer' });
 }
