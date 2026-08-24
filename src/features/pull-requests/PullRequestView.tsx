@@ -80,8 +80,7 @@ export function PullRequestView({
         </ResizableColumn>
         <ResizableColumn
           icon="◆"
-          title="commit"
-          count={pull.commits.length}
+          title="commits"
           preview={<ColumnPreview tokens={pull.commits.map((commit) => commitToken(commit, selection))} />}
           size={commitSize}
           onSize={setCommitSize}
@@ -109,8 +108,7 @@ export function PullRequestView({
         </ResizableColumn>
         <ResizableColumn
           icon="▤"
-          title="file"
-          count={fileSet?.files.length}
+          title="files"
           preview={<ColumnPreview tokens={(fileSet?.files ?? []).map((file) => fileToken(file, path))} />}
           size={fileSize}
           onSize={setFileSize}

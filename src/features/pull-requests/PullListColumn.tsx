@@ -27,8 +27,7 @@ export function RepoPullsColumn({ owner, repo, number, size, onSize }: PullColum
   return (
     <ResizableColumn
       icon={ICON}
-      title="pull request"
-      count={pulls?.length}
+      title="pull requests"
       preview={<ColumnPreview tokens={(pulls ?? []).map((pull) => pullToken(pull, `${owner}/${repo}`, pull.number === number))} />}
       size={size}
       onSize={onSize}
@@ -44,8 +43,7 @@ export function AllPullsColumn({ owner, repo, number, size, onSize }: PullColumn
   return (
     <ResizableColumn
       icon={ICON}
-      title="pull request"
-      count={pulls?.length}
+      title="pull requests"
       preview={
         <ColumnPreview
           tokens={(pulls ?? []).map((pull) =>
