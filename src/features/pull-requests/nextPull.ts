@@ -1,16 +1,10 @@
 'use client';
 
-import { standingPulls } from './pullActionStore';
+import { standingPulls, type PullTarget } from './pullActionStore';
 import { allPullsRoute, pullRoute, repoPullsPath } from './pullPaths';
 import type { CrossRepoPulls, PullRequestSummary } from './pullRequests';
 import { ALL_PULLS_CACHE_KEY } from './useAllPullRequests';
 import { readCachedJson } from '@/features/sources/useCachedJson';
-
-export interface PullTarget {
-  owner: string;
-  repo: string;
-  number: number;
-}
 
 export function viewingAcrossRepos(): boolean {
   return new URLSearchParams(window.location.search).get('from') === 'all';

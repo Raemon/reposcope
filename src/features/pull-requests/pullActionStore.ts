@@ -4,10 +4,13 @@ import { useSyncExternalStore } from 'react';
 
 export type PullActionKind = 'merge' | 'close';
 
-export interface PullAction {
+export interface PullTarget {
   owner: string;
   repo: string;
   number: number;
+}
+
+export interface PullAction extends PullTarget {
   kind: PullActionKind;
   state: 'running' | 'done' | 'failed';
   message: string;
@@ -27,7 +30,14 @@ export function notePullAction(action: PullAction): void {
   listeners.forEach((notify) => notify());
 }
 
-export function failureMessage(issue: unknown): string {
+export function trackPullAction(target: PullTarget, kind: PullActionKind, refusal: Promise<string | null>): void {
+  notePullAction({ ...target, kind, state: 'running', message: '' });
+  refusal
+    .then((refused) => notePullAction({ ...target, kind, state: refused ? 'failed' : 'done', message: refused ?? '' }))
+    .catch((issue: unknown) => notePullAction({ ...target, kind, state: 'failed', message: failureMessage(issue) }));
+}
+
+function failureMessage(issue: unknown): string {
   return issue instanceof Error ? issue.message : String(issue);
 }
 
@@ -48,11 +58,11 @@ export function latestPullFailure(held: PullAction[]): PullAction | null {
   return latest && latest.state === 'failed' ? latest : null;
 }
 
-export function standingPulls<T extends { owner: string; repo: string; number: number }>(pulls: T[]): T[] {
+export function standingPulls<T extends PullTarget>(pulls: T[]): T[] {
   return withoutResolved(snapshot, pulls);
 }
 
-export function useStandingPulls<T extends { owner: string; repo: string; number: number }>(pulls: T[] | null | undefined): T[] {
+export function useStandingPulls<T extends PullTarget>(pulls: T[] | null | undefined): T[] {
   return withoutResolved(usePullActions(), pulls ?? []);
 }
 
@@ -61,7 +71,7 @@ export function useStandingRepoPulls<T extends { number: number }>(owner: string
   return (pulls ?? []).filter((pull) => !resolved(held, owner, repo, pull.number));
 }
 
-function withoutResolved<T extends { owner: string; repo: string; number: number }>(held: PullAction[], pulls: T[]): T[] {
+function withoutResolved<T extends PullTarget>(held: PullAction[], pulls: T[]): T[] {
   return pulls.filter((pull) => !resolved(held, pull.owner, pull.repo, pull.number));
 }
 

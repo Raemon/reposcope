@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { closePull } from './closePull';
-import type { PullTarget } from './nextPull';
+import type { PullTarget } from './pullActionStore';
 import { prefetchPull } from './prefetchPull';
 import { useGithubToken } from '@/features/sources/sourceStore';
 import { SelectableLink } from '@/features/surface-ui/SelectableLink';
@@ -33,13 +33,12 @@ export function PullListRow({
       >
         {children}
       </SelectableLink>
-      <ClosePullIcon target={target} shown={current} />
+      <ClosePullIcon target={target} token={token} shown={current} />
     </div>
   );
 }
 
-function ClosePullIcon({ target, shown }: { target: PullTarget; shown: boolean }) {
-  const token = useGithubToken();
+function ClosePullIcon({ target, token, shown }: { target: PullTarget; token: string | null; shown: boolean }) {
   const router = useRouter();
   return (
     <button
