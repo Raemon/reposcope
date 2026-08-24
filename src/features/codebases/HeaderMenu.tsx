@@ -44,7 +44,7 @@ export function HeaderMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         {...labelClick}
-        className={`flex max-w-[22rem] items-baseline gap-1.5 rounded border border-btn-edge px-2 py-1 text-[11px] ${SELECTABLE_TEXT} ${
+        className={`flex max-w-[22rem] items-baseline gap-1.5 rounded px-2 py-1 text-[11px] ${SELECTABLE_TEXT} ${
           open ? 'bg-btn-active text-accent' : 'text-ink hover:bg-btn-hover'
         }`}
       >
@@ -55,7 +55,7 @@ export function HeaderMenu({
       </button>
       {open && (
         <div
-          className={`absolute left-0 top-full z-20 mt-1 flex max-h-[70vh] flex-col overflow-hidden rounded border border-panel-edge bg-panel shadow-lg ${width}`}
+          className={`absolute left-0 top-full z-20 mt-1 flex max-h-[70vh] flex-col overflow-hidden rounded bg-panel shadow-card ${width}`}
         >
           {children(() => setOpen(false))}
         </div>

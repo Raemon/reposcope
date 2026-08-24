@@ -7,9 +7,9 @@ import { addSource } from './sourceStore';
 import type { GithubAccess } from '@/features/github-auth/githubAccess';
 
 const FIELD =
-  'min-w-0 flex-1 rounded border border-btn-edge bg-field px-2 py-1 text-[11px] text-ink outline-none placeholder:text-ink-dim focus:border-accent';
+  'min-w-0 flex-1 rounded bg-field px-2 py-1 text-[11px] text-ink outline-none placeholder:text-ink-dim focus:ring-1 focus:ring-accent';
 const BUTTON =
-  'shrink-0 rounded border border-btn-edge bg-btn px-2.5 py-1 text-[11px] text-ink hover:bg-btn-hover active:bg-btn-active';
+  'shrink-0 rounded bg-btn px-2.5 py-1 text-[11px] text-ink hover:bg-btn-hover active:bg-btn-active';
 
 export function SourceControls({ compact = false, oauthConfigured }: { compact?: boolean; oauthConfigured: boolean }) {
   const router = useRouter();
@@ -127,7 +127,7 @@ function SourceCard({
   children: ReactNode;
 }) {
   return (
-    <section className={`rounded border border-panel-edge bg-panel ${compact ? 'px-3 py-2' : 'px-4 py-3'}`}>
+    <section className={`rounded bg-panel ${compact ? 'px-3 py-2' : 'px-4 py-3'}`}>
       <h2 className={compact ? 'text-[11px] text-ink' : 'text-xs text-ink'}>{title}</h2>
       <div className="mt-2">{children}</div>
       {error && <p className="mt-1.5 text-[10px] leading-4 text-error-ink">{error}</p>}

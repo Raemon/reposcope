@@ -18,7 +18,7 @@ export function RelativeTime({ iso, className = '' }: { iso: string; className?:
           <span
             role="tooltip"
             style={{ left: anchor.left + anchor.width / 2, top: anchor.bottom + 6 }}
-            className="fixed z-50 -translate-x-1/2 whitespace-nowrap rounded border border-btn-edge bg-tip px-1.5 py-0.5 text-[10px] leading-4 text-ink shadow-card"
+            className="fixed z-50 -translate-x-1/2 whitespace-nowrap rounded bg-tip px-1.5 py-0.5 text-[10px] leading-4 text-ink shadow-card"
           >
             {exactTime(iso)}
           </span>,

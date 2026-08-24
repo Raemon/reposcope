@@ -52,7 +52,7 @@ export function PullRequestList({ repo }: { repo: RepoRef }) {
           >
             <span className="shrink-0 text-[9px] text-ink-dim">#{pull.number}</span>
             <span className="min-w-0 flex-1 truncate">{pull.title}</span>
-            {pull.draft && <span className="shrink-0 rounded border border-btn-edge px-1 text-[9px]">draft</span>}
+            {pull.draft && <span className="shrink-0 rounded bg-btn px-1 text-[9px]">draft</span>}
             <span className="shrink-0 text-[9px] text-ink-dim">
               {pull.author} · {timeAgo(pull.updatedAt)}
             </span>

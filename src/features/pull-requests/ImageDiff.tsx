@@ -77,7 +77,7 @@ function ImagePane({
               src={blob.value.dataUrl}
               alt={`${label} — ${source.path}`}
               onLoad={(event) => setShape(`${event.currentTarget.naturalWidth}×${event.currentTarget.naturalHeight}`)}
-              className="max-h-[420px] max-w-full border border-panel-edge object-contain"
+              className="max-h-[420px] max-w-full object-contain"
             />
           </button>
         )}
