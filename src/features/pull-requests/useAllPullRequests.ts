@@ -5,7 +5,7 @@ import type { CrossRepoPulls } from './pullRequests';
 import { sidebarGroups } from '@/features/codebases/sidebarGroups';
 import { useSourceResults } from '@/features/codebases/useSourceResults';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
-import { useGithubToken, useSources, useStoreReady } from '@/features/sources/sourceStore';
+import { useGithubAccess, useGithubToken, useSources, useStoreReady } from '@/features/sources/sourceStore';
 import { useCachedJson } from '@/features/sources/useCachedJson';
 
 const MAX_REPOS = 60;
@@ -22,7 +22,8 @@ export function useAllPullRequests(): AllPullRequests {
   const ready = useStoreReady();
   const sources = useSources();
   const token = useGithubToken();
-  const results = useSourceResults(sources, token, ready);
+  const access = useGithubAccess();
+  const results = useSourceResults(sources, token, ready, access);
   const groups = useMemo(() => sidebarGroups(sources, results), [sources, results]);
   const repos = useMemo(() => knownRepos(groups), [groups]);
   const target = repos.map((repo) => `${repo.owner}/${repo.name}`).join(',');

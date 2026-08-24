@@ -13,7 +13,7 @@ import { PullRequestMenu } from '@/features/pull-requests/PullRequestMenu';
 import { parseRepoLink, type RepoRef } from '@/features/sources/parseRepoLink';
 import { SelectableLink } from '@/features/surface-ui/SelectableLink';
 import { ThemeToggle } from '@/features/theme/ThemeToggle';
-import { clearGithubToken, removeSource, useGithubToken, useSources, useStoreReady } from '@/features/sources/sourceStore';
+import { clearGithubToken, removeSource, useGithubAccess, useGithubToken, useSources, useStoreReady } from '@/features/sources/sourceStore';
 
 const ALL_PULLS = '/pulls';
 
@@ -42,7 +42,8 @@ function CodebaseMenu({ reading, readingAllPulls }: { reading: RepoRef | null; r
   const ready = useStoreReady();
   const sources = useSources();
   const token = useGithubToken();
-  const results = useSourceResults(sources, token, ready);
+  const access = useGithubAccess();
+  const results = useSourceResults(sources, token, ready, access);
   const connected = sources.some((source) => source.kind === 'viewer');
 
   return (
@@ -82,6 +83,7 @@ function CodebaseMenu({ reading, readingAllPulls }: { reading: RepoRef | null; r
               >
                 disconnect GitHub
               </button>
+              {access === 'public' && <span className="ml-2 text-[10px] text-ink-dim">public repositories only</span>}
             </div>
           )}
         </>

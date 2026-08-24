@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { parseOwnerInput, parseRepoLink } from './parseRepoLink';
 import { addSource } from './sourceStore';
+import type { GithubAccess } from '@/features/github-auth/githubAccess';
 
 const FIELD =
   'min-w-0 flex-1 rounded border border-btn-edge bg-field px-2 py-1 text-[11px] text-ink outline-none placeholder:text-ink-dim focus:border-accent';
@@ -65,24 +66,50 @@ export function SourceControls({ compact = false, oauthConfigured }: { compact?:
       </SourceCard>
       <SourceCard
         compact={compact}
-        title="Everything you can see on GitHub, public and private"
+        title="Only the public repositories you can see on GitHub"
         note={
           oauthConfigured
-            ? 'Opens GitHub’s authorization page; reposcope asks for read access to your repositories and keeps the token only in your browser’s localStorage.'
+            ? 'Asks GitHub for access to public repositories only; your private repositories stay out of reposcope.'
             : 'Set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET to enable this.'
         }
       >
-        {oauthConfigured ? (
-          <a href="/api/github/connect" className={`inline-block ${BUTTON}`}>
-            Connect GitHub
-          </a>
-        ) : (
-          <button type="button" disabled className={`${BUTTON} cursor-not-allowed opacity-50`}>
-            Connect GitHub
-          </button>
-        )}
+        <ConnectButton oauthConfigured={oauthConfigured} access="public" label="Connect GitHub (public only)" />
+      </SourceCard>
+      <SourceCard
+        compact={compact}
+        title="Everything you can see on GitHub, public and private"
+        note={
+          oauthConfigured
+            ? 'Opens GitHub\u2019s authorization page; reposcope asks for read access to your repositories and keeps the token only in your browser\u2019s localStorage.'
+            : 'Set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET to enable this.'
+        }
+      >
+        <ConnectButton oauthConfigured={oauthConfigured} access="all" label="Connect GitHub" />
       </SourceCard>
     </div>
+  );
+}
+
+function ConnectButton({
+  oauthConfigured,
+  access,
+  label,
+}: {
+  oauthConfigured: boolean;
+  access: GithubAccess;
+  label: string;
+}) {
+  if (!oauthConfigured) {
+    return (
+      <button type="button" disabled className={`${BUTTON} cursor-not-allowed opacity-50`}>
+        {label}
+      </button>
+    );
+  }
+  return (
+    <a href={`/api/github/connect?access=${access}`} className={`inline-block ${BUTTON}`}>
+      {label}
+    </a>
   );
 }
 
