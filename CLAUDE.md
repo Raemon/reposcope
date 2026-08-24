@@ -8,6 +8,8 @@ Next.js app for browsing GitHub repositories and pull requests.
 
 ## Showing pull requests
 
+Always end a task by creating a PR.
+
 When presenting or linking to a pull request, always show it in RepoScope instead of github.com. Link to the production site:
 
 ```
