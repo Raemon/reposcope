@@ -49,6 +49,11 @@ export interface FileBlob {
   byteSize: number;
 }
 
+export interface FileText {
+  text: string | null;
+  byteSize: number;
+}
+
 export interface PullRequestCommits {
   pull: PullRequestSummary;
   body: string | null;
@@ -117,6 +122,7 @@ const API = 'https://api.github.com';
 const FILE_PAGE = 100;
 const MAX_FILE_PAGES = 10;
 const MAX_BLOB_BYTES = 6 * 1024 * 1024;
+const MAX_TEXT_BYTES = 2 * 1024 * 1024;
 export const MAX_SCANNED_REPOS = 60;
 const SCAN_WORKERS = 6;
 
@@ -222,17 +228,27 @@ export async function listCommitFiles(owner: string, name: string, sha: string):
 }
 
 export async function readFileBlob(owner: string, name: string, ref: string, path: string): Promise<FileBlob> {
-  const encoded = path.split('/').map(encodeURIComponent).join('/');
-  const bytes = await githubBytes(
-    `${API}/repos/${owner}/${name}/contents/${encoded}?ref=${encodeURIComponent(ref)}`,
-    'application/vnd.github.raw',
-  );
+  const bytes = await readRawFile(owner, name, ref, path);
   if (bytes.byteLength > MAX_BLOB_BYTES) return { dataUrl: null, byteSize: bytes.byteLength };
   const type = imageTypeOf(path) ?? 'application/octet-stream';
   return {
     dataUrl: `data:${type};base64,${Buffer.from(bytes).toString('base64')}`,
     byteSize: bytes.byteLength,
   };
+}
+
+export async function readFileText(owner: string, name: string, ref: string, path: string): Promise<FileText> {
+  const bytes = await readRawFile(owner, name, ref, path);
+  if (bytes.byteLength > MAX_TEXT_BYTES) return { text: null, byteSize: bytes.byteLength };
+  return { text: new TextDecoder().decode(bytes), byteSize: bytes.byteLength };
+}
+
+function readRawFile(owner: string, name: string, ref: string, path: string): Promise<Uint8Array> {
+  const encoded = path.split('/').map(encodeURIComponent).join('/');
+  return githubBytes(
+    `${API}/repos/${owner}/${name}/contents/${encoded}?ref=${encodeURIComponent(ref)}`,
+    'application/vnd.github.raw',
+  );
 }
 
 function changedFile(file: GithubChangedFile): ChangedFile {
