@@ -38,6 +38,20 @@ export async function githubSend<T>(url: string, method: string, body: unknown):
   return (await response.json()) as T;
 }
 
+export async function githubGraphql<T>(query: string, variables: Record<string, unknown>): Promise<T> {
+  const url = 'https://api.github.com/graphql';
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { ...githubHeaders('application/json'), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query, variables }),
+  });
+  if (!response.ok) throw new GithubRequestError(response.status, await describeSendFailure(response, url));
+  const payload = (await response.json()) as { data?: T; errors?: { message?: string }[] };
+  const failure = payload.errors?.[0]?.message;
+  if (failure) throw new GithubRequestError(response.status, failure);
+  return payload.data as T;
+}
+
 export async function githubBytes(url: string, accept = 'application/vnd.github+json'): Promise<Uint8Array> {
   const response = await githubFetch(url, accept);
   return new Uint8Array(await response.arrayBuffer());

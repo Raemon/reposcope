@@ -1,4 +1,4 @@
-import { githubBytes, githubJson, githubSend } from '@/features/codebases/githubRequest';
+import { githubBytes, githubGraphql, githubJson, githubSend } from '@/features/codebases/githubRequest';
 import { imageTypeOf } from './imageFiles';
 
 export interface PullRequestSummary {
@@ -63,6 +63,7 @@ export interface PullComment {
 
 interface GithubPull {
   number: number;
+  node_id: string;
   title: string;
   body?: string | null;
   user: { login: string } | null;
@@ -130,12 +131,21 @@ export async function describePullRequest(owner: string, name: string, number: n
 }
 
 export async function mergePullRequest(owner: string, name: string, number: number): Promise<MergeResult> {
+  const pull = await githubJson<GithubPull>(`${API}/repos/${owner}/${name}/pulls/${number}`);
+  if (pull.draft) await markReadyForReview(pull.node_id);
   const result = await githubSend<{ merged?: boolean; message?: string }>(
     `${API}/repos/${owner}/${name}/pulls/${number}/merge`,
     'PUT',
     {},
   );
   return { merged: result.merged ?? false, message: result.message ?? '' };
+}
+
+async function markReadyForReview(pullId: string): Promise<void> {
+  await githubGraphql(
+    'mutation($pullId: ID!) { markPullRequestReadyForReview(input: { pullRequestId: $pullId }) { pullRequest { isDraft } } }',
+    { pullId },
+  );
 }
 
 export async function listPullRequestFiles(owner: string, name: string, number: number): Promise<ChangedFileSet> {
