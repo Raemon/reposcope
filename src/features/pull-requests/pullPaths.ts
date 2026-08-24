@@ -18,6 +18,18 @@ export function repoPullsPath(owner: string, repo: string): string {
   return `/api/github/pulls?${repoParams(owner, repo)}`;
 }
 
+export function mergePullPath(owner: string, repo: string, number: number): string {
+  return `/api/github/merge?${repoParams(owner, repo)}&number=${number}`;
+}
+
+export function pullRoute(owner: string, repo: string, number: number): string {
+  return `/repo/${owner}/${repo}/pull/${number}`;
+}
+
+export function allPullsRoute(owner: string, repo: string, number: number): string {
+  return `${pullRoute(owner, repo, number)}?from=all`;
+}
+
 function repoParams(owner: string, repo: string): string {
   return `owner=${encodeURIComponent(owner)}&name=${encodeURIComponent(repo)}`;
 }

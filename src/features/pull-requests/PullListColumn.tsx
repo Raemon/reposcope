@@ -4,7 +4,7 @@ import { AllPullRequestList } from './AllPullRequestList';
 import { ColumnPreview, type PreviewToken } from './ColumnPreview';
 import { PullRequestList } from './PullRequestMenu';
 import { ResizableColumn, type ColumnSize } from './ResizableColumn';
-import { mergedAway, useMergeAttempts } from './mergeStore';
+import { useStandingPulls, useStandingRepoPulls } from './mergeStore';
 import { repoPullsPath } from './pullPaths';
 import type { PullRequestSummary } from './pullRequests';
 import { useAllPullRequests } from './useAllPullRequests';
@@ -25,8 +25,7 @@ export function RepoPullsColumn({ owner, repo, number, size, onSize }: PullColum
   const ready = useStoreReady();
   const token = useGithubToken();
   const { data: pulls } = useCachedJson<PullRequestSummary[]>(repoPullsPath(owner, repo), token, ready);
-  const attempts = useMergeAttempts();
-  const standingPulls = (pulls ?? []).filter((pull) => !mergedAway(attempts, owner, repo, pull.number));
+  const standingPulls = useStandingRepoPulls(owner, repo, pulls);
   return (
     <ResizableColumn
       icon={ICON}
@@ -42,8 +41,7 @@ export function RepoPullsColumn({ owner, repo, number, size, onSize }: PullColum
 
 export function AllPullsColumn({ owner, repo, number, size, onSize }: PullColumn) {
   const { found } = useAllPullRequests();
-  const attempts = useMergeAttempts();
-  const standingPulls = (found?.pulls ?? []).filter((pull) => !mergedAway(attempts, pull.owner, pull.repo, pull.number));
+  const standingPulls = useStandingPulls(found?.pulls);
   return (
     <ResizableColumn
       icon={ICON}

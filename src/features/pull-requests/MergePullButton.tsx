@@ -10,9 +10,8 @@ import { useGithubToken } from '@/features/sources/sourceStore';
 export function MergePullButton({ repo, number }: { repo: RepoRef; number: number }) {
   const token = useGithubToken();
   const router = useRouter();
-  const held = useCurrentPull();
+  const pull = useCurrentPull(repo.owner, repo.name, number);
   const attempts = useMergeAttempts();
-  const pull = held && held.pull.number === number ? held : null;
   const attempt = mergeAttemptFor(attempts, repo.owner, repo.name, number);
   const failure = latestMergeFailure(attempts);
   const elsewhere = attempts.find((tried) => tried.state === 'merging' && tried !== attempt) ?? null;

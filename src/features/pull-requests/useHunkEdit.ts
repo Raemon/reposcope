@@ -62,24 +62,23 @@ export function useHunkEdit({
   }
 
   // Optimistic: dismiss the modal right away and leave the editor showing the
-  // committed content; the fresh diff closes it once the server confirms.
+  // committed content until the refreshed diff replaces it.
   async function commit() {
     if (!edit || !pull || message === null || committing) return;
     const refresh = onCommitted;
-    const note = message;
     setCommitting(true);
     setFailure(null);
     setMessage(null);
     try {
-      await postHunkCommit({ owner, repo, pull, headRef, filename, token, edit, message: note });
+      await postHunkCommit({ owner, repo, pull, headRef, filename, token, edit, message });
     } catch (issue: unknown) {
-      setMessage(note);
+      setMessage(message);
       setFailure(issue instanceof Error ? issue.message : String(issue));
       setCommitting(false);
       return;
     }
     if (refresh) await refresh();
-    else close();
+    close();
     setCommitting(false);
   }
 

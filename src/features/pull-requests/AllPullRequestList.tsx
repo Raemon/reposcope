@@ -2,8 +2,9 @@
 
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { mergedAway, useMergeAttempts } from './mergeStore';
+import { useStandingPulls } from './mergeStore';
 import { prefetchPull } from './prefetchPull';
+import { allPullsRoute, pullRoute } from './pullPaths';
 import type { CrossRepoPull } from './pullRequests';
 import { useAllPullRequests } from './useAllPullRequests';
 import { timeAgo } from '@/features/repo-insights/ui/timeAgo';
@@ -13,14 +14,6 @@ import { SelectableLink } from '@/features/surface-ui/SelectableLink';
 const NOTE = 'px-2 py-1 text-[11px] leading-4';
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
-function pullRoute(pull: { owner: string; repo: string; number: number }): string {
-  return `/repo/${pull.owner}/${pull.repo}/pull/${pull.number}`;
-}
-
-export function allPullHref(pull: { owner: string; repo: string; number: number }): string {
-  return `${pullRoute(pull)}?from=all`;
-}
-
 function updatedWithinLastWeek(pull: CrossRepoPull): boolean {
   return Date.now() - Date.parse(pull.updatedAt) < WEEK_MS;
 }
@@ -28,7 +21,7 @@ function updatedWithinLastWeek(pull: CrossRepoPull): boolean {
 export function AllPullRequestList() {
   const { scanning, repoCount, found, error } = useAllPullRequests();
   const pathname = usePathname();
-  const attempts = useMergeAttempts();
+  const standingPulls = useStandingPulls(found?.pulls);
   const [showingOlder, setShowingOlder] = useState(false);
 
   if (!found) {
@@ -40,9 +33,8 @@ export function AllPullRequestList() {
     );
   }
 
-  const standingPulls = found.pulls.filter((pull) => !mergedAway(attempts, pull.owner, pull.repo, pull.number));
   const visible = standingPulls.filter(
-    (pull) => showingOlder || updatedWithinLastWeek(pull) || pathname === pullRoute(pull),
+    (pull) => showingOlder || updatedWithinLastWeek(pull) || pathname === pullRoute(pull.owner, pull.repo, pull.number),
   );
   const olderCount = standingPulls.length - visible.length;
 
@@ -74,8 +66,8 @@ export function AllPullRequestList() {
 
 function PullRow({ pull, pathname }: { pull: CrossRepoPull; pathname: string }) {
   const token = useGithubToken();
-  const href = allPullHref(pull);
-  const active = pathname === pullRoute(pull);
+  const href = allPullsRoute(pull.owner, pull.repo, pull.number);
+  const active = pathname === pullRoute(pull.owner, pull.repo, pull.number);
   return (
     <SelectableLink
       href={href}

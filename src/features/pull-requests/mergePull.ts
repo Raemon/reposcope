@@ -1,9 +1,8 @@
 'use client';
 
-import { allPullHref } from './AllPullRequestList';
-import { mergeAttempts, mergedAway, noteMergeAttempt } from './mergeStore';
+import { noteMergeAttempt, standingPulls } from './mergeStore';
 import { prefetchPull } from './prefetchPull';
-import { repoPullsPath } from './pullPaths';
+import { allPullsRoute, mergePullPath, pullRoute, repoPullsPath } from './pullPaths';
 import type { CrossRepoPulls, MergeResult, PullRequestSummary } from './pullRequests';
 import { setStickyColumn } from './stickyColumns';
 import { ALL_PULLS_CACHE_KEY } from './useAllPullRequests';
@@ -17,7 +16,7 @@ export interface PullTarget {
 }
 
 export function mergePull(target: PullTarget, token: string | null, navigate: (href: string) => void): void {
-  const acrossRepos = window.location.search.includes('from=all');
+  const acrossRepos = new URLSearchParams(window.location.search).get('from') === 'all';
   const next = nextPullAfter(target, token, acrossRepos);
   noteMergeAttempt({ ...target, state: 'merging', message: '' });
   setStickyColumn(acrossRepos ? 'all-pulls' : 'pulls', (size) => ({ ...size, open: true }));
@@ -25,7 +24,7 @@ export function mergePull(target: PullTarget, token: string | null, navigate: (h
     prefetchPull(next.owner, next.repo, next.number, token);
     navigate(next.href);
   }
-  apiPost<MergeResult>(mergePath(target), token)
+  apiPost<MergeResult>(mergePullPath(target.owner, target.repo, target.number), token)
     .then((result) => {
       if (result.merged) noteMergeAttempt({ ...target, state: 'merged', message: '' });
       else noteMergeAttempt({ ...target, state: 'failed', message: result.message || 'Merge refused' });
@@ -35,17 +34,12 @@ export function mergePull(target: PullTarget, token: string | null, navigate: (h
     });
 }
 
-function mergePath({ owner, repo, number }: PullTarget): string {
-  return `/api/github/merge?owner=${encodeURIComponent(owner)}&name=${encodeURIComponent(repo)}&number=${number}`;
-}
-
 function nextPullAfter(target: PullTarget, token: string | null, acrossRepos: boolean): (PullTarget & { href: string }) | null {
-  const listed = acrossRepos ? cachedAllPulls(token) : cachedRepoPulls(target, token);
-  const standingPulls = listed.filter((pull) => !mergedAway(mergeAttempts(), pull.owner, pull.repo, pull.number));
-  const index = standingPulls.findIndex((pull) => samePull(pull, target));
-  const next = index < 0 ? null : standingPulls[index + 1] ?? standingPulls[index - 1] ?? null;
+  const listed = standingPulls(acrossRepos ? cachedAllPulls(token) : cachedRepoPulls(target, token));
+  const index = listed.findIndex((pull) => samePull(pull, target));
+  const next = index < 0 ? null : listed[index + 1] ?? listed[index - 1] ?? null;
   if (!next) return null;
-  return { ...next, href: acrossRepos ? allPullHref(next) : `/repo/${next.owner}/${next.repo}/pull/${next.number}` };
+  return { ...next, href: acrossRepos ? allPullsRoute(next.owner, next.repo, next.number) : pullRoute(next.owner, next.repo, next.number) };
 }
 
 function cachedRepoPulls({ owner, repo }: PullTarget, token: string | null): PullTarget[] {
