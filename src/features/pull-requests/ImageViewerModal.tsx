@@ -68,11 +68,7 @@ function ViewerFrame({
   onIndex: (index: number) => void;
   onClose: () => void;
 }) {
-  const dialog = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    dialog.current?.focus();
-  }, [index]);
-  const source = previewSource(file, baseRef, headRef);
+  const dialog = useFocusOnIndex(index);
   return (
     <div
       ref={dialog}
@@ -80,13 +76,50 @@ function ViewerFrame({
       aria-modal="true"
       aria-label={file.filename}
       tabIndex={-1}
-      onClick={(event) => event.stopPropagation()}
+      onClick={onClose}
       className="flex h-[90vh] w-[90vw] items-center gap-1 outline-none"
     >
       <ShiftButton label="Previous image" mark="‹" delta={-1} index={index} count={count} onIndex={onIndex} />
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <ViewerCaption file={file} index={index} count={count} onClose={onClose} />
-        <div className="flex min-h-0 flex-1 items-center justify-center">
+      <ViewerStage
+        owner={owner}
+        repo={repo}
+        file={file}
+        baseRef={baseRef}
+        headRef={headRef}
+        index={index}
+        count={count}
+        onClose={onClose}
+      />
+      <ShiftButton label="Next image" mark="›" delta={1} index={index} count={count} onIndex={onIndex} />
+    </div>
+  );
+}
+
+function ViewerStage({
+  owner,
+  repo,
+  file,
+  baseRef,
+  headRef,
+  index,
+  count,
+  onClose,
+}: {
+  owner: string;
+  repo: string;
+  file: ChangedFile;
+  baseRef: string;
+  headRef: string;
+  index: number;
+  count: number;
+  onClose: () => void;
+}) {
+  const source = previewSource(file, baseRef, headRef);
+  return (
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <ViewerCaption file={file} index={index} count={count} onClose={onClose} />
+      <div className="flex min-h-0 flex-1 items-center justify-center">
+        <span onClick={holdClick} className="flex max-h-full max-w-full">
           <BlobImage
             owner={owner}
             repo={repo}
@@ -94,9 +127,8 @@ function ViewerFrame({
             alt={file.filename}
             className="max-h-full max-w-full object-contain"
           />
-        </div>
+        </span>
       </div>
-      <ShiftButton label="Next image" mark="›" delta={1} index={index} count={count} onIndex={onIndex} />
     </div>
   );
 }
@@ -113,7 +145,7 @@ function ViewerCaption({
   onClose: () => void;
 }) {
   return (
-    <div className="flex shrink-0 items-baseline gap-2 px-1 py-[2px] text-[11px] leading-4">
+    <div onClick={holdClick} className="flex shrink-0 items-baseline gap-2 px-1 py-[2px] text-[11px] leading-4">
       <span title={file.filename} className="min-w-0 flex-1 truncate text-ink">
         {baseName(file.filename)}
       </span>
@@ -148,12 +180,23 @@ function ShiftButton({
     <button
       type="button"
       aria-label={label}
-      onClick={() => onIndex(wrapImageIndex(index, delta, count))}
+      onClick={(event) => {
+        holdClick(event);
+        onIndex(wrapImageIndex(index, delta, count));
+      }}
       className="shrink-0 px-2 py-8 text-[18px] leading-none text-ink-dim hover:bg-btn-hover hover:text-ink"
     >
       {mark}
     </button>
   );
+}
+
+function useFocusOnIndex(index: number) {
+  const dialog = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    dialog.current?.focus();
+  }, [index]);
+  return dialog;
 }
 
 function useViewerKeys(
@@ -184,4 +227,8 @@ function viewerKeyAction(
   if (key === 'ArrowLeft') return { index: wrapImageIndex(index, -1, count) };
   if (key === 'ArrowRight') return { index: wrapImageIndex(index, 1, count) };
   return null;
+}
+
+function holdClick(event: { stopPropagation: () => void }) {
+  event.stopPropagation();
 }
