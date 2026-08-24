@@ -12,7 +12,9 @@ import {
 } from 'react';
 import { ChangeCounts } from './ChangeCounts';
 import { ImageDiff } from './ImageDiff';
-import { isImagePath } from './imageFiles';
+import { ImageThumbnailStrip } from './ImageThumbnailStrip';
+import { imageFilesOf, isImagePath } from './imageFiles';
+import { imageSides } from './imageView';
 import { DragHandle, useDragWidth, type ColumnSize } from './ResizableColumn';
 import { sortByFolder } from './fileTree';
 import { splitDiff, type DiffCell, type DiffRow } from './splitDiff';
@@ -59,9 +61,12 @@ export function DiffPanes({
 
   if (!fileSet) return <Note text="Loading…" />;
   if (fileSet.files.length === 0) return <Note text="No files changed" />;
+  const orderedFiles = sortByFolder(fileSet.files);
+  const imageFiles = imageFilesOf(orderedFiles);
   return (
     <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
-      {sortByFolder(fileSet.files).map((file) => (
+      <ImageStrip key={`${fileSet.baseRef}:${fileSet.headRef}`} owner={owner} repo={repo} fileSet={fileSet} files={imageFiles} />
+      {orderedFiles.map((file) => (
         <FileSection
           key={file.filename}
           owner={owner}
@@ -77,6 +82,21 @@ export function DiffPanes({
       ))}
     </div>
   );
+}
+
+function ImageStrip({
+  owner,
+  repo,
+  fileSet,
+  files,
+}: {
+  owner: string;
+  repo: string;
+  fileSet: ChangedFileSet;
+  files: ChangedFile[];
+}) {
+  if (files.length === 0) return null;
+  return <ImageThumbnailStrip owner={owner} repo={repo} files={files} baseRef={fileSet.baseRef} headRef={fileSet.headRef} />;
 }
 
 function animateScrollTop(container: HTMLElement, target: number) {
@@ -107,7 +127,7 @@ function FileSection({
   headRef: string;
   sectionRef: (node: HTMLElement | null) => void;
 }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(!isImagePath(file.filename));
   return (
     <section ref={sectionRef} className="border-b border-panel-edge">
       <SelectableRow
@@ -144,14 +164,10 @@ function FileBody({
   headRef: string;
 }) {
   if (isImagePath(file.filename)) {
+    const { before, after } = imageSides(file, baseRef, headRef);
     return (
       <>
-        <ImageDiff
-          owner={owner}
-          repo={repo}
-          before={file.status === 'added' ? null : { ref: baseRef, path: file.previousFilename ?? file.filename }}
-          after={file.status === 'removed' ? null : { ref: headRef, path: file.filename }}
-        />
+        <ImageDiff owner={owner} repo={repo} before={before} after={after} />
         {file.patch && <FileDiff owner={owner} repo={repo} file={file} baseRef={baseRef} headRef={headRef} />}
       </>
     );

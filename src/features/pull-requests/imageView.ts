@@ -1,0 +1,45 @@
+import type { ChangedFile } from './pullRequests';
+
+export interface ImageSource {
+  ref: string;
+  path: string;
+}
+
+export interface ImageGallery {
+  owner: string;
+  repo: string;
+  files: ChangedFile[];
+  baseRef: string;
+  headRef: string;
+}
+
+export interface ImageFileView {
+  owner: string;
+  repo: string;
+  file: ChangedFile;
+  baseRef: string;
+  headRef: string;
+}
+
+export function imageSides(
+  file: ChangedFile,
+  baseRef: string,
+  headRef: string,
+): { before: ImageSource | null; after: ImageSource | null } {
+  return { before: beforeSide(file, baseRef), after: afterSide(file, headRef) };
+}
+
+function beforeSide(file: ChangedFile, baseRef: string): ImageSource | null {
+  if (file.status === 'added') return null;
+  return { ref: baseRef, path: file.previousFilename ?? file.filename };
+}
+
+function afterSide(file: ChangedFile, headRef: string): ImageSource | null {
+  if (file.status === 'removed') return null;
+  return { ref: headRef, path: file.filename };
+}
+
+export function previewSource(file: ChangedFile, baseRef: string, headRef: string): ImageSource {
+  const { before, after } = imageSides(file, baseRef, headRef);
+  return after ?? before ?? { ref: headRef, path: file.filename };
+}
