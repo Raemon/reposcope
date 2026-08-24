@@ -1,11 +1,12 @@
 'use client';
 
-import { useImperativeHandle, useRef, useState, type Ref } from 'react';
+import { useEffect, useImperativeHandle, useRef, useState, type CSSProperties, type Ref } from 'react';
 import { ChangeCounts } from './ChangeCounts';
 import { ImageDiff } from './ImageDiff';
 import { isImagePath } from './imageFiles';
 import { DragHandle, useDragWidth, type ColumnSize } from './ResizableColumn';
 import { splitDiff, type DiffCell, type DiffRow } from './splitDiff';
+import { langForPath, tokenizeCode, type ThemedToken } from './diffHighlight';
 import type { ChangedFile, ChangedFileSet } from './pullRequests';
 
 const ROW = 'flex h-[15px] items-center gap-1 leading-[15px]';
@@ -136,41 +137,101 @@ function FileBody({
           before={file.status === 'added' ? null : { ref: baseRef, path: file.previousFilename ?? file.filename }}
           after={file.status === 'removed' ? null : { ref: headRef, path: file.filename }}
         />
-        {file.patch && <FileDiff patch={file.patch} />}
+        {file.patch && <FileDiff patch={file.patch} filename={file.filename} />}
       </>
     );
   }
-  if (file.patch) return <FileDiff patch={file.patch} />;
+  if (file.patch) return <FileDiff patch={file.patch} filename={file.filename} />;
   return <Note text={`${file.status} — no textual diff`} />;
 }
 
-function FileDiff({ patch }: { patch: string }) {
+function FileDiff({ patch, filename }: { patch: string; filename: string }) {
   const [removedSize, setRemovedSize] = useState<ColumnSize>({ width: 520, open: true });
   const startDrag = useDragWidth(removedSize, setRemovedSize);
 
   const rows = splitDiff(patch);
+  const tokens = useDiffTokens(patch, filename);
   return (
     <div className="flex">
       <section
         className="relative flex shrink-0 flex-col border-r border-panel-edge"
         style={{ width: removedSize.width }}
       >
-        <DiffSide rows={rows} side="left" labels />
+        <DiffSide rows={rows} side="left" labels tokens={tokens?.left ?? null} />
         <DragHandle onPointerDown={startDrag} />
       </section>
       <section className="flex min-w-0 flex-1 flex-col">
-        <DiffSide rows={rows} side="right" labels={false} />
+        <DiffSide rows={rows} side="right" labels={false} tokens={tokens?.right ?? null} />
       </section>
     </div>
   );
 }
 
-function DiffSide({ rows, side, labels }: { rows: DiffRow[]; side: 'left' | 'right'; labels: boolean }) {
+interface SideTokens {
+  left: (ThemedToken[] | null)[];
+  right: (ThemedToken[] | null)[];
+}
+
+function useDiffTokens(patch: string, filename: string): SideTokens | null {
+  const [tokens, setTokens] = useState<SideTokens | null>(null);
+  useEffect(() => {
+    setTokens(null);
+    const lang = langForPath(filename);
+    if (!lang) return;
+    let cancelled = false;
+    const rows = splitDiff(patch);
+    const textOf = (cells: (DiffCell | null)[]) =>
+      cells
+        .filter((cell): cell is DiffCell => cell !== null)
+        .map((cell) => cell.text)
+        .join('\n');
+    Promise.all([
+      tokenizeCode(textOf(rows.map((row) => row.left)), lang),
+      tokenizeCode(textOf(rows.map((row) => row.right)), lang),
+    ]).then(([leftLines, rightLines]) => {
+      if (cancelled || (!leftLines && !rightLines)) return;
+      const left: (ThemedToken[] | null)[] = [];
+      const right: (ThemedToken[] | null)[] = [];
+      let leftIndex = 0;
+      let rightIndex = 0;
+      for (const row of rows) {
+        left.push(row.left && leftLines ? (leftLines[leftIndex] ?? null) : null);
+        if (row.left) leftIndex += 1;
+        right.push(row.right && rightLines ? (rightLines[rightIndex] ?? null) : null);
+        if (row.right) rightIndex += 1;
+      }
+      setTokens({ left, right });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [patch, filename]);
+  return tokens;
+}
+
+function DiffSide({
+  rows,
+  side,
+  labels,
+  tokens,
+}: {
+  rows: DiffRow[];
+  side: 'left' | 'right';
+  labels: boolean;
+  tokens: (ThemedToken[] | null)[] | null;
+}) {
   return (
     <div className="min-w-0 flex-1 overflow-x-auto">
       <div className="w-max min-w-full">
         {rows.map((row, index) => (
-          <DiffLine key={index} row={row} cell={side === 'left' ? row.left : row.right} side={side} labels={labels} />
+          <DiffLine
+            key={index}
+            row={row}
+            cell={side === 'left' ? row.left : row.right}
+            side={side}
+            labels={labels}
+            lineTokens={tokens?.[index] ?? null}
+          />
         ))}
       </div>
     </div>
@@ -182,11 +243,13 @@ function DiffLine({
   cell,
   side,
   labels,
+  lineTokens,
 }: {
   row: DiffRow;
   cell: DiffCell | null;
   side: 'left' | 'right';
   labels: boolean;
+  lineTokens: ThemedToken[] | null;
 }) {
   if (row.kind === 'hunk') {
     return (
@@ -201,7 +264,15 @@ function DiffLine({
   return (
     <div className={`${ROW} ${tone}`}>
       <span className={GUTTER}>{cell.line}</span>
-      <span className="whitespace-pre pr-2 text-[11px]">{cell.text}</span>
+      <span className="diff-code whitespace-pre pr-2 text-[11px]">
+        {lineTokens?.length
+          ? lineTokens.map((token, index) => (
+              <span key={index} style={token.htmlStyle as CSSProperties}>
+                {token.content}
+              </span>
+            ))
+          : cell.text}
+      </span>
     </div>
   );
 }
