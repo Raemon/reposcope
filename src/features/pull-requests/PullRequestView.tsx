@@ -9,6 +9,7 @@ import { PullFilesColumn } from './PullFilesColumn';
 import { PullRequestList } from './PullRequestMenu';
 import { ResizableColumn } from './ResizableColumn';
 import { setCurrentPull } from './currentPullStore';
+import { useMergeCount } from './mergeSignal';
 import { commitFilesPath, pullFilesPath, pullPath } from './pullPaths';
 import type { ChangedFileSet, PullRequestCommits, PullRequestSummary } from './pullRequests';
 import { useStickyColumn } from './stickyColumns';
@@ -40,6 +41,8 @@ export function PullRequestView({
   const [discussionSize, setDiscussionSize] = useStickyColumn('discussion', { width: 320, open: false });
   const [commitSize, setCommitSize] = useStickyColumn('commits', { width: 260, open: true });
   const [fileSize, setFileSize] = useStickyColumn('files', { width: 280, open: true });
+  const merges = useMergeCount();
+  const mergesSeen = useRef(merges);
   const diffPanes = useRef<DiffPanesHandle>(null);
   const pullRoute = pullPath(owner, repo, number);
   const fileRoute = selection === WHOLE_PULL ? pullFilesPath(owner, repo, number) : commitFilesPath(owner, repo, selection);
@@ -63,6 +66,15 @@ export function PullRequestView({
     setCurrentPull(pull);
     if (pull) setCommitSize((size) => ({ ...size, open: pull.commits.length > 1 }));
   }, [pull, setCommitSize]);
+
+  useEffect(() => {
+    if (merges === mergesSeen.current) return;
+    mergesSeen.current = merges;
+    setListSize((size) => ({ ...size, open: true }));
+    setDiscussionSize((size) => ({ ...size, open: false }));
+    setCommitSize((size) => ({ ...size, open: false }));
+    setFileSize((size) => ({ ...size, open: false }));
+  }, [merges, setListSize, setDiscussionSize, setCommitSize, setFileSize]);
 
   useEffect(() => {
     if (!fileSet) return;

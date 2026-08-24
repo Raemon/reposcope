@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useCurrentPull } from './currentPullStore';
+import { announceMerge } from './mergeSignal';
 import type { MergeResult } from './pullRequests';
 import { apiPost } from '@/features/sources/apiClient';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
@@ -27,8 +28,12 @@ export function MergePullButton({ repo, number }: { repo: RepoRef; number: numbe
         `/api/github/merge?owner=${encodeURIComponent(repo.owner)}&name=${encodeURIComponent(repo.name)}&number=${number}`,
         token,
       );
-      if (result.merged) setMerged(true);
-      else setError(result.message || 'Merge refused');
+      if (result.merged) {
+        setMerged(true);
+        announceMerge();
+      } else {
+        setError(result.message || 'Merge refused');
+      }
     } catch (issue: unknown) {
       setError(issue instanceof Error ? issue.message : String(issue));
     } finally {
