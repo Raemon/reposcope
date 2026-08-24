@@ -6,6 +6,7 @@ Next.js app for browsing GitHub repositories and pull requests.
 - Typecheck: `npm run typecheck`
 - Production: https://reposcope-five.vercel.app
 
+
 ## GitHub access
 
 Every read from GitHub goes through `githubJson`/`githubBytes` in
@@ -27,4 +28,17 @@ For UI changes that aren't deployed yet, run the dev server and screenshot the s
 
 Include screenshots as files in public/screenshots/
 
-If you make followup PRs after an existing merged PR, make it directly against origin/main instead of against the previous PR.
+If you make followup PRs after an existing merged PR, make it directly against origin/main instead of against the previous PR.  
+
+## Reviewing when done
+
+After you've finished a job and created the draft PR, spin up subagents to review the PR for
+- bugs
+- code that is duplicated, or partially duplicated, that you can consolidate
+- functions that are more than 7 lines long (see if you can split into subfunctions with names that make it clear why we're doing whatever the subfunction is doing)
+- useMemos, etc, that are more than 3 lines long (turn them into clearly named functions)
+- files that have gotten complex enough that they're handling multiple different things (split into subfiles)
+- unnecessarily complex code (trim all code down to the smallest you can)
+
+After THAT, spin up ANOTHER subagent, that just looks at the code for comments longer than 90 characters 
+(including multiple lines), and streamline all comments down to < 90 chars.
