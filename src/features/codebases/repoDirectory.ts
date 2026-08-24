@@ -1,5 +1,5 @@
 import { githubJson, GithubRequestError } from './githubRequest';
-import { githubTokenIdentity, userGithubToken } from './githubToken';
+import { userGithubToken } from './githubToken';
 
 export interface RepoSummary {
   owner: string;
@@ -27,18 +27,9 @@ interface GithubRepo {
 const API = 'https://api.github.com';
 const PAGE = 'per_page=100&sort=pushed';
 const MAX_PAGES = 5;
-const TTL_MS = 10 * 60 * 1000;
-const MAX_CACHED = 64;
-const cache = new Map<string, { at: number; repos: RepoSummary[] }>();
 
 export async function listOwnerRepos(login: string): Promise<RepoSummary[]> {
-  const key = `${githubTokenIdentity()}:${login.toLowerCase()}`;
-  const held = cache.get(key);
-  if (held && Date.now() - held.at < TTL_MS) return held.repos;
-  const repos = await fetchPages(await ownerListUrl(login));
-  cache.set(key, { at: Date.now(), repos });
-  while (cache.size > MAX_CACHED) cache.delete(cache.keys().next().value as string);
-  return repos;
+  return fetchPages(await ownerListUrl(login));
 }
 
 export async function listViewerRepos(): Promise<ViewerRepos> {

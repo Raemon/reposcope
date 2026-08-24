@@ -1,11 +1,11 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { SidebarGroup } from './sidebarGroups';
 import { removeSource } from '@/features/sources/sourceStore';
 import type { CodebaseSource } from '@/features/sources/sourceTypes';
+import { SelectableLink } from '@/features/surface-ui/SelectableLink';
 
 export function CodebaseList({ groups }: { groups: SidebarGroup[] }) {
   const [filter, setFilter] = useState('');
@@ -51,10 +51,11 @@ export function CodebaseList({ groups }: { groups: SidebarGroup[] }) {
                   key={href}
                   className={`flex items-baseline gap-1.5 pr-2 ${activeLink ? 'bg-btn-active' : 'hover:bg-btn-hover'}`}
                 >
-                  <Link
-                    ref={activeLink ? active : null}
+                  <SelectableLink
+                    ref={activeLink ? active : undefined}
                     href={href}
                     title={repo.description}
+                    current={activeLink}
                     className={`flex min-w-0 flex-1 items-baseline justify-between gap-2 py-[3px] pl-3 text-[11px] leading-4 ${
                       activeLink ? 'text-accent' : 'text-ink'
                     }`}
@@ -64,7 +65,7 @@ export function CodebaseList({ groups }: { groups: SidebarGroup[] }) {
                       {repo.private && <span className="mr-1 rounded border border-btn-edge px-1">private</span>}
                       {repo.language}
                     </span>
-                  </Link>
+                  </SelectableLink>
                   {repo.source && <RemoveControl source={repo.source} label={`Remove ${repo.owner}/${repo.name}`} />}
                 </div>
               );

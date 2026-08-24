@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 
 const MIN_WIDTH = 140;
 const MAX_WIDTH = 900;
@@ -77,17 +78,16 @@ export function ColumnHeader({
   onCollapse: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onCollapse}
-      aria-label={`Collapse ${title}`}
+    <SelectableRow
+      onActivate={onCollapse}
+      label={`Collapse ${title}`}
       className="flex w-full shrink-0 items-center gap-1.5 border-b border-panel-edge bg-panel px-1.5 py-[1px] text-left hover:bg-btn-hover"
     >
       <span aria-hidden className="shrink-0 text-[11px] leading-4 text-ink-dim">{icon}</span>
       <span className="shrink-0 text-[10px] uppercase tracking-[0.18em] text-ink-dim">{title}</span>
       {note && <span className="min-w-0 flex-1 truncate text-[10px] text-ink-dim">{note}</span>}
       <span aria-hidden className="ml-auto shrink-0 px-1 text-[11px] leading-none text-ink-dim">‹</span>
-    </button>
+    </SelectableRow>
   );
 }
 

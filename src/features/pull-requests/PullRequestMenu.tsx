@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import type { PullRequestSummary } from './pullRequests';
@@ -9,6 +8,7 @@ import { timeAgo } from '@/features/repo-insights/ui/timeAgo';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
 import { apiJson } from '@/features/sources/apiClient';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
+import { SelectableLink } from '@/features/surface-ui/SelectableLink';
 
 export function PullRequestMenu({ repo }: { repo: RepoRef }) {
   return (
@@ -50,10 +50,11 @@ export function PullRequestList({ repo }: { repo: RepoRef }) {
         const href = `/repo/${repo.owner}/${repo.name}/pull/${pull.number}`;
         const active = pathname === href;
         return (
-          <Link
+          <SelectableLink
             key={pull.number}
             href={href}
             title={pull.title}
+            current={active}
             className={`flex items-baseline gap-1.5 px-2 py-[1px] text-[11px] leading-4 ${
               active ? 'bg-btn-active text-accent' : 'text-ink hover:bg-btn-hover'
             }`}
@@ -64,7 +65,7 @@ export function PullRequestList({ repo }: { repo: RepoRef }) {
             <span className="shrink-0 text-[9px] text-ink-dim">
               {pull.author} · {timeAgo(pull.updatedAt)}
             </span>
-          </Link>
+          </SelectableLink>
         );
       })}
     </nav>

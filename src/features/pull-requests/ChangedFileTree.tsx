@@ -3,6 +3,7 @@
 import { ChangeCounts } from './ChangeCounts';
 import { baseName, groupByFolder } from './fileTree';
 import type { ChangedFile } from './pullRequests';
+import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 
 const ROW = 'flex w-full items-baseline gap-1.5 py-[1px] pr-1.5 text-left text-[11px] leading-4';
 
@@ -25,10 +26,9 @@ export function ChangedFileTree({
             </p>
           )}
           {group.files.map((file) => (
-            <button
+            <SelectableRow
               key={file.filename}
-              type="button"
-              onClick={() => onSelect(file.filename)}
+              onActivate={() => onSelect(file.filename)}
               title={file.filename}
               className={`${ROW} ${group.folder ? 'pl-4' : 'pl-1.5'} ${
                 file.filename === selected ? 'bg-btn-active text-accent' : 'text-ink hover:bg-btn-hover'
@@ -36,7 +36,7 @@ export function ChangedFileTree({
             >
               <span className="min-w-0 flex-1 truncate">{baseName(file.filename)}</span>
               <ChangeCounts additions={file.additions} deletions={file.deletions} />
-            </button>
+            </SelectableRow>
           ))}
         </div>
       ))}
