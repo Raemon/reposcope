@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { parseOwnerInput, parseRepoLink } from './parseRepoLink';
+import { repoHref } from '@/features/codebases/repoPaths';
 import { addSource } from './sourceStore';
 import type { GithubAccess } from '@/features/github-auth/githubAccess';
 
@@ -25,7 +26,7 @@ export function SourceControls({ compact = false, oauthConfigured }: { compact?:
     }
     setRepoError(null);
     addSource({ kind: 'repo', ...parsed.value });
-    router.push(`/repo/${parsed.value.owner}/${parsed.value.name}`);
+    router.push(repoHref(parsed.value.owner, parsed.value.name));
   };
 
   const submitOwner = (event: FormEvent<HTMLFormElement>) => {

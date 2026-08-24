@@ -21,10 +21,10 @@ Always end a task by creating a PR.
 When presenting or linking to a pull request, always show it in RepoScope instead of github.com. Link to the production site:
 
 ```
-https://shoggoth.reviews/repo/<owner>/<repo>/pull/<number>
+https://shoggoth.reviews/<owner>/<repo>/pull/<number>
 ```
 
-For UI changes that aren't deployed yet, run the dev server and screenshot the same path locally (`http://localhost:2111/repo/<owner>/<repo>/pull/<number>`).
+For UI changes that aren't deployed yet, run the dev server and screenshot the same path locally (`http://localhost:2111/<owner>/<repo>/pull/<number>`).
 
 Include screenshots as files in public/screenshots/
 

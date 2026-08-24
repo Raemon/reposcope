@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation';
 import type { PullRequestSummary } from './pullRequests';
 import { HeaderMenu } from '@/features/codebases/HeaderMenu';
+import { pullHref } from '@/features/codebases/repoPaths';
 import { timeAgo } from '@/features/repo-insights/ui/timeAgo';
 import { repoPullsPath } from './pullPaths';
 import { prefetchPull } from './prefetchPull';
@@ -35,7 +36,7 @@ export function PullRequestList({ repo }: { repo: RepoRef }) {
     <nav className="min-h-0 flex-1 overflow-auto py-[1px]">
       {error && <p className="px-2 py-1 text-[11px] leading-4 text-error-ink">{error}</p>}
       {pulls.map((pull) => {
-        const href = `/repo/${repo.owner}/${repo.name}/pull/${pull.number}`;
+        const href = pullHref(repo.owner, repo.name, pull.number);
         const active = pathname === href;
         return (
           <SelectableLink
