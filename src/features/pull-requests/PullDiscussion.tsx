@@ -5,6 +5,7 @@ import type { PullComment } from './pullRequests';
 import { timeAgo } from '@/features/repo-insights/ui/timeAgo';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 import { useCachedJson } from '@/features/sources/useCachedJson';
+import { usePollWhileVisible } from '@/features/sources/usePollWhileVisible';
 
 export function PullDiscussion({
   owner,
@@ -21,11 +22,10 @@ export function PullDiscussion({
 }) {
   const ready = useStoreReady();
   const token = useGithubToken();
-  const { data: comments, error } = useCachedJson<PullComment[]>(
-    pullCommentsPath(owner, repo, number),
-    token,
-    ready,
-  );
+  const commentState = useCachedJson<PullComment[]>(pullCommentsPath(owner, repo, number), token, ready);
+  const { data: comments, error } = commentState;
+
+  usePollWhileVisible(commentState.reload, ready);
 
   return (
     <div className="flex flex-col">
