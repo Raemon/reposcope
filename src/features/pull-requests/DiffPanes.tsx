@@ -2,6 +2,7 @@
 
 import { useImperativeHandle, useRef, type Ref } from 'react';
 import { DiffFileSection } from './DiffFileSection';
+import { DiffLayoutToggle } from './DiffLayoutToggle';
 import { EditTarget } from './editTarget';
 import { ImageThumbnailStrip } from './ImageThumbnailStrip';
 import { imageFilesOf } from './imageFiles';
@@ -46,28 +47,31 @@ export function DiffPanes({
   const orderedFiles = sortByFolder(fileSet.files);
   return (
     <EditTarget value={editablePull && { pull: editablePull, headRef: fileSet.headRef, onCommitted }}>
-      <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
-        <ImageStrip
-          key={`${fileSet.baseRef}:${fileSet.headRef}`}
-          owner={owner}
-          repo={repo}
-          fileSet={fileSet}
-          files={imageFilesOf(orderedFiles)}
-        />
-        {orderedFiles.map((file) => (
-          <DiffFileSection
-            key={file.filename}
+      <div className="flex min-h-0 flex-1 flex-col">
+        <DiffLayoutToggle />
+        <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
+          <ImageStrip
+            key={`${fileSet.baseRef}:${fileSet.headRef}`}
             owner={owner}
             repo={repo}
-            file={file}
-            baseRef={fileSet.baseRef}
-            headRef={fileSet.headRef}
-            sectionRef={(node) => {
-              if (node) sections.current.set(file.filename, node);
-              else sections.current.delete(file.filename);
-            }}
+            fileSet={fileSet}
+            files={imageFilesOf(orderedFiles)}
           />
-        ))}
+          {orderedFiles.map((file) => (
+            <DiffFileSection
+              key={file.filename}
+              owner={owner}
+              repo={repo}
+              file={file}
+              baseRef={fileSet.baseRef}
+              headRef={fileSet.headRef}
+              sectionRef={(node) => {
+                if (node) sections.current.set(file.filename, node);
+                else sections.current.delete(file.filename);
+              }}
+            />
+          ))}
+        </div>
       </div>
     </EditTarget>
   );
