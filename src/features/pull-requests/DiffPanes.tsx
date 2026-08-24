@@ -1,14 +1,29 @@
 'use client';
 
-import { useEffect, useImperativeHandle, useRef, useState, type CSSProperties, type Ref } from 'react';
+import {
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+  type Ref,
+} from 'react';
 import { ChangeCounts } from './ChangeCounts';
+import { CodeBlockEditor } from './CodeBlockEditor';
+import { CommitEditModal } from './CommitEditModal';
 import { ImageDiff } from './ImageDiff';
+import { commitMessageFor, editableBlockAt, type EditableBlock } from './editableBlocks';
+import { useCurrentPull } from './currentPullStore';
 import { isImagePath } from './imageFiles';
 import { DragHandle, useDragWidth, type ColumnSize } from './ResizableColumn';
 import { sortByFolder } from './fileTree';
 import { splitDiff, type DiffCell, type DiffRow } from './splitDiff';
 import { langForPath, tokenizeCode, type ThemedToken } from './diffHighlight';
 import type { ChangedFile, ChangedFileSet } from './pullRequests';
+import { apiPostJson } from '@/features/sources/apiClient';
+import { useGithubToken } from '@/features/sources/sourceStore';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 
 const ROW = 'flex h-[15px] items-center gap-1 leading-[15px]';
@@ -23,11 +38,15 @@ export function DiffPanes({
   owner,
   repo,
   fileSet,
+  editable = false,
+  onCommitted,
   ref,
 }: {
   owner: string;
   repo: string;
   fileSet: ChangedFileSet | null;
+  editable?: boolean;
+  onCommitted?: () => void;
   ref?: Ref<DiffPanesHandle>;
 }) {
   const scroller = useRef<HTMLDivElement | null>(null);
@@ -55,6 +74,8 @@ export function DiffPanes({
           file={file}
           baseRef={fileSet.baseRef}
           headRef={fileSet.headRef}
+          editable={editable}
+          onCommitted={onCommitted}
           sectionRef={(node) => {
             if (node) sections.current.set(file.filename, node);
             else sections.current.delete(file.filename);
@@ -84,6 +105,8 @@ function FileSection({
   file,
   baseRef,
   headRef,
+  editable,
+  onCommitted,
   sectionRef,
 }: {
   owner: string;
@@ -91,6 +114,8 @@ function FileSection({
   file: ChangedFile;
   baseRef: string;
   headRef: string;
+  editable: boolean;
+  onCommitted?: () => void;
   sectionRef: (node: HTMLElement | null) => void;
 }) {
   const [open, setOpen] = useState(true);
@@ -111,7 +136,17 @@ function FileSection({
         <span className="shrink-0 text-[9px] uppercase tracking-[0.18em] text-ink-dim">{file.status}</span>
         <ChangeCounts additions={file.additions} deletions={file.deletions} />
       </SelectableRow>
-      {open && <FileBody owner={owner} repo={repo} file={file} baseRef={baseRef} headRef={headRef} />}
+      {open && (
+        <FileBody
+          owner={owner}
+          repo={repo}
+          file={file}
+          baseRef={baseRef}
+          headRef={headRef}
+          editable={editable}
+          onCommitted={onCommitted}
+        />
+      )}
     </section>
   );
 }
@@ -122,13 +157,27 @@ function FileBody({
   file,
   baseRef,
   headRef,
+  editable,
+  onCommitted,
 }: {
   owner: string;
   repo: string;
   file: ChangedFile;
   baseRef: string;
   headRef: string;
+  editable: boolean;
+  onCommitted?: () => void;
 }) {
+  const diff = file.patch ? (
+    <FileDiff
+      owner={owner}
+      repo={repo}
+      patch={file.patch}
+      filename={file.filename}
+      editable={editable}
+      onCommitted={onCommitted}
+    />
+  ) : null;
   if (isImagePath(file.filename)) {
     return (
       <>
@@ -138,20 +187,98 @@ function FileBody({
           before={file.status === 'added' ? null : { ref: baseRef, path: file.previousFilename ?? file.filename }}
           after={file.status === 'removed' ? null : { ref: headRef, path: file.filename }}
         />
-        {file.patch && <FileDiff patch={file.patch} filename={file.filename} />}
+        {diff}
       </>
     );
   }
-  if (file.patch) return <FileDiff patch={file.patch} filename={file.filename} />;
+  if (diff) return diff;
   return <Note text={`${file.status} — no textual diff`} />;
 }
 
-function FileDiff({ patch, filename }: { patch: string; filename: string }) {
+interface ActiveEdit {
+  block: EditableBlock;
+  draft: string;
+}
+
+function FileDiff({
+  owner,
+  repo,
+  patch,
+  filename,
+  editable,
+  onCommitted,
+}: {
+  owner: string;
+  repo: string;
+  patch: string;
+  filename: string;
+  editable: boolean;
+  onCommitted?: () => void;
+}) {
+  const token = useGithubToken();
+  const held = useCurrentPull();
   const [removedSize, setRemovedSize] = useState<ColumnSize>({ width: 520, open: true });
   const startDrag = useDragWidth(removedSize, setRemovedSize);
+  const [edit, setEdit] = useState<ActiveEdit | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [committing, setCommitting] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
 
-  const rows = splitDiff(patch);
+  const rows = useMemo(() => splitDiff(patch), [patch]);
   const tokens = useDiffTokens(patch, filename);
+  const pull = editable && held?.pull.state === 'open' && !held.pull.merged ? held.pull : null;
+
+  useEffect(() => {
+    setEdit(null);
+    setMessage(null);
+    setFailure(null);
+  }, [patch, filename]);
+
+  const dirty = edit !== null && edit.draft !== edit.block.text;
+
+  function beginEdit(rowIndex: number) {
+    if (!pull || edit) return;
+    const block = editableBlockAt(rows, rowIndex);
+    if (block) setEdit({ block, draft: block.text });
+  }
+
+  function askToCommit() {
+    if (!edit || !pull) return;
+    if (!dirty) {
+      setEdit(null);
+      return;
+    }
+    setFailure(null);
+    setMessage(commitMessageFor(pull, edit.block.text, edit.draft));
+  }
+
+  async function commit() {
+    if (!edit || !pull || message === null) return;
+    setCommitting(true);
+    setFailure(null);
+    try {
+      await apiPostJson(
+        `/api/github/commit-file?owner=${encodeURIComponent(owner)}&name=${encodeURIComponent(repo)}&number=${pull.number}`,
+        token,
+        {
+          path: filename,
+          startLine: edit.block.startLine,
+          endLine: edit.block.endLine,
+          original: edit.block.text,
+          updated: edit.draft,
+          message,
+        },
+      );
+      setEdit(null);
+      setMessage(null);
+      onCommitted?.();
+    } catch (issue: unknown) {
+      setFailure(issue instanceof Error ? issue.message : String(issue));
+    } finally {
+      setCommitting(false);
+    }
+  }
+
   return (
     <div className="flex">
       <section
@@ -162,8 +289,47 @@ function FileDiff({ patch, filename }: { patch: string; filename: string }) {
         <DragHandle onPointerDown={startDrag} />
       </section>
       <section className="flex min-w-0 flex-1 flex-col">
-        <DiffSide rows={rows} side="right" labels={false} tokens={tokens?.right ?? null} />
+        <DiffSide
+          rows={rows}
+          side="right"
+          labels={false}
+          tokens={tokens?.right ?? null}
+          editable={pull !== null}
+          onEditBlock={beginEdit}
+          editor={
+            edit && (
+              <CodeBlockEditor
+                value={edit.draft}
+                lang={langForPath(filename)}
+                saving={committing}
+                onChange={(draft) => setEdit((was) => (was ? { ...was, draft } : was))}
+                onSave={askToCommit}
+                onCancel={() => setEdit(null)}
+              />
+            )
+          }
+          editedRows={edit?.block ?? null}
+        />
       </section>
+      {message !== null && edit !== null && (
+        <CommitEditModal
+          path={filename}
+          message={message}
+          committing={committing}
+          error={failure}
+          onMessage={setMessage}
+          onCommit={commit}
+          onRevert={() => {
+            setEdit(null);
+            setMessage(null);
+            setFailure(null);
+          }}
+          onCancel={() => {
+            setMessage(null);
+            setFailure(null);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -215,23 +381,71 @@ function DiffSide({
   side,
   labels,
   tokens,
+  editable = false,
+  onEditBlock,
+  editor,
+  editedRows,
 }: {
   rows: DiffRow[];
   side: 'left' | 'right';
   labels: boolean;
   tokens: (ThemedToken[] | null)[] | null;
+  editable?: boolean;
+  onEditBlock?: (rowIndex: number) => void;
+  editor?: ReactNode;
+  editedRows?: EditableBlock | null;
+}) {
+  const band = (from: number, to: number) => (
+    <DiffRows
+      rows={rows.slice(from, to)}
+      offset={from}
+      side={side}
+      labels={labels}
+      tokens={tokens}
+      editable={editable}
+      onEditBlock={onEditBlock}
+    />
+  );
+  if (!editedRows) return band(0, rows.length);
+  return (
+    <div className="min-w-0 flex-1">
+      {editedRows.firstRow > 0 && band(0, editedRows.firstRow)}
+      {editor}
+      {editedRows.lastRow + 1 < rows.length && band(editedRows.lastRow + 1, rows.length)}
+    </div>
+  );
+}
+
+function DiffRows({
+  rows,
+  offset,
+  side,
+  labels,
+  tokens,
+  editable,
+  onEditBlock,
+}: {
+  rows: DiffRow[];
+  offset: number;
+  side: 'left' | 'right';
+  labels: boolean;
+  tokens: (ThemedToken[] | null)[] | null;
+  editable: boolean;
+  onEditBlock?: (rowIndex: number) => void;
 }) {
   return (
     <div className="min-w-0 flex-1 overflow-x-auto">
       <div className="w-max min-w-full">
         {rows.map((row, index) => (
           <DiffLine
-            key={index}
+            key={offset + index}
             row={row}
             cell={side === 'left' ? row.left : row.right}
             side={side}
             labels={labels}
-            lineTokens={tokens?.[index] ?? null}
+            lineTokens={tokens?.[offset + index] ?? null}
+            editable={editable}
+            onEdit={onEditBlock ? () => onEditBlock(offset + index) : undefined}
           />
         ))}
       </div>
@@ -245,12 +459,16 @@ function DiffLine({
   side,
   labels,
   lineTokens,
+  editable,
+  onEdit,
 }: {
   row: DiffRow;
   cell: DiffCell | null;
   side: 'left' | 'right';
   labels: boolean;
   lineTokens: ThemedToken[] | null;
+  editable?: boolean;
+  onEdit?: () => void;
 }) {
   if (row.kind === 'hunk') {
     return (
@@ -262,8 +480,13 @@ function DiffLine({
   if (!cell) return <div className={`${ROW} bg-procgen/40`} />;
   const changed = row.kind === 'change';
   const tone = !changed ? '' : side === 'left' ? 'bg-del-bg text-del-ink' : 'bg-add-bg text-add-ink';
+  const openable = editable && side === 'right';
   return (
-    <div className={`${ROW} ${tone}`}>
+    <div
+      className={`${ROW} ${tone} ${openable ? 'cursor-text' : ''}`}
+      title={openable ? 'Triple-click to edit this section' : undefined}
+      onClick={openable && onEdit ? (event) => event.detail === 3 && onEdit() : undefined}
+    >
       <span className={GUTTER}>{cell.line}</span>
       <span className="diff-code whitespace-pre pr-2 text-[11px]">
         {lineTokens?.length

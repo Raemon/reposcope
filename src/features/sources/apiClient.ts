@@ -15,6 +15,16 @@ export async function apiPost<T>(path: string, token: string | null): Promise<T>
   return readJson<T>(await fetch(path, { method: 'POST', headers: authHeaders(token) }));
 }
 
+export async function apiPostJson<T>(path: string, token: string | null, body: unknown): Promise<T> {
+  return readJson<T>(
+    await fetch(path, {
+      method: 'POST',
+      headers: { ...authHeaders(token), 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
+  );
+}
+
 function authHeaders(token: string | null): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }

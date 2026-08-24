@@ -41,6 +41,9 @@ export function PullRequestView({
   const [discussionSize, setDiscussionSize] = useState<ColumnSize>({ width: 320, open: false });
   const [commitSize, setCommitSize] = useState<ColumnSize>({ width: 260, open: true });
   const [fileSize, setFileSize] = useState<ColumnSize>({ width: 280, open: true });
+  const identity = `${owner}/${repo}#${number}`;
+  const [refresh, setRefresh] = useState({ identity, count: 0 });
+  const background = refresh.identity === identity && refresh.count > 0;
   const diffPanes = useRef<DiffPanesHandle>(null);
 
   useEffect(() => () => setCurrentPull(null), []);
@@ -48,10 +51,12 @@ export function PullRequestView({
   useEffect(() => {
     if (!ready) return;
     const controller = new AbortController();
-    setPull(null);
-    setError(null);
-    setSelection(WHOLE_PULL);
-    setCurrentPull(null);
+    if (!background) {
+      setPull(null);
+      setError(null);
+      setSelection(WHOLE_PULL);
+      setCurrentPull(null);
+    }
     apiJson<PullRequestCommits>(
       `/api/github/pull?owner=${encodeURIComponent(owner)}&name=${encodeURIComponent(repo)}&number=${number}`,
       token,
@@ -66,14 +71,16 @@ export function PullRequestView({
         if (!controller.signal.aborted) setError(issue instanceof Error ? issue.message : String(issue));
       });
     return () => controller.abort();
-  }, [owner, repo, number, token, ready]);
+  }, [owner, repo, number, token, ready, refresh, background]);
 
   useEffect(() => {
     if (!ready) return;
     const controller = new AbortController();
-    setFileSet(null);
     setFileError(null);
-    setPath(null);
+    if (!background) {
+      setFileSet(null);
+      setPath(null);
+    }
     const repoParams = `owner=${encodeURIComponent(owner)}&name=${encodeURIComponent(repo)}`;
     const source =
       selection === WHOLE_PULL
@@ -82,13 +89,13 @@ export function PullRequestView({
     apiJson<ChangedFileSet>(source, token, controller.signal)
       .then((loaded) => {
         setFileSet(loaded);
-        setPath(loaded.files[0]?.filename ?? null);
+        if (!background) setPath(loaded.files[0]?.filename ?? null);
       })
       .catch((issue: unknown) => {
         if (!controller.signal.aborted) setFileError(issue instanceof Error ? issue.message : String(issue));
       });
     return () => controller.abort();
-  }, [owner, repo, number, selection, token, ready]);
+  }, [owner, repo, number, selection, token, ready, refresh, background]);
 
   if (error) return <p className="px-2 py-1 text-[11px] text-error-ink">{error}</p>;
   if (!pull) return <p className="px-2 py-1 text-[11px] text-ink-dim">Loading #{number}…</p>;
@@ -146,7 +153,16 @@ export function PullRequestView({
         {fileError !== null ? (
           <p className="flex-1 px-2 py-1 text-[11px] text-error-ink">{fileError}</p>
         ) : (
-          <DiffPanes ref={diffPanes} owner={owner} repo={repo} fileSet={fileSet} />
+          <DiffPanes
+            ref={diffPanes}
+            owner={owner}
+            repo={repo}
+            fileSet={fileSet}
+            editable={selection === WHOLE_PULL}
+            onCommitted={() =>
+              setRefresh((was) => ({ identity, count: was.identity === identity ? was.count + 1 : 1 }))
+            }
+          />
         )}
       </div>
     </div>

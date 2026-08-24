@@ -1,4 +1,5 @@
-import { githubBytes, githubGraphql, githubJson, githubSend } from '@/features/codebases/githubRequest';
+import { dropCachedScope } from '@/features/codebases/githubCache';
+import { GithubRequestError, githubBytes, githubGraphql, githubJson, githubSend } from '@/features/codebases/githubRequest';
 import { imageTypeOf } from './imageFiles';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
 
@@ -59,6 +60,20 @@ export interface PullRequestCommits {
   commits: CommitSummary[];
 }
 
+export interface FileEdit {
+  path: string;
+  startLine: number;
+  endLine: number;
+  original: string;
+  updated: string;
+  message: string;
+}
+
+export interface EditResult {
+  sha: string;
+  branch: string;
+}
+
 export interface MergeResult {
   merged: boolean;
   message: string;
@@ -83,7 +98,7 @@ interface GithubPull {
   state: string;
   merged?: boolean;
   base: { ref: string; sha: string };
-  head: { ref: string; sha: string };
+  head: { ref: string; sha: string; repo?: { full_name: string } | null };
   additions?: number;
   deletions?: number;
 }
@@ -94,6 +109,12 @@ interface GithubComment {
   created_at: string;
   body?: string;
   path?: string;
+}
+
+interface GithubFileContents {
+  sha: string;
+  content?: string;
+  encoding?: string;
 }
 
 interface GithubChangedFile {
@@ -202,6 +223,51 @@ export async function listPullRequestFiles(owner: string, name: string, number: 
     if (batch.length < FILE_PAGE) break;
   }
   return { baseRef: pull.base.sha, headRef: pull.head.sha, files };
+}
+
+export async function commitFileEdit(
+  owner: string,
+  name: string,
+  number: number,
+  edit: FileEdit,
+): Promise<EditResult> {
+  const pull = await githubJson<GithubPull>(`${API}/repos/${owner}/${name}/pulls/${number}`);
+  if (pull.state !== 'open') throw new GithubRequestError(409, `Pull request #${number} is ${pull.state}`);
+  const target = pull.head.repo?.full_name ?? `${owner}/${name}`;
+  const branch = pull.head.ref;
+  const contents = `${API}/repos/${target}/contents/${encodePath(edit.path)}`;
+  const held = await githubJson<GithubFileContents>(`${contents}?ref=${encodeURIComponent(branch)}`);
+  const commit = await githubSend<{ commit?: { sha?: string } }>(contents, 'PUT', {
+    message: edit.message,
+    content: Buffer.from(spliceLines(decodeContents(held), edit), 'utf8').toString('base64'),
+    sha: held.sha,
+    branch,
+  });
+  await dropCachedScope(`repos/${owner}/${name}`);
+  return { sha: commit.commit?.sha ?? '', branch };
+}
+
+function decodeContents(held: GithubFileContents): string {
+  if (held.encoding !== 'base64' || typeof held.content !== 'string') {
+    throw new GithubRequestError(422, 'That file is too large to edit from here');
+  }
+  return Buffer.from(held.content, 'base64').toString('utf8');
+}
+
+function spliceLines(text: string, edit: FileEdit): string {
+  const lines = text.split('\n');
+  if (edit.endLine > lines.length) throw new GithubRequestError(409, staleMessage(edit.path));
+  const standing = lines.slice(edit.startLine - 1, edit.endLine).join('\n');
+  if (standing !== edit.original) throw new GithubRequestError(409, staleMessage(edit.path));
+  return [...lines.slice(0, edit.startLine - 1), ...edit.updated.split('\n'), ...lines.slice(edit.endLine)].join('\n');
+}
+
+function staleMessage(path: string): string {
+  return `${path} has changed on the branch since this diff loaded; reload before editing`;
+}
+
+function encodePath(path: string): string {
+  return path.split('/').map(encodeURIComponent).join('/');
 }
 
 export async function listPullComments(owner: string, name: string, number: number): Promise<PullComment[]> {
