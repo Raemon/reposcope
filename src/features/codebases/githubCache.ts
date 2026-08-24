@@ -13,7 +13,7 @@ export interface CachedResponse {
   body: string;
 }
 
-const DIRECTORY = process.env.REPOSCOPE_CACHE_DIR ?? join(tmpdir(), 'reposcope-github-cache');
+const DIRECTORY = process.env.SHOGGOTH_CACHE_DIR ?? process.env.REPOSCOPE_CACHE_DIR ?? join(tmpdir(), 'shoggoth-reviews-github-cache');
 const MAX_MEMORY_ENTRIES = 512;
 const MAX_STORED_BYTES = 8_000_000;
 const MAX_DIRECTORY_BYTES = 256_000_000;

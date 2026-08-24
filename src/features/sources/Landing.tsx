@@ -17,9 +17,9 @@ export function Landing({ error, oauthConfigured }: { error: string | null; oaut
       <p className="mb-1 text-[10px] uppercase tracking-[0.18em] text-ink-dim">
         {onboarding ? 'Choose what to read' : 'Read straight from GitHub'}
       </p>
-      <h1 className="text-xl text-accent">reposcope</h1>
+      <h1 className="text-xl text-accent">Shoggoth Reviews</h1>
       <p className="mt-2 text-xs leading-5 text-ink-dim">
-        {onboarding ? 'Point reposcope at GitHub repositories. ' : 'Pick a repository below to read it. '}
+        {onboarding ? 'Point Shoggoth Reviews at GitHub repositories. ' : 'Pick a repository below to read it. '}
         Each one is fetched from GitHub in memory, parsed, and rendered as its server boundary: URL layers, the code
         each operation reaches, and the in-repo callers that make it matter to a person.
       </p>

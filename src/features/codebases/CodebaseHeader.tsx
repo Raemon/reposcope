@@ -24,8 +24,8 @@ export function CodebaseHeader() {
   const readingAllPulls = pathname === ALL_PULLS;
   return (
     <header className="flex items-center gap-3 border-b border-panel-edge bg-panel px-3 py-1.5">
-      <Link href="/" aria-label="reposcope home" className="shrink-0">
-        <ScopeMark size={64} title="reposcope home" />
+      <Link href="/" aria-label="Shoggoth Reviews home" className="shrink-0">
+        <ScopeMark size={64} title="Shoggoth Reviews home" />
       </Link>
       <CodebaseMenu reading={reading} readingAllPulls={readingAllPulls} />
       {reading &&

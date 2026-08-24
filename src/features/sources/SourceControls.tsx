@@ -68,7 +68,7 @@ export function SourceControls({ compact = false, oauthConfigured }: { compact?:
         title="Everything you can see on GitHub, public and private"
         note={
           oauthConfigured
-            ? 'Opens GitHub’s authorization page; reposcope asks for read access to your repositories and keeps the token only in your browser’s localStorage.'
+            ? 'Opens GitHub’s authorization page; Shoggoth Reviews asks for read access to your repositories and keeps the token only in your browser’s localStorage.'
             : 'Set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET to enable this.'
         }
       >

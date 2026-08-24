@@ -5,7 +5,7 @@ export function ScopeMark({ size = 64, title }: { size?: number; title?: string 
       width={size}
       height={size}
       role="img"
-      aria-label={title ?? 'reposcope'}
+      aria-label={title ?? 'Shoggoth Reviews'}
       className="text-scope"
     >
       <circle cx="27" cy="27" r="18" className="fill-scope-lens" />

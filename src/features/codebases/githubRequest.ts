@@ -204,7 +204,7 @@ function githubHeaders(accept = ACCEPT, token = githubToken()): Record<string, s
   return {
     Accept: accept,
     'X-GitHub-Api-Version': '2022-11-28',
-    'User-Agent': 'reposcope',
+    'User-Agent': 'shoggoth-reviews',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 }

@@ -5,7 +5,7 @@ import { ThemeScript } from '@/features/theme/ThemeScript';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'reposcope — codebase viewer',
+  title: 'Shoggoth Reviews — codebase viewer',
   description: 'Read the server boundary of any repository straight from GitHub.',
 };
 

@@ -18,7 +18,7 @@ check:caching` runs as part of `npm run build` and fails on new call sites.
 
 Always end a task by creating a PR.
 
-When presenting or linking to a pull request, always show it in RepoScope instead of github.com. Link to the production site:
+When presenting or linking to a pull request, always show it in Shoggoth Reviews instead of github.com. Link to the production site:
 
 ```
 https://shoggoth.reviews/repo/<owner>/<repo>/pull/<number>

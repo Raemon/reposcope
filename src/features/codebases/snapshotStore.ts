@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { gunzipSync, gzipSync } from 'node:zlib';
 import type { Codebase } from './codebaseSource';
 
-const DIRECTORY = join(tmpdir(), 'reposcope-snapshots');
+const DIRECTORY = join(tmpdir(), 'shoggoth-reviews-snapshots');
 
 export async function readSnapshot(owner: string, repo: string, sha: string): Promise<Codebase | null> {
   try {

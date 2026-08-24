@@ -1,14 +1,16 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
+import { readRenamedItem } from '@/features/storage/renamedStorage';
 
 export type Theme = 'light' | 'dark';
 
-const THEME_KEY = 'reposcope.theme';
+const THEME_KEY = 'shoggoth.theme';
+const LEGACY_THEME_KEY = 'reposcope.theme';
 const listeners = new Set<() => void>();
 
 export function readTheme(): Theme {
-  const stored = readItem(THEME_KEY);
+  const stored = readRenamedItem(THEME_KEY, LEGACY_THEME_KEY);
   if (stored === 'light' || stored === 'dark') return stored;
   return systemTheme();
 }
@@ -40,14 +42,6 @@ function subscribe(listener: () => void): () => void {
     listeners.delete(listener);
     window.removeEventListener('storage', listener);
   };
-}
-
-function readItem(key: string): string | null {
-  try {
-    return window.localStorage.getItem(key);
-  } catch {
-    return null;
-  }
 }
 
 function writeItem(key: string, value: string): void {

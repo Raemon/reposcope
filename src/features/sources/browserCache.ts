@@ -1,6 +1,9 @@
 'use client';
 
-const PREFIX = 'reposcope.cache.';
+import { purgeLegacyPrefix } from '@/features/storage/renamedStorage';
+
+const PREFIX = 'shoggoth.cache.';
+const LEGACY_PREFIX = 'reposcope.cache.';
 const MAX_ENTRIES = 60;
 
 interface CachedEntry {
@@ -9,8 +12,16 @@ interface CachedEntry {
 }
 
 const memory = new Map<string, CachedEntry>();
+let legacyPurged = false;
+
+function purgeLegacyOnce(): void {
+  if (legacyPurged) return;
+  legacyPurged = true;
+  purgeLegacyPrefix(LEGACY_PREFIX);
+}
 
 export function readBrowserCache<T>(key: string): T | null {
+  purgeLegacyOnce();
   const entry = memory.get(key) ?? readStored(key);
   if (!entry) return null;
   remember(key, entry);
@@ -18,6 +29,7 @@ export function readBrowserCache<T>(key: string): T | null {
 }
 
 export function writeBrowserCache(key: string, value: unknown): void {
+  purgeLegacyOnce();
   const entry = { storedAt: Date.now(), value };
   remember(key, entry);
   if (store(key, entry)) return;

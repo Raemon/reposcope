@@ -2,15 +2,18 @@
 
 import { useSyncExternalStore } from 'react';
 import { normalizeSources, parseSources, serializeSource, sourceKey, type CodebaseSource } from './sourceTypes';
+import { readRenamedItem } from '@/features/storage/renamedStorage';
 
-const SOURCES_KEY = 'reposcope.sources';
-const TOKEN_KEY = 'reposcope.githubToken';
+const SOURCES_KEY = 'shoggoth.sources';
+const LEGACY_SOURCES_KEY = 'reposcope.sources';
+const TOKEN_KEY = 'shoggoth.githubToken';
+const LEGACY_TOKEN_KEY = 'reposcope.githubToken';
 const NO_SOURCES: CodebaseSource[] = [];
 const listeners = new Set<() => void>();
 let held: { raw: string | null; sources: CodebaseSource[] } | null = null;
 
 function readSources(): CodebaseSource[] {
-  const raw = readItem(SOURCES_KEY);
+  const raw = readRenamedItem(SOURCES_KEY, LEGACY_SOURCES_KEY);
   if (!held || held.raw !== raw) held = { raw, sources: parseSources(raw) };
   return held.sources;
 }
@@ -30,7 +33,7 @@ export function removeSource(source: CodebaseSource): void {
 }
 
 function readGithubToken(): string | null {
-  return readItem(TOKEN_KEY);
+  return readRenamedItem(TOKEN_KEY, LEGACY_TOKEN_KEY);
 }
 
 export function writeGithubToken(token: string): void {
@@ -39,6 +42,7 @@ export function writeGithubToken(token: string): void {
 
 export function clearGithubToken(): void {
   writeItem(TOKEN_KEY, null);
+  writeItem(LEGACY_TOKEN_KEY, null);
 }
 
 export function useSources(): CodebaseSource[] {
@@ -64,14 +68,6 @@ function subscribe(listener: () => void): () => void {
     listeners.delete(listener);
     window.removeEventListener('storage', listener);
   };
-}
-
-function readItem(key: string): string | null {
-  try {
-    return window.localStorage.getItem(key);
-  } catch {
-    return null;
-  }
 }
 
 function writeItem(key: string, value: string | null): void {
