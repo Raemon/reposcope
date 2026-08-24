@@ -1,0 +1,146 @@
+'use client';
+
+import { useContext, useMemo, useState } from 'react';
+import { CodeBlockEditor } from './CodeBlockEditor';
+import { CommitEditModal } from './CommitEditModal';
+import { DiffSide, type HunkControl } from './DiffSide';
+import { langForPath } from './diffHighlight';
+import { ROW_HEIGHT, SAVE_BAR } from './diffMetrics';
+import { EditTarget } from './editTarget';
+import { type EditableBlock } from './editableBlocks';
+import { expandDiff } from './expandDiff';
+import { DragHandle, useDragWidth, type ColumnSize } from './ResizableColumn';
+import { splitDiff, type DiffRow } from './splitDiff';
+import { useDiffTokens, useIntralineEmphasis } from './useDiffSideHighlight';
+import { useHeightTransition } from './useHeightTransition';
+import { useHunkEdit, type HunkEdit } from './useHunkEdit';
+import { hunkHint, useWholeFile, type WholeFile } from './useWholeFile';
+import type { ChangedFile } from './pullRequests';
+import { useGithubToken } from '@/features/sources/sourceStore';
+
+export function FileDiff({
+  owner,
+  repo,
+  file,
+  baseRef,
+  headRef,
+}: {
+  owner: string;
+  repo: string;
+  file: ChangedFile;
+  baseRef: string;
+  headRef: string;
+}) {
+  const token = useGithubToken();
+  const target = useContext(EditTarget);
+  const [removedSize, setRemovedSize] = useState<ColumnSize>({ width: 520, open: true });
+  const startDrag = useDragWidth(removedSize, setRemovedSize);
+  const [wantWholeFile, setWantWholeFile] = useState(false);
+  const wholeFile = useWholeFile(owner, repo, file, baseRef, headRef, wantWholeFile);
+  const patchRows = useMemo(() => splitDiff(file.patch ?? ''), [file.patch]);
+  const rows = useMemo(() => rowsForDisplay(patchRows, wholeFile.lines), [patchRows, wholeFile.lines]);
+  const emphasis = useIntralineEmphasis(rows);
+  const tokens = useDiffTokens(rows, file.filename);
+  const growing = useHeightTransition(rows);
+  const pull = target?.pull ?? null;
+  const hunkEdit = useHunkEdit({
+    owner,
+    repo,
+    pull,
+    headRef: target?.headRef ?? '',
+    rows: patchRows,
+    filename: file.filename,
+    patch: file.patch ?? '',
+    token,
+    onCommitted: target?.onCommitted,
+  });
+  const showingWholeFile = rows !== patchRows;
+  const canEdit = pull !== null && !wantWholeFile;
+  const expand = expandControl(wholeFile, showingWholeFile, hunkEdit, setWantWholeFile);
+  return (
+    <div ref={growing} className="flex">
+      <section className="relative flex shrink-0 flex-col border-r border-panel-edge" style={{ width: removedSize.width }}>
+        <DiffSide rows={rows} side="left" labels tokens={tokens?.left ?? null} emphasis={emphasis} expand={expand} spacer={canEdit ? spacerFor(hunkEdit.edit) : null} />
+        <DragHandle onPointerDown={startDrag} />
+      </section>
+      <section className="flex min-w-0 flex-1 flex-col">
+        <DiffSide
+          rows={rows}
+          side="right"
+          labels={false}
+          tokens={tokens?.right ?? null}
+          emphasis={emphasis}
+          expand={expand}
+          editable={canEdit}
+          onEditBlock={hunkEdit.begin}
+          editedRows={canEdit ? hunkEdit.edit?.block ?? null : null}
+          editor={canEdit && hunkEdit.edit ? hunkEditor(file.filename, hunkEdit) : null}
+        />
+      </section>
+      {hunkEdit.message !== null && hunkEdit.edit !== null && (
+        <CommitEditModal
+          path={file.filename}
+          message={hunkEdit.message}
+          committing={hunkEdit.committing}
+          error={hunkEdit.failure}
+          onMessage={hunkEdit.setMessage}
+          onCommit={hunkEdit.commit}
+          onRevert={hunkEdit.close}
+          onCancel={hunkEdit.dismissModal}
+        />
+      )}
+    </div>
+  );
+}
+
+function rowsForDisplay(patchRows: DiffRow[], lines: WholeFile['lines']): DiffRow[] {
+  return lines ? expandDiff(patchRows, lines.base, lines.head) : patchRows;
+}
+
+function expandControl(
+  wholeFile: WholeFile,
+  showingWholeFile: boolean,
+  hunkEdit: ReturnType<typeof useHunkEdit>,
+  setWantWholeFile: (update: (was: boolean) => boolean) => void,
+): HunkControl {
+  return {
+    expanded: showingWholeFile,
+    hint: hunkHint(wholeFile, showingWholeFile),
+    onToggle: wholeFile.available ? () => toggleWholeFile(hunkEdit, setWantWholeFile) : null,
+  };
+}
+
+function toggleWholeFile(hunkEdit: ReturnType<typeof useHunkEdit>, setWantWholeFile: (update: (was: boolean) => boolean) => void) {
+  if (hunkEdit.edit && hunkEdit.edit.draft !== hunkEdit.edit.block.text) return;
+  hunkEdit.close();
+  setWantWholeFile((was) => !was);
+}
+
+function hunkEditor(filename: string, hunkEdit: ReturnType<typeof useHunkEdit>) {
+  const edit = hunkEdit.edit;
+  if (!edit) return null;
+  return (
+    <CodeBlockEditor
+      key={edit.block.firstRow}
+      value={edit.draft}
+      lang={langForPath(filename)}
+      caretLine={edit.block.caretLine}
+      minHeight={coveredHeight(edit.block)}
+      saving={hunkEdit.committing}
+      onChange={hunkEdit.setDraft}
+      onSave={hunkEdit.askToCommit}
+      onExit={hunkEdit.askToCommit}
+    />
+  );
+}
+
+function coveredHeight(block: EditableBlock): number {
+  return (block.lastRow - block.firstRow + 1) * ROW_HEIGHT;
+}
+
+function spacerFor(edit: HunkEdit | null): { afterRow: number; height: number } | null {
+  if (!edit) return null;
+  const covered = coveredHeight(edit.block);
+  const drawn = Math.max(covered, edit.draft.split('\n').length * ROW_HEIGHT + SAVE_BAR);
+  return { afterRow: edit.block.lastRow, height: drawn - covered };
+}

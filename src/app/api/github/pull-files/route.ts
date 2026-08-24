@@ -10,6 +10,7 @@ export async function GET(request: Request) {
       requireParam(request, 'owner', LOGIN_PATTERN),
       requireParam(request, 'name', REPO_NAME_PATTERN),
       Number(requireParam(request, 'number', NUMBER_PATTERN)),
+      new URL(request.url).searchParams.get('fresh') === '1',
     ),
   );
 }

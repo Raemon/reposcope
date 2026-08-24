@@ -16,6 +16,7 @@ export function MergePullButton({ repo, number }: { repo: RepoRef; number: numbe
   const [error, setError] = useState<string | null>(null);
 
   const closed = pull !== null && pull.pull.state !== 'open';
+  const conflicted = pull?.conflicted ?? false;
   const done = merged || (pull?.pull.merged ?? false);
 
   async function merge() {
@@ -49,17 +50,19 @@ export function MergePullButton({ repo, number }: { repo: RepoRef; number: numbe
       <button
         type="button"
         onClick={merge}
-        disabled={merging || pull === null || closed}
+        disabled={merging || pull === null || closed || conflicted}
         title={
           closed
             ? `Pull request is ${pull?.pull.state}`
-            : pull?.pull.draft
-              ? `Mark #${number} ready for review and merge`
-              : `Merge #${number}`
+            : conflicted
+              ? `#${number} has conflicts with its base branch`
+              : pull?.pull.draft
+                ? `Mark #${number} ready for review and merge`
+                : `Merge #${number}`
         }
         className="shrink-0 rounded border border-btn-edge px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-ink-dim hover:bg-btn-hover hover:text-ink disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-ink-dim"
       >
-        {merging ? 'Merging…' : 'Merge'}
+        {merging ? 'Merging…' : conflicted ? 'Merge Conflicts' : 'Merge'}
       </button>
     </div>
   );

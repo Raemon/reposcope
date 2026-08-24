@@ -17,8 +17,8 @@ const STALE_ON_STATUS = [403, 408, 429, 500, 502, 503, 504];
 
 const inFlight = new Map<string, Promise<CachedResponse>>();
 
-export async function githubJson<T>(url: string): Promise<T> {
-  return JSON.parse(decodeBody(await cachedResponse(url, ACCEPT)).toString('utf8')) as T;
+export async function githubJson<T>(url: string, fresh = false): Promise<T> {
+  return JSON.parse(decodeBody(await cachedResponse(url, ACCEPT, fresh)).toString('utf8')) as T;
 }
 
 export async function githubBytes(url: string, accept = ACCEPT): Promise<Uint8Array> {
@@ -41,6 +41,10 @@ export async function githubSend<T>(url: string, method: string, body: unknown):
   return (await response.json()) as T;
 }
 
+export async function dropGithubCache(owner: string, name: string): Promise<void> {
+  await dropCachedScope(`repos/${owner}/${name}`);
+}
+
 export async function githubGraphql<T>(query: string, variables: Record<string, unknown>): Promise<T> {
   const url = 'https://api.github.com/graphql';
   const tokenUsed = githubToken();
@@ -60,12 +64,12 @@ export async function githubGraphql<T>(query: string, variables: Record<string, 
   return payload.data as T;
 }
 
-async function cachedResponse(url: string, accept: string): Promise<CachedResponse> {
+async function cachedResponse(url: string, accept: string, fresh = false): Promise<CachedResponse> {
   const scope = scopeOf(url);
   const key = cacheKey([githubTokenIdentity(), url, accept]);
   const held = await readCachedResponse(scope, key);
-  if (held && Date.now() - held.storedAt < freshnessOf(url)) return held;
-  return shareInFlight(scope + key, () => revalidate(url, accept, scope, key, held));
+  if (held && !fresh && Date.now() - held.storedAt < freshnessOf(url)) return held;
+  return shareInFlight(scope + key + (fresh ? ':fresh' : ''), () => revalidate(url, accept, scope, key, held, fresh));
 }
 
 function shareInFlight(key: string, work: () => Promise<CachedResponse>): Promise<CachedResponse> {
@@ -82,13 +86,15 @@ async function revalidate(
   scope: string,
   key: string,
   held: CachedResponse | null,
+  fresh: boolean,
 ): Promise<CachedResponse> {
   const tokenUsed = githubToken();
+  const fallback = fresh ? null : held;
   const response = await fetch(url, { cache: 'no-store', headers: conditionalHeaders(accept, held, tokenUsed) }).catch(() => null);
-  if (!response) return unreachable(url, held);
+  if (!response) return unreachable(url, fallback);
   if (response.status === 304 && held) return store(scope, key, { ...held, storedAt: Date.now() });
   if (response.status === 401 && tokenUsed) return readAfterRejectedToken(url, accept, tokenUsed, response);
-  if (!response.ok) return staleOrThrow(response, url, held);
+  if (!response.ok) return staleOrThrow(response, url, fallback);
   return store(scope, key, await capture(response));
 }
 
