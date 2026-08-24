@@ -11,6 +11,7 @@ import { CurrentPullTitle } from '@/features/pull-requests/CurrentPullTitle';
 import { MergePullButton } from '@/features/pull-requests/MergePullButton';
 import { PullRequestMenu } from '@/features/pull-requests/PullRequestMenu';
 import { parseRepoLink, type RepoRef } from '@/features/sources/parseRepoLink';
+import { SelectableLink } from '@/features/surface-ui/SelectableLink';
 import { ThemeToggle } from '@/features/theme/ThemeToggle';
 import { clearGithubToken, removeSource, useGithubToken, useSources, useStoreReady } from '@/features/sources/sourceStore';
 
@@ -91,9 +92,9 @@ function CodebaseMenu({ reading, readingAllPulls }: { reading: RepoRef | null; r
 
 function AllPullsRow({ active }: { active: boolean }) {
   return (
-    <Link
+    <SelectableLink
       href={ALL_PULLS}
-      aria-current={active ? 'page' : undefined}
+      current={active}
       className={`flex items-baseline gap-1.5 border-b border-panel-edge px-2 py-1 text-[11px] leading-4 ${
         active ? 'bg-btn-active text-accent' : 'text-ink hover:bg-btn-hover'
       }`}
@@ -102,7 +103,7 @@ function AllPullsRow({ active }: { active: boolean }) {
       <span className="min-w-0 flex-1 truncate text-[9px] text-ink-dim">
         open pull requests from every codebase, newest first
       </span>
-    </Link>
+    </SelectableLink>
   );
 }
 
@@ -111,14 +112,14 @@ function ReadingRow({ reading }: { reading: RepoRef }) {
     <nav className="min-h-0 flex-1 overflow-auto py-[1px]">
       <h2 className="px-2 pt-1 text-[9px] uppercase tracking-[0.18em] text-ink-dim">{reading.owner}</h2>
       <div className="flex items-baseline gap-1.5 bg-btn-active pr-2">
-        <Link
+        <SelectableLink
           href={`/repo/${reading.owner}/${reading.name}`}
-          aria-current="page"
+          current
           className="flex min-w-0 flex-1 items-baseline justify-between gap-2 py-[1px] pl-2 text-[11px] leading-4 text-accent"
         >
           <span className="truncate">{reading.name}</span>
           <span className="shrink-0 text-[9px] text-ink-dim">reading</span>
-        </Link>
+        </SelectableLink>
       </div>
     </nav>
   );

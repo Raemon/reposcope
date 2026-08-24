@@ -50,7 +50,13 @@ export function MergePullButton({ repo, number }: { repo: RepoRef; number: numbe
         type="button"
         onClick={merge}
         disabled={merging || pull === null || closed}
-        title={closed ? `Pull request is ${pull?.pull.state}` : `Merge #${number}`}
+        title={
+          closed
+            ? `Pull request is ${pull?.pull.state}`
+            : pull?.pull.draft
+              ? `Mark #${number} ready for review and merge`
+              : `Merge #${number}`
+        }
         className="shrink-0 rounded border border-btn-edge px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-ink-dim hover:bg-btn-hover hover:text-ink disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-ink-dim"
       >
         {merging ? 'Merging…' : 'Merge'}

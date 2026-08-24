@@ -1,10 +1,10 @@
 'use client';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { CrossRepoPull } from './pullRequests';
 import { useAllPullRequests } from './useAllPullRequests';
 import { timeAgo } from '@/features/repo-insights/ui/timeAgo';
+import { SelectableLink } from '@/features/surface-ui/SelectableLink';
 
 const NOTE = 'px-2 py-1 text-[11px] leading-4';
 
@@ -45,9 +45,10 @@ function PullRow({ pull, pathname }: { pull: CrossRepoPull; pathname: string }) 
   const href = allPullHref(pull);
   const active = pathname === href.split('?')[0];
   return (
-    <Link
+    <SelectableLink
       href={href}
       title={`${pull.owner}/${pull.repo} #${pull.number} — ${pull.title}`}
+      current={active}
       className={`flex items-baseline gap-1.5 px-2 py-[1px] text-[11px] leading-4 ${
         active ? 'bg-btn-active text-accent' : 'text-ink hover:bg-btn-hover'
       }`}
@@ -59,6 +60,6 @@ function PullRow({ pull, pathname }: { pull: CrossRepoPull; pathname: string }) 
       <span className="shrink-0 text-[9px] text-ink-dim">
         {pull.author} · {timeAgo(pull.updatedAt)}
       </span>
-    </Link>
+    </SelectableLink>
   );
 }

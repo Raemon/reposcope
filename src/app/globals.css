@@ -140,6 +140,20 @@
   }
 }
 
+.diff-code span {
+  color: var(--shiki-light, inherit);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .diff-code span {
+    color: var(--shiki-dark, inherit);
+  }
+}
+
+:root[data-theme='dark'] .diff-code span {
+  color: var(--shiki-dark, inherit);
+}
+
 :root[data-theme='dark'] {
   --bg: #0f0e0d;
   --panel: #1a1917;

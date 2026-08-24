@@ -3,13 +3,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { AllPullRequestList } from './AllPullRequestList';
 import { ChangeCounts } from './ChangeCounts';
+import { ChangedFileTree } from './ChangedFileTree';
 import { DiffPanes, type DiffPanesHandle } from './DiffPanes';
 import { PullDiscussion } from './PullDiscussion';
 import { PullRequestList } from './PullRequestMenu';
 import { ResizableColumn, type ColumnSize } from './ResizableColumn';
 import { setCurrentPull } from './currentPullStore';
-import type { ChangedFile, PullRequestCommits } from './pullRequests';
+import type { ChangedFileSet, PullRequestCommits } from './pullRequests';
 import { RelativeTime } from '@/features/surface-ui/RelativeTime';
+import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 import { apiJson } from '@/features/sources/apiClient';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 
@@ -33,7 +35,7 @@ export function PullRequestView({
   const [error, setError] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [selection, setSelection] = useState<string>(WHOLE_PULL);
-  const [files, setFiles] = useState<ChangedFile[] | null>(null);
+  const [fileSet, setFileSet] = useState<ChangedFileSet | null>(null);
   const [path, setPath] = useState<string | null>(null);
   const [listSize, setListSize] = useState<ColumnSize>({ width: acrossRepos ? 380 : 300, open: acrossRepos });
   const [discussionSize, setDiscussionSize] = useState<ColumnSize>({ width: 320, open: false });
@@ -69,7 +71,7 @@ export function PullRequestView({
   useEffect(() => {
     if (!ready) return;
     const controller = new AbortController();
-    setFiles(null);
+    setFileSet(null);
     setFileError(null);
     setPath(null);
     const repoParams = `owner=${encodeURIComponent(owner)}&name=${encodeURIComponent(repo)}`;
@@ -77,10 +79,10 @@ export function PullRequestView({
       selection === WHOLE_PULL
         ? `/api/github/pull-files?${repoParams}&number=${number}`
         : `/api/github/commit?${repoParams}&sha=${selection}`;
-    apiJson<ChangedFile[]>(source, token, controller.signal)
+    apiJson<ChangedFileSet>(source, token, controller.signal)
       .then((loaded) => {
-        setFiles(loaded);
-        setPath(loaded[0]?.filename ?? null);
+        setFileSet(loaded);
+        setPath(loaded.files[0]?.filename ?? null);
       })
       .catch((issue: unknown) => {
         if (!controller.signal.aborted) setFileError(issue instanceof Error ? issue.message : String(issue));
@@ -106,56 +108,45 @@ export function PullRequestView({
           <PullDiscussion owner={owner} repo={repo} number={number} author={pull.pull.author} body={pull.body} />
         </ResizableColumn>
         <ResizableColumn icon="◆" title={`commits · ${pull.commits.length}`} size={commitSize} onSize={setCommitSize}>
-          <button
-            type="button"
-            onClick={() => setSelection(WHOLE_PULL)}
+          <SelectableRow
+            onActivate={() => setSelection(WHOLE_PULL)}
             className={`${ROW} ${selection === WHOLE_PULL ? 'bg-btn-active text-accent' : 'text-ink hover:bg-btn-hover'}`}
           >
             <span className="min-w-0 flex-1 truncate">all changes</span>
             <ChangeCounts additions={pull.additions} deletions={pull.deletions} />
-          </button>
+          </SelectableRow>
           {pull.commits.map((commit) => (
-            <button
+            <SelectableRow
               key={commit.sha}
-              type="button"
-              onClick={() => setSelection(commit.sha)}
+              onActivate={() => setSelection(commit.sha)}
               className={`${ROW} ${commit.sha === selection ? 'bg-btn-active text-accent' : 'text-ink hover:bg-btn-hover'}`}
             >
               <span className="shrink-0 text-[9px] text-ink-dim/50">{commit.sha.slice(0, 7)}</span>
               <span className="min-w-0 flex-1 truncate">{commit.message}</span>
               <RelativeTime iso={commit.date} className="shrink-0 text-[9px] text-ink-dim" />
-            </button>
+            </SelectableRow>
           ))}
         </ResizableColumn>
-        <ResizableColumn icon="▤" title={`files · ${files?.length ?? 0}`} size={fileSize} onSize={setFileSize}>
+        <ResizableColumn icon="▤" title={`files · ${fileSet?.files.length ?? 0}`} size={fileSize} onSize={setFileSize}>
           {fileError !== null ? (
             <p className="px-1.5 py-[1px] text-[11px] leading-4 text-error-ink">{fileError}</p>
-          ) : files === null ? (
+          ) : fileSet === null ? (
             <p className="px-1.5 py-[1px] text-[11px] leading-4 text-ink-dim">Loading…</p>
           ) : (
-            files.map((candidate) => (
-              <button
-                key={candidate.filename}
-                type="button"
-                onClick={() => {
-                  setPath(candidate.filename);
-                  diffPanes.current?.scrollToFile(candidate.filename);
-                }}
-                title={candidate.filename}
-                className={`${ROW} ${
-                  candidate.filename === path ? 'bg-btn-active text-accent' : 'text-ink hover:bg-btn-hover'
-                }`}
-              >
-                <span className="min-w-0 flex-1 truncate">{candidate.filename}</span>
-                <ChangeCounts additions={candidate.additions} deletions={candidate.deletions} />
-              </button>
-            ))
+            <ChangedFileTree
+              files={fileSet.files}
+              selected={path}
+              onSelect={(filename) => {
+                setPath(filename);
+                diffPanes.current?.scrollToFile(filename);
+              }}
+            />
           )}
         </ResizableColumn>
         {fileError !== null ? (
           <p className="flex-1 px-2 py-1 text-[11px] text-error-ink">{fileError}</p>
         ) : (
-          <DiffPanes ref={diffPanes} files={files} />
+          <DiffPanes ref={diffPanes} owner={owner} repo={repo} fileSet={fileSet} />
         )}
       </div>
     </div>

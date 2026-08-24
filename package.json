@@ -8,15 +8,17 @@
   },
   "scripts": {
     "dev": "next dev --port 2111",
-    "build": "next build",
+    "build": "npm run check:caching && next build",
     "start": "next start --port 2111",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check:caching": "node scripts/checkGithubCaching.mjs"
   },
   "dependencies": {
     "@tailwindcss/postcss": "4.3.3",
     "next": "16.3.0",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "shiki": "3.12.0"
   },
   "devDependencies": {
     "@types/node": "22.20.1",
