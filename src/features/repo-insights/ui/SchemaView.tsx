@@ -73,7 +73,7 @@ function ModelPanel({ model, most }: { model: SchemaModel; most: number }) {
         <SourceRef at={model.at} />
       </div>
       <div className="flex items-center gap-2 border-b border-panel-edge px-2 py-1.5">
-        <span className="inline-flex h-1.5 w-24 overflow-hidden rounded-sm border border-btn-edge bg-btn">
+        <span className="inline-flex h-1.5 w-24 overflow-hidden rounded-sm bg-btn">
           <span className="h-full bg-meter-2" style={{ width: `${Math.max(2, (model.callsites / most) * 100)}%` }} />
         </span>
         <CallsiteNote model={model} />

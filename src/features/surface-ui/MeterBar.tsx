@@ -22,7 +22,7 @@ export function MeterBar({ segments, width = 'w-48' }: { segments: MeterSegment[
   const total = segments.reduce((sum, segment) => sum + segment.value, 0);
   if (total <= 0) return null;
   return (
-    <span className={`inline-flex h-2 ${width} overflow-hidden rounded-sm border border-btn-edge align-middle`}>
+    <span className={`inline-flex h-2 ${width} overflow-hidden rounded-sm align-middle`}>
       {segments.map((segment, at) => (
         <span
           key={segment.label}

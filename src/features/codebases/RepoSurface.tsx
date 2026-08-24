@@ -78,7 +78,7 @@ export function RepoSurface({ owner, repo }: { owner: string; repo: string }) {
     return (
       <section className="max-w-2xl">
         <h1 className="text-xl text-accent">{heading}</h1>
-        <p className="mt-2 rounded border border-error-edge bg-error-bg px-3 py-2 text-xs text-error-ink">
+        <p className="mt-2 rounded bg-error-bg px-3 py-2 text-xs text-error-ink">
           {held.message}
         </p>
       </section>

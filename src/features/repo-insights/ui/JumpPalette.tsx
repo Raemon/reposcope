@@ -107,7 +107,7 @@ export function JumpPalette({
           id={panelId}
           role="listbox"
           aria-label="Jump results"
-          className="absolute right-0 top-full z-40 mt-1 max-h-[60vh] w-[min(34rem,80vw)] overflow-y-auto rounded-md border border-btn-edge bg-tip py-1 shadow-[0_8px_28px_rgba(20,30,50,0.18)]"
+          className="absolute right-0 top-full z-40 mt-1 max-h-[60vh] w-[min(34rem,80vw)] overflow-y-auto rounded-md bg-tip py-1 shadow-card"
         >
           {groups.length === 0 ? (
             <p className="px-3 py-1.5 font-mono text-[11px] text-ink-dim">nothing named that</p>

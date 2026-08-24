@@ -27,7 +27,6 @@
   --color-danger-ink: var(--danger-ink);
 
   --color-tip: var(--tip);
-  --color-error-edge: var(--error-edge);
   --color-error-bg: var(--error-bg);
   --color-error-ink: var(--error-ink);
 
@@ -60,7 +59,7 @@
   --scope: #157a3f;
   --scope-lens: #dff0e3;
 
-  --field: #ffffff;
+  --field: #e6ebf2;
   --procgen: #dfe5ee;
   --btn: #e3e9f1;
   --btn-edge: #737e8e;
@@ -75,7 +74,6 @@
   --danger-ink: #8c1414;
 
   --tip: #ffffff;
-  --error-edge: #b34d4d;
   --error-bg: #fbeced;
   --error-ink: #8c1414;
 
@@ -123,7 +121,6 @@
     --danger-ink: #ffa199;
 
     --tip: #242220;
-    --error-edge: #a85555;
     --error-bg: #2e201f;
     --error-ink: #ffa199;
 
@@ -185,7 +182,6 @@
   --danger-ink: #ffa199;
 
   --tip: #242220;
-  --error-edge: #a85555;
   --error-bg: #2e201f;
   --error-ink: #ffa199;
 
