@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { DragHandle, useDragWidth, type ColumnSize } from './ResizableColumn';
-import { CHECKERBOARD, type ImageSource } from './imageView';
+import { CheckerImg } from './BlobImage';
+import { type ImageSource } from './imageView';
 import { openImageTab } from './openImageTab';
 import { useFileBlob } from './useFileBlob';
 
@@ -72,11 +73,10 @@ function ImagePane({
             className="max-w-full cursor-zoom-in"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <CheckerImg
               src={blob.value.dataUrl}
               alt={`${label} — ${source.path}`}
               onLoad={(event) => setShape(`${event.currentTarget.naturalWidth}×${event.currentTarget.naturalHeight}`)}
-              style={CHECKERBOARD}
               className="max-h-[420px] max-w-full border border-panel-edge object-contain"
             />
           </button>

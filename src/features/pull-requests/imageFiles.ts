@@ -1,3 +1,5 @@
+import type { ChangedFile } from './pullRequests';
+
 const IMAGE_TYPES: Record<string, string> = {
   apng: 'image/apng',
   avif: 'image/avif',
@@ -18,4 +20,8 @@ export function imageTypeOf(path: string): string | null {
 
 export function isImagePath(path: string): boolean {
   return imageTypeOf(path) !== null;
+}
+
+export function imageFilesOf(files: ChangedFile[]): ChangedFile[] {
+  return files.filter((file) => isImagePath(file.filename));
 }

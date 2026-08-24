@@ -13,8 +13,8 @@ import {
 import { ChangeCounts } from './ChangeCounts';
 import { ImageDiff } from './ImageDiff';
 import { ImageThumbnailStrip } from './ImageThumbnailStrip';
-import { isImagePath } from './imageFiles';
-import { imageFilesOf, imageSides } from './imageView';
+import { imageFilesOf, isImagePath } from './imageFiles';
+import { imageSides } from './imageView';
 import { DragHandle, useDragWidth, type ColumnSize } from './ResizableColumn';
 import { sortByFolder } from './fileTree';
 import { splitDiff, type DiffCell, type DiffRow } from './splitDiff';
@@ -65,16 +65,7 @@ export function DiffPanes({
   const imageFiles = imageFilesOf(orderedFiles);
   return (
     <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
-      {imageFiles.length > 0 && (
-        <ImageThumbnailStrip
-          key={fileSet.headRef}
-          owner={owner}
-          repo={repo}
-          files={imageFiles}
-          baseRef={fileSet.baseRef}
-          headRef={fileSet.headRef}
-        />
-      )}
+      <ImageStrip key={`${fileSet.baseRef}:${fileSet.headRef}`} owner={owner} repo={repo} fileSet={fileSet} files={imageFiles} />
       {orderedFiles.map((file) => (
         <FileSection
           key={file.filename}
@@ -91,6 +82,21 @@ export function DiffPanes({
       ))}
     </div>
   );
+}
+
+function ImageStrip({
+  owner,
+  repo,
+  fileSet,
+  files,
+}: {
+  owner: string;
+  repo: string;
+  fileSet: ChangedFileSet;
+  files: ChangedFile[];
+}) {
+  if (files.length === 0) return null;
+  return <ImageThumbnailStrip owner={owner} repo={repo} files={files} baseRef={fileSet.baseRef} headRef={fileSet.headRef} />;
 }
 
 function animateScrollTop(container: HTMLElement, target: number) {

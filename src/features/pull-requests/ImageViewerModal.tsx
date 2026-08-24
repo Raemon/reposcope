@@ -1,163 +1,128 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { BlobImage } from './BlobImage';
+import type { ReactNode, RefObject } from 'react';
+import { FilePreview } from './BlobImage';
 import { baseName } from './fileTree';
-import { previewSource, wrapImageIndex } from './imageView';
 import type { ChangedFile } from './pullRequests';
+import type { ImageGallery } from './imageView';
+import { holdClick, useFocusOnIndex, useViewerKeys, wrapImageIndex } from './viewerKeys';
 
-export function ImageViewerModal({
-  owner,
-  repo,
-  files,
-  baseRef,
-  headRef,
-  index,
-  onIndex,
-  onClose,
-}: {
-  owner: string;
-  repo: string;
-  files: ChangedFile[];
-  baseRef: string;
-  headRef: string;
+const SHIFT = 'shrink-0 px-2 py-8 text-[18px] leading-none text-ink-dim hover:bg-btn-hover hover:text-ink';
+
+interface ViewerProps {
+  gallery: ImageGallery;
   index: number;
   onIndex: (index: number) => void;
   onClose: () => void;
-}) {
-  const file = files[index];
-  useViewerKeys(index, files.length, onIndex, onClose);
-  if (!file) return null;
-  return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-bg/95" onClick={onClose} role="presentation">
-      <ViewerFrame
-        owner={owner}
-        repo={repo}
-        file={file}
-        baseRef={baseRef}
-        headRef={headRef}
-        index={index}
-        count={files.length}
-        onIndex={onIndex}
-        onClose={onClose}
-      />
-    </div>,
-    document.body,
-  );
 }
 
-function ViewerFrame({
-  owner,
-  repo,
-  file,
-  baseRef,
-  headRef,
-  index,
-  count,
-  onIndex,
-  onClose,
-}: {
-  owner: string;
-  repo: string;
-  file: ChangedFile;
-  baseRef: string;
-  headRef: string;
-  index: number;
-  count: number;
-  onIndex: (index: number) => void;
-  onClose: () => void;
-}) {
+export function ImageViewerModal(props: ViewerProps) {
+  const file = props.gallery.files[props.index];
+  useViewerKeys(props.index, props.gallery.files.length, props.onIndex, props.onClose);
+  if (!file) return null;
+  return createPortal(<ViewerDialog {...props} file={file} />, document.body);
+}
+
+function ViewerDialog({ gallery, file, index, onIndex, onClose }: ViewerProps & { file: ChangedFile }) {
   const dialog = useFocusOnIndex(index);
   return (
-    <div
-      ref={dialog}
-      role="dialog"
-      aria-modal="true"
-      aria-label={file.filename}
-      tabIndex={-1}
-      onClick={onClose}
-      className="flex h-[90vh] w-[90vw] items-center gap-1 outline-none"
-    >
-      <ShiftButton label="Previous image" mark="‹" delta={-1} index={index} count={count} onIndex={onIndex} />
-      <ViewerStage
-        owner={owner}
-        repo={repo}
-        file={file}
-        baseRef={baseRef}
-        headRef={headRef}
-        index={index}
-        count={count}
-        onClose={onClose}
-      />
-      <ShiftButton label="Next image" mark="›" delta={1} index={index} count={count} onIndex={onIndex} />
+    <DialogShell dialog={dialog} label={file.filename} onClose={onClose}>
+      <ViewerBody gallery={gallery} file={file} index={index} onIndex={onIndex} onClose={onClose} />
+    </DialogShell>
+  );
+}
+
+function DialogShell({
+  dialog,
+  label,
+  onClose,
+  children,
+}: {
+  dialog: RefObject<HTMLDivElement | null>;
+  label: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div ref={dialog} role="dialog" aria-modal="true" aria-label={label} tabIndex={-1} onClick={onClose} className="fixed inset-0 z-50 flex items-center justify-center bg-bg/95 outline-none">
+      {children}
     </div>
   );
 }
 
-function ViewerStage({
-  owner,
-  repo,
-  file,
-  baseRef,
-  headRef,
-  index,
-  count,
-  onClose,
-}: {
-  owner: string;
-  repo: string;
-  file: ChangedFile;
-  baseRef: string;
-  headRef: string;
-  index: number;
-  count: number;
-  onClose: () => void;
-}) {
-  const source = previewSource(file, baseRef, headRef);
+function ViewerBody({ gallery, file, index, onIndex, onClose }: ViewerProps & { file: ChangedFile }) {
+  const count = gallery.files.length;
+  return (
+    <div className="flex h-[90vh] w-[90vw] items-center gap-1">
+      {shiftControl(-1, index, count, onIndex)}
+      <ViewerStage gallery={gallery} file={file} index={index} onClose={onClose} />
+      {shiftControl(1, index, count, onIndex)}
+    </div>
+  );
+}
+
+function ViewerStage({ gallery, file, index, onClose }: { gallery: ImageGallery; file: ChangedFile; index: number; onClose: () => void }) {
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <ViewerCaption file={file} index={index} count={count} onClose={onClose} />
-      <div className="flex min-h-0 flex-1 items-center justify-center">
-        <span onClick={holdClick} className="flex max-h-full max-w-full">
-          <BlobImage
-            owner={owner}
-            repo={repo}
-            source={source}
-            alt={file.filename}
-            className="max-h-full max-w-full object-contain"
-          />
-        </span>
-      </div>
+      <ViewerCaption file={file} index={index} count={gallery.files.length} onClose={onClose} />
+      <ViewerPicture gallery={gallery} file={file} />
     </div>
   );
 }
 
-function ViewerCaption({
-  file,
-  index,
-  count,
-  onClose,
-}: {
-  file: ChangedFile;
-  index: number;
-  count: number;
-  onClose: () => void;
-}) {
+function ViewerPicture({ gallery, file }: { gallery: ImageGallery; file: ChangedFile }) {
   return (
-    <div onClick={holdClick} className="flex shrink-0 items-baseline gap-2 px-1 py-[2px] text-[11px] leading-4">
-      <span title={file.filename} className="min-w-0 flex-1 truncate text-ink">
-        {baseName(file.filename)}
+    <div className="flex min-h-0 flex-1 items-center justify-center">
+      <span onClick={holdClick} className="flex max-h-full min-h-0 max-w-full">
+        <FilePreview owner={gallery.owner} repo={gallery.repo} file={file} baseRef={gallery.baseRef} headRef={gallery.headRef} className="max-h-full max-w-full object-contain" />
       </span>
-      <span className="shrink-0 uppercase tracking-[0.18em] text-ink-dim">{file.status}</span>
-      <span className="shrink-0 text-ink-dim">
-        {index + 1}/{count}
-      </span>
-      <button type="button" onClick={onClose} className="shrink-0 text-ink-dim hover:bg-btn-hover hover:text-ink">
-        close
-      </button>
     </div>
   );
+}
+
+function ViewerCaption({ file, index, count, onClose }: { file: ChangedFile; index: number; count: number; onClose: () => void }) {
+  return (
+    <div onClick={holdClick} className="flex shrink-0 items-baseline gap-2 px-1 py-[2px] text-[11px] leading-4">
+      <CaptionName path={file.filename} />
+      <CaptionStatus status={file.status} />
+      <CaptionIndex index={index} count={count} />
+      <CloseViewer onClose={onClose} />
+    </div>
+  );
+}
+
+function CaptionName({ path }: { path: string }) {
+  return (
+    <span title={path} className="min-w-0 flex-1 truncate text-ink">
+      {baseName(path)}
+    </span>
+  );
+}
+
+function CaptionStatus({ status }: { status: string }) {
+  return <span className="shrink-0 uppercase tracking-[0.18em] text-ink-dim">{status}</span>;
+}
+
+function CaptionIndex({ index, count }: { index: number; count: number }) {
+  return (
+    <span className="shrink-0 text-ink-dim">
+      {index + 1}/{count}
+    </span>
+  );
+}
+
+function CloseViewer({ onClose }: { onClose: () => void }) {
+  return (
+    <button type="button" onClick={onClose} className="shrink-0 text-ink-dim hover:bg-btn-hover hover:text-ink">
+      close
+    </button>
+  );
+}
+
+function shiftControl(delta: number, index: number, count: number, onIndex: (index: number) => void) {
+  const back = delta < 0;
+  return <ShiftButton label={back ? 'Previous image' : 'Next image'} mark={back ? '‹' : '›'} delta={delta} index={index} count={count} onIndex={onIndex} />;
 }
 
 function ShiftButton({
@@ -177,58 +142,19 @@ function ShiftButton({
 }) {
   if (count < 2) return null;
   return (
-    <button
-      type="button"
-      aria-label={label}
-      onClick={(event) => {
-        holdClick(event);
-        onIndex(wrapImageIndex(index, delta, count));
-      }}
-      className="shrink-0 px-2 py-8 text-[18px] leading-none text-ink-dim hover:bg-btn-hover hover:text-ink"
-    >
+    <button type="button" aria-label={label} onClick={(event) => shiftImage(event, index, delta, count, onIndex)} className={SHIFT}>
       {mark}
     </button>
   );
 }
 
-function useFocusOnIndex(index: number) {
-  const dialog = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    dialog.current?.focus();
-  }, [index]);
-  return dialog;
-}
-
-function useViewerKeys(
+function shiftImage(
+  event: { stopPropagation: () => void },
   index: number,
+  delta: number,
   count: number,
   onIndex: (index: number) => void,
-  onClose: () => void,
 ) {
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      const action = viewerKeyAction(event.key, index, count);
-      if (!action) return;
-      event.preventDefault();
-      if (action.close) onClose();
-      else onIndex(action.index);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [index, count, onIndex, onClose]);
-}
-
-function viewerKeyAction(
-  key: string,
-  index: number,
-  count: number,
-): { close: true; index?: undefined } | { close?: undefined; index: number } | null {
-  if (key === 'Escape') return { close: true };
-  if (key === 'ArrowLeft') return { index: wrapImageIndex(index, -1, count) };
-  if (key === 'ArrowRight') return { index: wrapImageIndex(index, 1, count) };
-  return null;
-}
-
-function holdClick(event: { stopPropagation: () => void }) {
-  event.stopPropagation();
+  holdClick(event);
+  onIndex(wrapImageIndex(index, delta, count));
 }
