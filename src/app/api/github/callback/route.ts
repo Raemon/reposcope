@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { oauthConfig, type OAuthConfig } from '@/features/github-auth/githubOAuthConfig';
-import { consumeOauthState } from '@/features/github-auth/oauthState';
+import { accessFromState, consumeOauthState } from '@/features/github-auth/oauthState';
 import { requestOrigin } from '@/features/github-auth/requestOrigin';
 
 interface TokenResponse {
@@ -23,7 +23,8 @@ export async function GET(request: Request) {
   if (!code || !state || !expected || state !== expected) return fail('GitHub sign-in state mismatch; try again');
   try {
     const token = await exchangeCode(code, `${origin}/api/github/callback`, config);
-    return NextResponse.redirect(`${origin}/connect#token=${encodeURIComponent(token)}`);
+    const granted = new URLSearchParams({ token, access: accessFromState(state) });
+    return NextResponse.redirect(`${origin}/connect#${granted}`);
   } catch (error) {
     return fail(error instanceof Error ? error.message : 'GitHub sign-in failed');
   }

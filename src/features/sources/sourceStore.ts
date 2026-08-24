@@ -2,9 +2,11 @@
 
 import { useSyncExternalStore } from 'react';
 import { normalizeSources, parseSources, serializeSource, sourceKey, type CodebaseSource } from './sourceTypes';
+import { parseGithubAccess, type GithubAccess } from '@/features/github-auth/githubAccess';
 
 const SOURCES_KEY = 'reposcope.sources';
 const TOKEN_KEY = 'reposcope.githubToken';
+const ACCESS_KEY = 'reposcope.githubAccess';
 const NO_SOURCES: CodebaseSource[] = [];
 const listeners = new Set<() => void>();
 let held: { raw: string | null; sources: CodebaseSource[] } | null = null;
@@ -33,12 +35,18 @@ function readGithubToken(): string | null {
   return readItem(TOKEN_KEY);
 }
 
-export function writeGithubToken(token: string): void {
+export function writeGithubToken(token: string, access: GithubAccess): void {
+  writeItem(ACCESS_KEY, access);
   writeItem(TOKEN_KEY, token);
 }
 
 export function clearGithubToken(): void {
+  writeItem(ACCESS_KEY, null);
   writeItem(TOKEN_KEY, null);
+}
+
+function readGithubAccess(): GithubAccess {
+  return parseGithubAccess(readItem(ACCESS_KEY));
 }
 
 export function useSources(): CodebaseSource[] {
@@ -47,6 +55,10 @@ export function useSources(): CodebaseSource[] {
 
 export function useGithubToken(): string | null {
   return useSyncExternalStore(subscribe, readGithubToken, () => null);
+}
+
+export function useGithubAccess(): GithubAccess {
+  return useSyncExternalStore(subscribe, readGithubAccess, () => 'all' as const);
 }
 
 export function useStoreReady(): boolean {

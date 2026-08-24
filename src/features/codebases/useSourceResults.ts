@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { RepoSummary, ViewerRepos } from './repoDirectory';
 import type { SourceResult } from './sidebarGroups';
+import type { GithubAccess } from '@/features/github-auth/githubAccess';
 import { apiJson } from '@/features/sources/apiClient';
 import { readBrowserCache, writeBrowserCache } from '@/features/sources/browserCache';
 import { sourceKey, type CodebaseSource } from '@/features/sources/sourceTypes';
@@ -14,6 +15,7 @@ export function useSourceResults(
   sources: CodebaseSource[],
   token: string | null,
   ready: boolean,
+  access: GithubAccess,
 ): Map<string, SourceResult> {
   const [results, setResults] = useState({ token, map: NONE });
 
@@ -28,14 +30,14 @@ export function useSourceResults(
       });
     };
     for (const source of sources) {
-      const cached = readBrowserCache<SourceResult>(cacheName(source, token));
+      const cached = readBrowserCache<SourceResult>(cacheName(source, token, access));
       if (cached) remember(sourceKey(source), cached);
-      void requestSource(source, token, cached).then((result) => remember(sourceKey(source), result));
+      void requestSource(source, token, access, cached).then((result) => remember(sourceKey(source), result));
     }
     return () => {
       live = false;
     };
-  }, [sources, token, ready]);
+  }, [sources, token, ready, access]);
 
   return results.token === token ? results.map : NONE;
 }
@@ -43,12 +45,13 @@ export function useSourceResults(
 function requestSource(
   source: CodebaseSource,
   token: string | null,
+  access: GithubAccess,
   cached: SourceResult | null,
 ): Promise<SourceResult> {
-  const name = cacheName(source, token);
+  const name = cacheName(source, token, access);
   const running = inFlight.get(name);
   if (running) return running;
-  const request = fetchSource(source, token)
+  const request = fetchSource(source, token, access)
     .then((result) => {
       writeBrowserCache(name, result);
       return result;
@@ -62,15 +65,15 @@ function requestSource(
   return request;
 }
 
-function cacheName(source: CodebaseSource, token: string | null): string {
-  return `source ${token ? 'signed-in' : 'anonymous'} ${sourceKey(source)}`;
+function cacheName(source: CodebaseSource, token: string | null, access: GithubAccess): string {
+  return `source ${token ? `signed-in ${access}` : 'anonymous'} ${sourceKey(source)}`;
 }
 
 function sameResult(held: SourceResult | undefined, next: SourceResult): boolean {
   return held !== undefined && JSON.stringify(held) === JSON.stringify(next);
 }
 
-function fetchSource(source: CodebaseSource, token: string | null): Promise<SourceResult> {
+function fetchSource(source: CodebaseSource, token: string | null, access: GithubAccess): Promise<SourceResult> {
   switch (source.kind) {
     case 'owner':
       return apiJson<RepoSummary[]>(`/api/github/repos?owner=${encodeURIComponent(source.login)}`, token).then(
@@ -82,7 +85,7 @@ function fetchSource(source: CodebaseSource, token: string | null): Promise<Sour
         token,
       ).then((repo) => ({ state: 'ready', repos: [repo], login: null }));
     case 'viewer':
-      return apiJson<ViewerRepos>('/api/github/viewer', token).then((viewer) => ({
+      return apiJson<ViewerRepos>(`/api/github/viewer?access=${access}`, token).then((viewer) => ({
         state: 'ready',
         repos: viewer.repos,
         login: viewer.login,

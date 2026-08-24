@@ -1,7 +1,7 @@
 'use client';
 
 import { SourceControls } from './SourceControls';
-import { useGithubToken, useSources, useStoreReady } from './sourceStore';
+import { useGithubAccess, useGithubToken, useSources, useStoreReady } from './sourceStore';
 import { CodebaseList } from '@/features/codebases/CodebaseList';
 import { sidebarGroups } from '@/features/codebases/sidebarGroups';
 import { useSourceResults } from '@/features/codebases/useSourceResults';
@@ -10,7 +10,8 @@ export function Landing({ error, oauthConfigured }: { error: string | null; oaut
   const ready = useStoreReady();
   const sources = useSources();
   const token = useGithubToken();
-  const results = useSourceResults(sources, token, ready);
+  const access = useGithubAccess();
+  const results = useSourceResults(sources, token, ready, access);
   const onboarding = !ready || sources.length === 0;
   return (
     <section className="max-w-2xl">
