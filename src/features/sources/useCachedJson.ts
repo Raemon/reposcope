@@ -58,6 +58,10 @@ export function prefetchJson(path: string, token: string | null, key: string = p
   if (readBrowserCache(cacheName(key, token)) === null) void requestJson(path, token, key).catch(() => {});
 }
 
+export function readCachedJson<T>(key: string, token: string | null): T | null {
+  return readBrowserCache<T>(cacheName(key, token));
+}
+
 function reloadHeld<T>(
   snapshot: Asked,
   asked: { current: Asked },

@@ -32,7 +32,7 @@ export function InsightSection({
 
 export function InsightPanel({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`w-fit max-w-full overflow-x-auto rounded border border-panel-edge bg-panel ${className}`}>
+    <div className={`w-fit max-w-full overflow-x-auto rounded bg-panel ${className}`}>
       {children}
     </div>
   );

@@ -1,11 +1,7 @@
 import { parseRepoLink, type RepoRef } from '@/features/sources/parseRepoLink';
 
-export function repoHref(owner: string, repo: string): string {
+export function repoRoute(owner: string, repo: string): string {
   return `/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
-}
-
-export function pullHref(owner: string, repo: string, number: number): string {
-  return `${repoHref(owner, repo)}/pull/${number}`;
 }
 
 export function pullBeingRead(pathname: string): number | null {

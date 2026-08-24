@@ -25,12 +25,12 @@ export function Landing({ error, oauthConfigured }: { error: string | null; oaut
         each operation reaches, and the in-repo callers that make it matter to a person.
       </p>
       {error && (
-        <p className="mt-3 rounded border border-error-edge bg-error-bg px-3 py-2 text-xs text-error-ink">{error}</p>
+        <p className="mt-3 rounded bg-error-bg px-3 py-2 text-xs text-error-ink">{error}</p>
       )}
       {!onboarding && (
         <>
           <p className="mb-1 mt-5 text-[10px] uppercase tracking-[0.18em] text-ink-dim">Your codebases</p>
-          <div className="flex max-h-[26rem] flex-col overflow-hidden rounded border border-panel-edge bg-panel">
+          <div className="flex max-h-[26rem] flex-col overflow-hidden rounded bg-panel">
             <CodebaseList groups={sidebarGroups(sources, results)} />
           </div>
           <p className="mt-5 text-[10px] uppercase tracking-[0.18em] text-ink-dim">Add more</p>

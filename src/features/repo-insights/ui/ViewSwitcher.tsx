@@ -46,12 +46,12 @@ function ViewTab({
   href: string;
   onSelect: (id: SurfaceViewId) => void;
 }) {
-  const className = `flex items-center gap-1.5 rounded border px-2 py-1 text-[11px] transition-colors ${
+  const className = `flex items-center gap-1.5 rounded px-2 py-1 text-[11px] transition-colors ${
     current
-      ? 'border-accent bg-panel text-accent'
+      ? 'bg-procgen text-accent'
       : view.available
-        ? 'border-btn-edge bg-btn text-ink-dim hover:bg-btn-hover hover:text-ink'
-        : 'cursor-not-allowed border-btn-edge bg-bg text-ink-dim opacity-50'
+        ? 'bg-btn text-ink-dim hover:bg-btn-hover hover:text-ink'
+        : 'cursor-not-allowed bg-bg text-ink-dim opacity-50'
   }`;
   const label = (
     <>

@@ -2,10 +2,11 @@
 
 import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { repoHref } from './repoPaths';
+import { repoRoute } from './repoPaths';
 import type { SidebarGroup } from './sidebarGroups';
 import { removeSource } from '@/features/sources/sourceStore';
 import type { CodebaseSource } from '@/features/sources/sourceTypes';
+import { FilterField } from '@/features/surface-ui/FilterField';
 import { SelectableLink } from '@/features/surface-ui/SelectableLink';
 
 export function CodebaseList({ groups }: { groups: SidebarGroup[] }) {
@@ -21,12 +22,12 @@ export function CodebaseList({ groups }: { groups: SidebarGroup[] }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="border-b border-panel-edge px-2 py-2">
-        <input
+        <FilterField
           value={filter}
-          onChange={(event) => setFilter(event.target.value)}
+          onChange={setFilter}
           placeholder="filter repositories"
           aria-label="Filter repositories"
-          className="w-full rounded border border-btn-edge bg-field px-2 py-1 text-[11px] text-ink outline-none placeholder:text-ink-dim focus:border-accent"
+          className="w-full"
         />
       </div>
       <nav className="min-h-0 flex-1 overflow-auto py-1">
@@ -36,16 +37,16 @@ export function CodebaseList({ groups }: { groups: SidebarGroup[] }) {
               <span className="truncate">
                 {group.owner} · {group.loading ? '…' : group.repos.length}
               </span>
-              {group.you && <span className="rounded border border-btn-edge px-1 normal-case tracking-normal">you</span>}
+              {group.you && <span className="rounded bg-btn px-1 normal-case tracking-normal">you</span>}
               {group.source && <RemoveControl source={group.source} label={`Remove ${group.owner}`} />}
             </h2>
             {group.error && (
-              <p className="mx-3 mb-1 rounded border border-error-edge bg-error-bg px-2 py-1 text-[10px] leading-4 text-error-ink">
+              <p className="mx-3 mb-1 rounded bg-error-bg px-2 py-1 text-[10px] leading-4 text-error-ink">
                 {group.error}
               </p>
             )}
             {group.repos.map((repo) => {
-              const href = repoHref(repo.owner, repo.name);
+              const href = repoRoute(repo.owner, repo.name);
               const activeLink = pathname === href;
               return (
                 <div
@@ -63,7 +64,7 @@ export function CodebaseList({ groups }: { groups: SidebarGroup[] }) {
                   >
                     <span className="truncate">{repo.name}</span>
                     <span className="shrink-0 text-[9px] text-ink-dim">
-                      {repo.private && <span className="mr-1 rounded border border-btn-edge px-1">private</span>}
+                      {repo.private && <span className="mr-1 rounded bg-btn px-1">private</span>}
                       {repo.language}
                     </span>
                   </SelectableLink>

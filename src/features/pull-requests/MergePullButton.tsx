@@ -1,40 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useCurrentPull } from './currentPullStore';
-import type { MergeResult } from './pullRequests';
-import { apiPost } from '@/features/sources/apiClient';
+import { mergePull } from './mergePull';
+import { latestMergeFailure, mergeAttemptFor, useMergeAttempts } from './mergeStore';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
 import { useGithubToken } from '@/features/sources/sourceStore';
 
 export function MergePullButton({ repo, number }: { repo: RepoRef; number: number }) {
   const token = useGithubToken();
-  const held = useCurrentPull();
-  const pull = held && held.pull.number === number ? held : null;
-  const [merging, setMerging] = useState(false);
-  const [merged, setMerged] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  const pull = useCurrentPull(repo.owner, repo.name, number);
+  const attempts = useMergeAttempts();
+  const attempt = mergeAttemptFor(attempts, repo.owner, repo.name, number);
+  const failure = latestMergeFailure(attempts);
+  const elsewhere = attempts.find((tried) => tried.state === 'merging' && tried !== attempt) ?? null;
 
+  const merging = attempt?.state === 'merging';
   const closed = pull !== null && pull.pull.state !== 'open';
   const conflicted = pull?.conflicted ?? false;
-  const done = merged || (pull?.pull.merged ?? false);
-
-  async function merge() {
-    setMerging(true);
-    setError(null);
-    try {
-      const result = await apiPost<MergeResult>(
-        `/api/github/merge?owner=${encodeURIComponent(repo.owner)}&name=${encodeURIComponent(repo.name)}&number=${number}`,
-        token,
-      );
-      if (result.merged) setMerged(true);
-      else setError(result.message || 'Merge refused');
-    } catch (issue: unknown) {
-      setError(issue instanceof Error ? issue.message : String(issue));
-    } finally {
-      setMerging(false);
-    }
-  }
+  const done = attempt?.state === 'merged' || (pull?.pull.merged ?? false);
 
   if (done) {
     return <span className="shrink-0 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-ink-dim">merged</span>;
@@ -42,14 +27,20 @@ export function MergePullButton({ repo, number }: { repo: RepoRef; number: numbe
 
   return (
     <div className="flex shrink-0 items-center gap-2">
-      {error !== null && (
-        <span title={error} className="max-w-56 truncate text-[10px] text-error-ink">
-          {error}
+      {failure !== null && (
+        <span
+          title={`${failure.owner}/${failure.repo}#${failure.number}: ${failure.message}`}
+          className="max-w-56 truncate text-[10px] text-error-ink"
+        >
+          #{failure.number} {failure.message}
         </span>
+      )}
+      {elsewhere !== null && (
+        <span className="shrink-0 text-[10px] text-ink-dim">merging #{elsewhere.number}…</span>
       )}
       <button
         type="button"
-        onClick={merge}
+        onClick={() => mergePull({ owner: repo.owner, repo: repo.name, number }, token, (href) => router.push(href))}
         disabled={merging || pull === null || closed || conflicted}
         title={
           closed
@@ -60,7 +51,7 @@ export function MergePullButton({ repo, number }: { repo: RepoRef; number: numbe
                 ? `Mark #${number} ready for review and merge`
                 : `Merge #${number}`
         }
-        className="shrink-0 rounded border border-btn-edge px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-ink-dim hover:bg-btn-hover hover:text-ink disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-ink-dim"
+        className="shrink-0 rounded bg-btn px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-ink-dim hover:bg-btn-hover hover:text-ink disabled:opacity-40 disabled:hover:bg-btn disabled:hover:text-ink-dim"
       >
         {merging ? 'Merging…' : conflicted ? 'Merge Conflicts' : 'Merge'}
       </button>

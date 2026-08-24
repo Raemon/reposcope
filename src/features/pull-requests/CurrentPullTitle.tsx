@@ -2,10 +2,10 @@
 
 import { useCurrentPull } from './currentPullStore';
 import { timeAgo } from '@/features/repo-insights/ui/timeAgo';
+import type { RepoRef } from '@/features/sources/parseRepoLink';
 
-export function CurrentPullTitle({ number }: { number: number }) {
-  const held = useCurrentPull();
-  const pull = held && held.pull.number === number ? held : null;
+export function CurrentPullTitle({ repo, number }: { repo: RepoRef; number: number }) {
+  const pull = useCurrentPull(repo.owner, repo.name, number);
   return (
     <div className="flex min-w-0 flex-1 items-baseline gap-1.5 text-[11px] leading-4">
       <span className="shrink-0 text-accent">#{number}</span>

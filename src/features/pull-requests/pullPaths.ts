@@ -1,3 +1,5 @@
+import { repoRoute } from '@/features/codebases/repoPaths';
+
 export function pullPath(owner: string, repo: string, number: number): string {
   return `/api/github/pull?${repoParams(owner, repo)}&number=${number}`;
 }
@@ -16,6 +18,18 @@ export function pullCommentsPath(owner: string, repo: string, number: number): s
 
 export function repoPullsPath(owner: string, repo: string): string {
   return `/api/github/pulls?${repoParams(owner, repo)}`;
+}
+
+export function mergePullPath(owner: string, repo: string, number: number): string {
+  return `/api/github/merge?${repoParams(owner, repo)}&number=${number}`;
+}
+
+export function pullRoute(owner: string, repo: string, number: number): string {
+  return `${repoRoute(owner, repo)}/pull/${number}`;
+}
+
+export function allPullsRoute(owner: string, repo: string, number: number): string {
+  return `${pullRoute(owner, repo, number)}?from=all`;
 }
 
 function repoParams(owner: string, repo: string): string {

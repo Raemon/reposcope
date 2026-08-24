@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { CodebaseList } from './CodebaseList';
 import { HeaderMenu } from './HeaderMenu';
-import { pullBeingRead, repoBeingRead, repoHref } from './repoPaths';
+import { pullBeingRead, repoBeingRead, repoRoute } from './repoPaths';
 import { sidebarGroups } from './sidebarGroups';
 import { useSourceResults } from './useSourceResults';
 import { ScopeMark } from '@/features/brand/ScopeMark';
@@ -31,7 +31,7 @@ export function CodebaseHeader() {
       </Link>
       <CodebaseMenu reading={reading} />
       {reading &&
-        (pullNumber === null ? <PullRequestMenu repo={reading} /> : <CurrentPullTitle number={pullNumber} />)}
+        (pullNumber === null ? <PullRequestMenu repo={reading} /> : <CurrentPullTitle repo={reading} number={pullNumber} />)}
       <div className="ml-auto flex shrink-0 items-center gap-2">
         {reading && pullNumber !== null && <MergePullButton repo={reading} number={pullNumber} />}
         <ThemeToggle />
@@ -132,7 +132,7 @@ function ReadingRow({ reading }: { reading: RepoRef }) {
       <h2 className="px-2 pt-1 text-[9px] uppercase tracking-[0.18em] text-ink-dim">{reading.owner}</h2>
       <div className="flex items-baseline gap-1.5 bg-btn-active pr-2">
         <SelectableLink
-          href={repoHref(reading.owner, reading.name)}
+          href={repoRoute(reading.owner, reading.name)}
           current
           className="flex min-w-0 flex-1 items-baseline justify-between gap-2 py-[1px] pl-2 text-[11px] leading-4 text-accent"
         >

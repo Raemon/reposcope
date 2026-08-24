@@ -13,11 +13,11 @@ export function Chip({
   tipLabel?: string;
 }) {
   const tones = {
-    dim: 'border-btn-edge bg-btn text-ink-dim',
-    accent: 'border-btn-edge bg-btn text-accent',
+    dim: 'bg-btn text-ink-dim',
+    accent: 'bg-btn text-accent',
   };
   const body = (
-    <span className={`inline-flex items-center whitespace-nowrap rounded border px-1.5 py-px font-mono text-[10px] leading-4 ${tones[tone]}`}>
+    <span className={`inline-flex items-center whitespace-nowrap rounded px-1.5 py-px font-mono text-[10px] leading-4 ${tones[tone]}`}>
       {children}
     </span>
   );
