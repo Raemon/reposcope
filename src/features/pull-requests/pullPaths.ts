@@ -24,6 +24,10 @@ export function mergePullPath(owner: string, repo: string, number: number): stri
   return `/api/github/merge?${repoParams(owner, repo)}&number=${number}`;
 }
 
+export function closePullPath(owner: string, repo: string, number: number): string {
+  return `/api/github/close?${repoParams(owner, repo)}&number=${number}`;
+}
+
 export function pullRoute(owner: string, repo: string, number: number): string {
   return `${repoRoute(owner, repo)}/pull/${number}`;
 }

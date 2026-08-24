@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useCurrentPull } from './currentPullStore';
 import { mergePull } from './mergePull';
-import { latestMergeFailure, mergeAttemptFor, useMergeAttempts } from './mergeStore';
+import { latestPullFailure, pullActionFor, usePullActions } from './pullActionStore';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
 import { useGithubToken } from '@/features/sources/sourceStore';
 
@@ -11,15 +11,15 @@ export function MergePullButton({ repo, number }: { repo: RepoRef; number: numbe
   const token = useGithubToken();
   const router = useRouter();
   const pull = useCurrentPull(repo.owner, repo.name, number);
-  const attempts = useMergeAttempts();
-  const attempt = mergeAttemptFor(attempts, repo.owner, repo.name, number);
-  const failure = latestMergeFailure(attempts);
-  const elsewhere = attempts.find((tried) => tried.state === 'merging' && tried !== attempt) ?? null;
+  const actions = usePullActions();
+  const action = pullActionFor(actions, repo.owner, repo.name, number);
+  const failure = latestPullFailure(actions);
+  const elsewhere = actions.find((acted) => acted.state === 'running' && acted !== action) ?? null;
 
-  const merging = attempt?.state === 'merging';
+  const merging = action?.kind === 'merge' && action.state === 'running';
   const closed = pull !== null && pull.pull.state !== 'open';
   const conflicted = pull?.conflicted ?? false;
-  const done = attempt?.state === 'merged' || (pull?.pull.merged ?? false);
+  const done = (action?.kind === 'merge' && action.state === 'done') || (pull?.pull.merged ?? false);
 
   if (done) {
     return <span className="shrink-0 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-ink-dim">merged</span>;
@@ -36,7 +36,9 @@ export function MergePullButton({ repo, number }: { repo: RepoRef; number: numbe
         </span>
       )}
       {elsewhere !== null && (
-        <span className="shrink-0 text-[10px] text-ink-dim">merging #{elsewhere.number}…</span>
+        <span className="shrink-0 text-[10px] text-ink-dim">
+          {elsewhere.kind === 'close' ? 'closing' : 'merging'} #{elsewhere.number}…
+        </span>
       )}
       <button
         type="button"
