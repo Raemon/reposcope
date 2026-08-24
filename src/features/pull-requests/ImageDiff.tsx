@@ -67,7 +67,7 @@ function ImagePane({
         {shape && <span className="tracking-normal normal-case">{shape}</span>}
         {blob.value && <span className="tracking-normal normal-case">{byteLabel(blob.value.byteSize)}</span>}
       </div>
-      <div style={CHECKERBOARD} className="flex min-h-[80px] flex-1 items-center justify-center p-3">
+      <div className="flex min-h-[80px] flex-1 items-center justify-center p-3">
         {!source ? (
           <PaneNote text={label === 'before' ? 'added in this change' : 'deleted in this change'} />
         ) : blob.error ? (
@@ -82,7 +82,8 @@ function ImagePane({
             src={blob.value.dataUrl}
             alt={`${label} — ${source.path}`}
             onLoad={(event) => setShape(`${event.currentTarget.naturalWidth}×${event.currentTarget.naturalHeight}`)}
-            className="max-h-[420px] max-w-full object-contain"
+            style={CHECKERBOARD}
+            className="max-h-[420px] max-w-full border border-panel-edge object-contain"
           />
         )}
       </div>
