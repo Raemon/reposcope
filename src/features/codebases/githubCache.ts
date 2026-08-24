@@ -55,7 +55,7 @@ export async function dropCachedScope(scope: string): Promise<void> {
   const prefix = scopeHash(scope);
   for (const held of memory.keys()) if (held.startsWith(scope)) memory.delete(held);
   try {
-    for (const name of await readdir(DIRECTORY)) {
+    for (const name of await readdir(/*turbopackIgnore: true*/ DIRECTORY)) {
       if (name.startsWith(`${prefix}~`)) await rm(join(DIRECTORY, name), { force: true });
     }
   } catch {
@@ -82,7 +82,7 @@ async function pruneWhenDue(): Promise<void> {
   if (writesSincePrune < WRITES_BETWEEN_PRUNES) return;
   writesSincePrune = 0;
   const entries = await Promise.all(
-    (await readdir(DIRECTORY)).map(async (name) => {
+    (await readdir(/*turbopackIgnore: true*/ DIRECTORY)).map(async (name) => {
       const path = join(DIRECTORY, name);
       const info = await stat(path).catch(() => null);
       return { path, size: info?.size ?? 0, usedAt: info?.mtimeMs ?? 0 };
