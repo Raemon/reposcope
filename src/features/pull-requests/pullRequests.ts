@@ -1,4 +1,12 @@
-import { githubBytes, githubGraphql, githubJson, githubSend } from '@/features/codebases/githubRequest';
+import {
+  GithubRequestError,
+  dropGithubCache,
+  githubBytes,
+  githubGraphql,
+  githubJson,
+  githubSend,
+} from '@/features/codebases/githubRequest';
+import { userGithubToken } from '@/features/codebases/githubToken';
 import { imageTypeOf } from './imageFiles';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
 
@@ -67,6 +75,21 @@ export interface PullRequestCommits {
   commits: CommitSummary[];
 }
 
+export interface FileEdit {
+  path: string;
+  headRef: string;
+  startLine: number;
+  endLine: number;
+  original: string;
+  updated: string;
+  message: string;
+}
+
+export interface EditResult {
+  sha: string;
+  branch: string;
+}
+
 export interface MergeResult {
   merged: boolean;
   message: string;
@@ -91,7 +114,7 @@ interface GithubPull {
   state: string;
   merged?: boolean;
   base: { ref: string; sha: string };
-  head: { ref: string; sha: string };
+  head: { ref: string; sha: string; repo?: { full_name: string } | null };
   additions?: number;
   deletions?: number;
 }
@@ -102,6 +125,12 @@ interface GithubComment {
   created_at: string;
   body?: string;
   path?: string;
+}
+
+interface GithubFileContents {
+  sha: string;
+  content?: string;
+  encoding?: string;
 }
 
 interface GithubChangedFile {
@@ -160,9 +189,14 @@ export async function listPullRequestsAcross(repos: RepoRef[]): Promise<CrossRep
   return { pulls, failures };
 }
 
-export async function describePullRequest(owner: string, name: string, number: number): Promise<PullRequestCommits> {
+export async function describePullRequest(
+  owner: string,
+  name: string,
+  number: number,
+  fresh = false,
+): Promise<PullRequestCommits> {
   const [pull, commits] = await Promise.all([
-    githubJson<GithubPull>(`${API}/repos/${owner}/${name}/pulls/${number}`),
+    githubJson<GithubPull>(`${API}/repos/${owner}/${name}/pulls/${number}`, fresh),
     githubJson<GithubCommit[]>(`${API}/repos/${owner}/${name}/pulls/${number}/commits?per_page=100`),
   ]);
   return {
@@ -202,17 +236,90 @@ function alreadyReady(error: unknown): boolean {
   return error instanceof Error && /not a draft/i.test(error.message);
 }
 
-export async function listPullRequestFiles(owner: string, name: string, number: number): Promise<ChangedFileSet> {
-  const pull = await githubJson<GithubPull>(`${API}/repos/${owner}/${name}/pulls/${number}`);
+export async function listPullRequestFiles(
+  owner: string,
+  name: string,
+  number: number,
+  fresh = false,
+): Promise<ChangedFileSet> {
+  const pull = await githubJson<GithubPull>(`${API}/repos/${owner}/${name}/pulls/${number}`, fresh);
+  return { baseRef: pull.base.sha, headRef: pull.head.sha, files: await changedFilePages(owner, name, number, fresh) };
+}
+
+async function changedFilePages(
+  owner: string,
+  name: string,
+  number: number,
+  fresh = false,
+): Promise<ChangedFile[]> {
   const files: ChangedFile[] = [];
   for (let page = 1; page <= MAX_FILE_PAGES; page += 1) {
     const batch = await githubJson<GithubChangedFile[]>(
       `${API}/repos/${owner}/${name}/pulls/${number}/files?per_page=${FILE_PAGE}&page=${page}`,
+      fresh,
     );
     files.push(...batch.map(changedFile));
     if (batch.length < FILE_PAGE) break;
   }
-  return { baseRef: pull.base.sha, headRef: pull.head.sha, files };
+  return files;
+}
+
+export async function commitFileEdit(
+  owner: string,
+  name: string,
+  number: number,
+  edit: FileEdit,
+): Promise<EditResult> {
+  if (!userGithubToken()) throw new GithubRequestError(401, 'Connect GitHub before committing');
+  const pull = await githubJson<GithubPull>(`${API}/repos/${owner}/${name}/pulls/${number}`, true);
+  if (pull.state !== 'open') throw new GithubRequestError(409, `Pull request #${number} is ${pull.state}`);
+  if (pull.head.sha !== edit.headRef) throw new GithubRequestError(409, staleMessage(edit.path));
+  const target = pull.head.repo?.full_name;
+  if (!target) throw new GithubRequestError(422, `The head repository for #${number} is gone`);
+  const changed = await changedFilePages(owner, name, number);
+  if (!changed.some((file) => file.filename === edit.path)) {
+    throw new GithubRequestError(422, `${edit.path} is not among the files this pull request changes`);
+  }
+  const branch = pull.head.ref;
+  const contents = `${API}/repos/${target}/contents/${encodePath(edit.path)}`;
+  const held = await githubJson<GithubFileContents>(`${contents}?ref=${encodeURIComponent(branch)}`, true);
+  const commit = await githubSend<{ commit?: { sha?: string } }>(contents, 'PUT', {
+    message: edit.message,
+    content: Buffer.from(spliceLines(decodeContents(held), edit), 'utf8').toString('base64'),
+    sha: held.sha,
+    branch,
+  });
+  await dropGithubCache(owner, name);
+  return { sha: commit.commit?.sha ?? '', branch };
+}
+
+function decodeContents(held: GithubFileContents): string {
+  if (held.encoding !== 'base64' || typeof held.content !== 'string') {
+    throw new GithubRequestError(422, 'That file is too large to edit from here');
+  }
+  return Buffer.from(held.content, 'base64').toString('utf8');
+}
+
+function spliceLines(text: string, edit: FileEdit): string {
+  const lines = text.split('\n');
+  if (edit.endLine > lines.length) throw new GithubRequestError(409, staleMessage(edit.path));
+  const standing = lines.slice(edit.startLine - 1, edit.endLine);
+  if (standing.map(stripReturn).join('\n') !== edit.original) throw new GithubRequestError(409, staleMessage(edit.path));
+  const ending = standing.some((line) => line.endsWith('\r')) ? '\r' : '';
+  const replacement = edit.updated.split('\n').map((line) => stripReturn(line) + ending);
+  return [...lines.slice(0, edit.startLine - 1), ...replacement, ...lines.slice(edit.endLine)].join('\n');
+}
+
+function stripReturn(line: string): string {
+  return line.endsWith('\r') ? line.slice(0, -1) : line;
+}
+
+function staleMessage(path: string): string {
+  return `${path} has changed on the branch since this diff loaded; reload before editing`;
+}
+
+function encodePath(path: string): string {
+  return path.split('/').map(encodeURIComponent).join('/');
 }
 
 export async function listPullComments(owner: string, name: string, number: number): Promise<PullComment[]> {

@@ -1,3 +1,6 @@
+'use client';
+
+import { useEffect, useState, type CSSProperties } from 'react';
 import { createHighlighter, type Highlighter, type ThemedToken } from 'shiki';
 
 export type { ThemedToken };
@@ -47,4 +50,32 @@ export async function tokenizeCode(text: string, lang: string): Promise<ThemedTo
   } catch {
     return null;
   }
+}
+
+export function useTokenized(text: string, lang: string | null): ThemedToken[][] | null {
+  const [done, setDone] = useState<{ text: string; lines: ThemedToken[][] } | null>(null);
+  useEffect(() => {
+    if (!lang) return;
+    let cancelled = false;
+    tokenizeCode(text, lang).then((lines) => {
+      if (!cancelled && lines) setDone({ text, lines });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [text, lang]);
+  return done?.text === text ? done.lines : null;
+}
+
+export function CodeTokens({ tokens, text }: { tokens: ThemedToken[] | null; text: string }) {
+  if (!tokens?.length) return <>{text || ' '}</>;
+  return (
+    <>
+      {tokens.map((token, index) => (
+        <span key={index} style={token.htmlStyle as CSSProperties}>
+          {token.content}
+        </span>
+      ))}
+    </>
+  );
 }
