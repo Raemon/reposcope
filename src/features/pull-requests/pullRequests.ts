@@ -1,4 +1,5 @@
-import { githubJson, githubSend } from '@/features/codebases/githubRequest';
+import { githubBytes, githubJson, githubSend } from '@/features/codebases/githubRequest';
+import { imageTypeOf } from './imageFiles';
 
 export interface PullRequestSummary {
   number: number;
@@ -24,6 +25,17 @@ export interface ChangedFile {
   additions: number;
   deletions: number;
   patch: string | null;
+}
+
+export interface ChangedFileSet {
+  baseRef: string;
+  headRef: string;
+  files: ChangedFile[];
+}
+
+export interface FileBlob {
+  dataUrl: string | null;
+  byteSize: number;
 }
 
 export interface PullRequestCommits {
@@ -58,8 +70,8 @@ interface GithubPull {
   draft?: boolean;
   state: string;
   merged?: boolean;
-  base: { ref: string };
-  head: { ref: string };
+  base: { ref: string; sha: string };
+  head: { ref: string; sha: string };
   additions?: number;
   deletions?: number;
 }
@@ -85,12 +97,14 @@ interface GithubCommit {
   sha: string;
   commit: { message: string; author: { name: string; date: string } | null };
   author: { login: string } | null;
+  parents?: { sha: string }[];
   files?: GithubChangedFile[];
 }
 
 const API = 'https://api.github.com';
 const FILE_PAGE = 100;
 const MAX_FILE_PAGES = 10;
+const MAX_BLOB_BYTES = 6 * 1024 * 1024;
 
 export async function listPullRequests(owner: string, name: string): Promise<PullRequestSummary[]> {
   const pulls = await githubJson<GithubPull[]>(
@@ -124,7 +138,8 @@ export async function mergePullRequest(owner: string, name: string, number: numb
   return { merged: result.merged ?? false, message: result.message ?? '' };
 }
 
-export async function listPullRequestFiles(owner: string, name: string, number: number): Promise<ChangedFile[]> {
+export async function listPullRequestFiles(owner: string, name: string, number: number): Promise<ChangedFileSet> {
+  const pull = await githubJson<GithubPull>(`${API}/repos/${owner}/${name}/pulls/${number}`);
   const files: ChangedFile[] = [];
   for (let page = 1; page <= MAX_FILE_PAGES; page += 1) {
     const batch = await githubJson<GithubChangedFile[]>(
@@ -133,7 +148,7 @@ export async function listPullRequestFiles(owner: string, name: string, number: 
     files.push(...batch.map(changedFile));
     if (batch.length < FILE_PAGE) break;
   }
-  return files;
+  return { baseRef: pull.base.sha, headRef: pull.head.sha, files };
 }
 
 export async function listPullComments(owner: string, name: string, number: number): Promise<PullComment[]> {
@@ -144,9 +159,27 @@ export async function listPullComments(owner: string, name: string, number: numb
   return [...conversation, ...review].map(pullComment).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
-export async function listCommitFiles(owner: string, name: string, sha: string): Promise<ChangedFile[]> {
+export async function listCommitFiles(owner: string, name: string, sha: string): Promise<ChangedFileSet> {
   const commit = await githubJson<GithubCommit>(`${API}/repos/${owner}/${name}/commits/${sha}`);
-  return (commit.files ?? []).map(changedFile);
+  return {
+    baseRef: commit.parents?.[0]?.sha ?? commit.sha,
+    headRef: commit.sha,
+    files: (commit.files ?? []).map(changedFile),
+  };
+}
+
+export async function readFileBlob(owner: string, name: string, ref: string, path: string): Promise<FileBlob> {
+  const encoded = path.split('/').map(encodeURIComponent).join('/');
+  const bytes = await githubBytes(
+    `${API}/repos/${owner}/${name}/contents/${encoded}?ref=${encodeURIComponent(ref)}`,
+    'application/vnd.github.raw',
+  );
+  if (bytes.byteLength > MAX_BLOB_BYTES) return { dataUrl: null, byteSize: bytes.byteLength };
+  const type = imageTypeOf(path) ?? 'application/octet-stream';
+  return {
+    dataUrl: `data:${type};base64,${Buffer.from(bytes).toString('base64')}`,
+    byteSize: bytes.byteLength,
+  };
 }
 
 function changedFile(file: GithubChangedFile): ChangedFile {
