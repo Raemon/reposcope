@@ -142,10 +142,18 @@ export async function mergePullRequest(owner: string, name: string, number: numb
 }
 
 async function markReadyForReview(pullId: string): Promise<void> {
-  await githubGraphql(
-    'mutation($pullId: ID!) { markPullRequestReadyForReview(input: { pullRequestId: $pullId }) { pullRequest { isDraft } } }',
-    { pullId },
-  );
+  try {
+    await githubGraphql(
+      'mutation($pullId: ID!) { markPullRequestReadyForReview(input: { pullRequestId: $pullId }) { pullRequest { isDraft } } }',
+      { pullId },
+    );
+  } catch (error) {
+    if (!alreadyReady(error)) throw error;
+  }
+}
+
+function alreadyReady(error: unknown): boolean {
+  return error instanceof Error && /not a draft/i.test(error.message);
 }
 
 export async function listPullRequestFiles(owner: string, name: string, number: number): Promise<ChangedFileSet> {
