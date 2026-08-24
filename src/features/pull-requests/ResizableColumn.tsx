@@ -69,11 +69,13 @@ export function ColumnHeader({
   title,
   icon,
   note,
+  hideTitle,
   onCollapse,
 }: {
   title: string;
   icon: string;
   note?: string;
+  hideTitle?: boolean;
   onCollapse: () => void;
 }) {
   return (
@@ -84,7 +86,7 @@ export function ColumnHeader({
       className="flex w-full shrink-0 items-center gap-1.5 border-b border-panel-edge bg-panel px-1.5 py-[1px] text-left hover:bg-btn-hover"
     >
       <span aria-hidden className="shrink-0 text-[11px] leading-4 text-ink-dim">{icon}</span>
-      <span className="shrink-0 text-[10px] uppercase tracking-[0.18em] text-ink-dim">{title}</span>
+      {!hideTitle && <span className="shrink-0 text-[10px] uppercase tracking-[0.18em] text-ink-dim">{title}</span>}
       {note && <span className="min-w-0 flex-1 truncate text-[10px] text-ink-dim">{note}</span>}
       <span aria-hidden className="ml-auto shrink-0 px-1 text-[11px] leading-none text-ink-dim">‹</span>
     </button>
