@@ -12,13 +12,16 @@ import { SelectableLink } from '@/features/surface-ui/SelectableLink';
 const NOTE = 'px-2 py-1 text-[11px] leading-4';
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
+function pullRoute(pull: { owner: string; repo: string; number: number }): string {
+  return `/repo/${pull.owner}/${pull.repo}/pull/${pull.number}`;
+}
+
 export function allPullHref(pull: { owner: string; repo: string; number: number }): string {
-  return `/repo/${pull.owner}/${pull.repo}/pull/${pull.number}?from=all`;
+  return `${pullRoute(pull)}?from=all`;
 }
 
 function updatedWithinLastWeek(pull: CrossRepoPull): boolean {
-  const updated = Date.parse(pull.updatedAt);
-  return Number.isNaN(updated) || Date.now() - updated < WEEK_MS;
+  return Date.now() - Date.parse(pull.updatedAt) < WEEK_MS;
 }
 
 export function AllPullRequestList() {
@@ -35,10 +38,10 @@ export function AllPullRequestList() {
     );
   }
 
-  const recent = found.pulls.filter(updatedWithinLastWeek);
-  const older = found.pulls.filter((pull) => !updatedWithinLastWeek(pull));
-  const olderHoldsOpenPull = older.some((pull) => pathname === allPullHref(pull).split('?')[0]);
-  const visible = showingOlder || olderHoldsOpenPull ? found.pulls : recent;
+  const visible = found.pulls.filter(
+    (pull) => showingOlder || updatedWithinLastWeek(pull) || pathname === pullRoute(pull),
+  );
+  const olderCount = found.pulls.length - visible.length;
 
   return (
     <nav className="min-h-0 flex-1 overflow-auto py-[1px]">
@@ -48,13 +51,13 @@ export function AllPullRequestList() {
       {visible.map((pull) => (
         <PullRow key={`${pull.owner}/${pull.repo}#${pull.number}`} pull={pull} pathname={pathname} />
       ))}
-      {visible.length < found.pulls.length && (
+      {olderCount > 0 && (
         <button
           type="button"
           onClick={() => setShowingOlder(true)}
           className="w-full px-2 py-[1px] text-left text-[11px] leading-4 text-ink-dim hover:bg-btn-hover hover:text-ink"
         >
-          show older ({older.length})
+          show older ({olderCount})
         </button>
       )}
       {found.failures.map((failure) => (
@@ -69,7 +72,7 @@ export function AllPullRequestList() {
 function PullRow({ pull, pathname }: { pull: CrossRepoPull; pathname: string }) {
   const token = useGithubToken();
   const href = allPullHref(pull);
-  const active = pathname === href.split('?')[0];
+  const active = pathname === pullRoute(pull);
   return (
     <SelectableLink
       href={href}
