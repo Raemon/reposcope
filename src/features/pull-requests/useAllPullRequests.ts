@@ -1,14 +1,15 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { CrossRepoPulls } from './pullRequests';
 import { sidebarGroups } from '@/features/codebases/sidebarGroups';
 import { useSourceResults } from '@/features/codebases/useSourceResults';
-import { apiJson } from '@/features/sources/apiClient';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
 import { useGithubToken, useSources, useStoreReady } from '@/features/sources/sourceStore';
+import { useCachedJson } from '@/features/sources/useCachedJson';
 
 const MAX_REPOS = 60;
+const CACHE_KEY = 'all-pulls';
 
 export interface AllPullRequests {
   scanning: boolean;
@@ -23,28 +24,15 @@ export function useAllPullRequests(): AllPullRequests {
   const token = useGithubToken();
   const results = useSourceResults(sources, token, ready);
   const groups = useMemo(() => sidebarGroups(sources, results), [sources, results]);
-  const scanning = !ready || groups.some((group) => group.loading);
   const repos = useMemo(() => knownRepos(groups), [groups]);
   const target = repos.map((repo) => `${repo.owner}/${repo.name}`).join(',');
-  const [found, setFound] = useState<{ target: string; pulls: CrossRepoPulls } | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!ready || target === '') return;
-    const controller = new AbortController();
-    setError(null);
-    apiJson<CrossRepoPulls>(`/api/github/all-pulls?repos=${encodeURIComponent(target)}`, token, controller.signal)
-      .then((pulls) => setFound({ target, pulls }))
-      .catch((issue: unknown) => {
-        if (!controller.signal.aborted) setError(issue instanceof Error ? issue.message : String(issue));
-      });
-    return () => controller.abort();
-  }, [target, token, ready]);
+  const path = target === '' ? null : `/api/github/all-pulls?repos=${encodeURIComponent(target)}`;
+  const { data, fresh, error } = useCachedJson<CrossRepoPulls>(path, token, ready, CACHE_KEY);
 
   return {
-    scanning: scanning || (target !== '' && found?.target !== target && error === null),
+    scanning: !ready || groups.some((group) => group.loading) || (path !== null && !fresh),
     repoCount: repos.length,
-    found: found?.pulls ?? null,
+    found: data,
     error,
   };
 }

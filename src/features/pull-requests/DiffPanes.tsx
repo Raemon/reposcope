@@ -17,10 +17,11 @@ import { DragHandle, useDragWidth, type ColumnSize } from './ResizableColumn';
 import { sortByFolder } from './fileTree';
 import { splitDiff, type DiffCell, type DiffRow } from './splitDiff';
 import { expandDiff, splitLines } from './expandDiff';
+import { langForPath, tokenizeCode, type ThemedToken } from './diffHighlight';
+import { intralineRanges, type CharRange, type IntralineRanges } from './intralineDiff';
+import type { ChangedFile, ChangedFileSet, FileText } from './pullRequests';
 import { apiJson } from '@/features/sources/apiClient';
 import { useGithubToken } from '@/features/sources/sourceStore';
-import { langForPath, tokenizeCode, type ThemedToken } from './diffHighlight';
-import type { ChangedFile, ChangedFileSet, FileText } from './pullRequests';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 
 const ROW = 'flex h-[15px] items-center gap-1 leading-[15px]';
@@ -182,6 +183,7 @@ function FileDiff({
     () => (wholeFile.lines ? expandDiff(patchRows, wholeFile.lines.base, wholeFile.lines.head) : patchRows),
     [patchRows, wholeFile.lines],
   );
+  const emphasis = useIntralineEmphasis(rows);
   const tokens = useDiffTokens(rows, file.filename);
   const growing = useHeightTransition(rows);
 
@@ -197,11 +199,18 @@ function FileDiff({
         className="relative flex shrink-0 flex-col border-r border-panel-edge"
         style={{ width: removedSize.width }}
       >
-        <DiffSide rows={rows} side="left" labels tokens={tokens?.left ?? null} hunk={hunk} />
+        <DiffSide rows={rows} side="left" labels tokens={tokens?.left ?? null} emphasis={emphasis} hunk={hunk} />
         <DragHandle onPointerDown={startDrag} />
       </section>
       <section className="flex min-w-0 flex-1 flex-col">
-        <DiffSide rows={rows} side="right" labels={false} tokens={tokens?.right ?? null} hunk={hunk} />
+        <DiffSide
+          rows={rows}
+          side="right"
+          labels={false}
+          tokens={tokens?.right ?? null}
+          emphasis={emphasis}
+          hunk={hunk}
+        />
       </section>
     </div>
   );
@@ -319,6 +328,16 @@ function useHeightTransition(rows: DiffRow[]) {
   return node;
 }
 
+function useIntralineEmphasis(rows: DiffRow[]): (IntralineRanges | null)[] {
+  return useMemo(
+    () =>
+      rows.map((row) =>
+        row.kind === 'change' && row.left && row.right ? intralineRanges(row.left.text, row.right.text) : null,
+      ),
+    [rows],
+  );
+}
+
 interface SideTokens {
   left: (ThemedToken[] | null)[];
   right: (ThemedToken[] | null)[];
@@ -374,12 +393,14 @@ function DiffSide({
   side,
   labels,
   tokens,
+  emphasis,
   hunk,
 }: {
   rows: DiffRow[];
   side: 'left' | 'right';
   labels: boolean;
   tokens: (ThemedToken[] | null)[] | null;
+  emphasis: (IntralineRanges | null)[];
   hunk: HunkControl;
 }) {
   return (
@@ -393,6 +414,7 @@ function DiffSide({
             side={side}
             labels={labels}
             lineTokens={tokens?.[index] ?? null}
+            ranges={(side === 'left' ? emphasis[index]?.before : emphasis[index]?.after) ?? null}
             hunk={hunk}
           />
         ))}
@@ -407,6 +429,7 @@ function DiffLine({
   side,
   labels,
   lineTokens,
+  ranges,
   hunk,
 }: {
   row: DiffRow;
@@ -414,26 +437,71 @@ function DiffLine({
   side: 'left' | 'right';
   labels: boolean;
   lineTokens: ThemedToken[] | null;
+  ranges: CharRange[] | null;
   hunk: HunkControl;
 }) {
   if (row.kind === 'hunk') return <HunkLine label={labels ? row.label : ''} hunk={hunk} />;
   if (!cell) return <div className={`${ROW} bg-procgen/40`} />;
   const changed = row.kind === 'change';
   const tone = !changed ? '' : side === 'left' ? 'bg-del-bg text-del-ink' : 'bg-add-bg text-add-ink';
+  const emphasisTone = side === 'left' ? 'bg-del-emph' : 'bg-add-emph';
   return (
     <div className={`${ROW} ${tone}`}>
       <span className={GUTTER}>{cell.line}</span>
       <span className="diff-code whitespace-pre pr-2 text-[11px]">
-        {lineTokens?.length
-          ? lineTokens.map((token, index) => (
-              <span key={index} style={token.htmlStyle as CSSProperties}>
-                {token.content}
-              </span>
-            ))
-          : cell.text}
+        {codeSegments(cell.text, lineTokens, changed ? ranges : null).map((segment, index) => (
+          <span
+            key={index}
+            className={segment.emphasized ? emphasisTone : undefined}
+            style={segment.style}
+          >
+            {segment.content}
+          </span>
+        ))}
       </span>
     </div>
   );
+}
+
+interface CodeSegment {
+  content: string;
+  style?: CSSProperties;
+  emphasized: boolean;
+}
+
+function codeSegments(
+  text: string,
+  lineTokens: ThemedToken[] | null,
+  ranges: CharRange[] | null,
+): CodeSegment[] {
+  const colored: { content: string; style?: CSSProperties }[] = lineTokens?.length
+    ? lineTokens.map((token) => ({ content: token.content, style: token.htmlStyle as CSSProperties }))
+    : [{ content: text }];
+  if (!ranges?.length) return colored.map((piece) => ({ ...piece, emphasized: false }));
+
+  const segments: CodeSegment[] = [];
+  let offset = 0;
+  for (const piece of colored) {
+    for (const part of splitAtRanges(offset, piece.content, ranges)) {
+      segments.push({ content: part.content, style: piece.style, emphasized: part.emphasized });
+    }
+    offset += piece.content.length;
+  }
+  return segments;
+}
+
+function splitAtRanges(start: number, text: string, ranges: CharRange[]) {
+  const parts: { content: string; emphasized: boolean }[] = [];
+  let position = 0;
+  while (position < text.length) {
+    const absolute = start + position;
+    const inside = ranges.find((range) => absolute >= range.start && absolute < range.end);
+    const nextStart = ranges.find((range) => range.start > absolute)?.start ?? start + text.length;
+    const stop = Math.min(text.length, (inside ? inside.end : nextStart) - start);
+    parts.push({ content: text.slice(position, stop), emphasized: Boolean(inside) });
+    position = stop;
+  }
+  return parts;
 }
 
 function HunkLine({ label, hunk }: { label: string; hunk: HunkControl }) {
