@@ -30,7 +30,7 @@ export function useHunkEdit({
   filename: string;
   patch: string;
   token: string | null;
-  onCommitted?: () => void;
+  onCommitted?: () => void | Promise<void>;
 }) {
   const [edit, setEdit] = useState<HunkEdit | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -50,31 +50,37 @@ export function useHunkEdit({
   useEffect(close, [patch, filename]);
 
   function begin(rowIndex: number) {
-    if (!pull || (edit && edit.draft !== edit.block.text)) return;
+    if (!pull || committing || (edit && edit.draft !== edit.block.text)) return;
     const block = editableBlockAt(rows, rowIndex);
     if (block) setEdit({ block, draft: block.text });
   }
 
   function askToCommit() {
-    if (!edit || !pull) return;
+    if (!edit || !pull || committing) return;
     if (edit.draft === edit.block.text) close();
     else setMessage(commitMessageFor(pull, edit.block.text, edit.draft));
   }
 
+  // Optimistic: dismiss the modal right away and leave the editor showing the
+  // committed content; the fresh diff closes it once the server confirms.
   async function commit() {
-    if (!edit || !pull || message === null) return;
+    if (!edit || !pull || message === null || committing) return;
     const refresh = onCommitted;
+    const note = message;
     setCommitting(true);
     setFailure(null);
+    setMessage(null);
     try {
-      await postHunkCommit({ owner, repo, pull, headRef, filename, token, edit, message });
-      close();
-      refresh?.();
+      await postHunkCommit({ owner, repo, pull, headRef, filename, token, edit, message: note });
     } catch (issue: unknown) {
+      setMessage(note);
       setFailure(issue instanceof Error ? issue.message : String(issue));
-    } finally {
       setCommitting(false);
+      return;
     }
+    if (refresh) await refresh();
+    else close();
+    setCommitting(false);
   }
 
   return {

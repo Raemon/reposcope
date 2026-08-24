@@ -50,6 +50,7 @@ export function CodeBlockEditor({
           value={value}
           wrap="off"
           spellCheck={false}
+          readOnly={saving}
           aria-label="Edit this section"
           onChange={(event) => onChange(event.target.value)}
           onScroll={(event) => {
