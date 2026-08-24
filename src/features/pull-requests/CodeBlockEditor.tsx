@@ -32,12 +32,7 @@ export function CodeBlockEditor({
   const highlighted = useTokenized(value, lang);
 
   useEffect(() => {
-    const field = input.current;
-    if (!field) return;
-    window.getSelection()?.removeAllRanges();
-    field.focus({ preventScroll: true });
-    const caret = field.value.split('\n').slice(0, caretLine).join('\n').length + (caretLine > 0 ? 1 : 0);
-    field.setSelectionRange(caret, caret);
+    placeCaret(input.current, caretLine);
   }, [caretLine]);
 
   return (
@@ -80,4 +75,12 @@ export function CodeBlockEditor({
       </div>
     </div>
   );
+}
+
+function placeCaret(field: HTMLTextAreaElement | null, caretLine: number) {
+  if (!field) return;
+  window.getSelection()?.removeAllRanges();
+  field.focus({ preventScroll: true });
+  const caret = field.value.split('\n').slice(0, caretLine).join('\n').length + (caretLine > 0 ? 1 : 0);
+  field.setSelectionRange(caret, caret);
 }

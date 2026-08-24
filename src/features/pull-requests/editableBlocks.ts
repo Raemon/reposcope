@@ -10,11 +10,20 @@ export interface EditableBlock {
 }
 
 export function editableBlockAt(rows: DiffRow[], index: number): EditableBlock | null {
+  const bounds = hunkRowBounds(rows, index);
+  return bounds ? blockFromRightCells(rows, bounds.firstRow, bounds.lastRow, index) : null;
+}
+
+function hunkRowBounds(rows: DiffRow[], index: number): { firstRow: number; lastRow: number } | null {
   if (!withinHunk(rows[index])) return null;
   let firstRow = index;
   let lastRow = index;
   while (withinHunk(rows[firstRow - 1])) firstRow -= 1;
   while (withinHunk(rows[lastRow + 1])) lastRow += 1;
+  return { firstRow, lastRow };
+}
+
+function blockFromRightCells(rows: DiffRow[], firstRow: number, lastRow: number, caretIndex: number): EditableBlock | null {
   const cells = rows.slice(firstRow, lastRow + 1).flatMap((row) => (row.right ? [row.right] : []));
   const first = cells[0];
   const last = cells[cells.length - 1];
@@ -24,7 +33,7 @@ export function editableBlockAt(rows: DiffRow[], index: number): EditableBlock |
     lastRow,
     startLine: first.line,
     endLine: last.line,
-    caretLine: rows.slice(firstRow, index).filter((row) => row.right).length,
+    caretLine: rows.slice(firstRow, caretIndex).filter((row) => row.right).length,
     text: cells.map((cell) => cell.text.replace(/\r$/, '')).join('\n'),
   };
 }

@@ -2,22 +2,19 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { AllPullRequestList } from './AllPullRequestList';
-import { ChangeCounts } from './ChangeCounts';
-import { ChangedFileTree } from './ChangedFileTree';
 import { DiffPanes, type DiffPanesHandle } from './DiffPanes';
+import { PullCommitColumn } from './PullCommitColumn';
 import { PullDiscussion } from './PullDiscussion';
+import { PullFilesColumn } from './PullFilesColumn';
 import { PullRequestList } from './PullRequestMenu';
 import { ResizableColumn } from './ResizableColumn';
 import { setCurrentPull } from './currentPullStore';
 import { commitFilesPath, pullFilesPath, pullPath } from './pullPaths';
 import type { ChangedFileSet, PullRequestCommits, PullRequestSummary } from './pullRequests';
 import { useStickyColumn } from './stickyColumns';
-import { RelativeTime } from '@/features/surface-ui/RelativeTime';
-import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 import { useCachedJson } from '@/features/sources/useCachedJson';
 
-const ROW = 'flex w-full items-baseline gap-1.5 px-1.5 py-[1px] text-left text-[11px] leading-4';
 const WHOLE_PULL = 'all';
 
 export function PullRequestView({
@@ -80,7 +77,7 @@ export function PullRequestView({
       if (asked !== showing.current) return;
     } catch (issue: unknown) {
       if (asked !== showing.current) return;
-      setNotice(`Commit saved; reloading the diff failed: ${issue instanceof Error ? issue.message : String(issue)}`);
+      setNotice(reloadFailure(issue));
     }
   }
 
@@ -104,42 +101,18 @@ export function PullRequestView({
           <PullDiscussion owner={owner} repo={repo} number={number} author={pull.pull.author} body={pull.body} />
         </ResizableColumn>
         <ResizableColumn icon="◆" title={`commits · ${pull.commits.length}`} size={commitSize} onSize={setCommitSize}>
-          <SelectableRow
-            onActivate={() => setSelection(WHOLE_PULL)}
-            className={`${ROW} ${selection === WHOLE_PULL ? 'bg-btn-active text-accent' : 'text-ink hover:bg-btn-hover'}`}
-          >
-            <span className="min-w-0 flex-1 truncate">all changes</span>
-            <ChangeCounts additions={pull.additions} deletions={pull.deletions} />
-          </SelectableRow>
-          {pull.commits.map((commit) => (
-            <SelectableRow
-              key={commit.sha}
-              onActivate={() => setSelection(commit.sha)}
-              className={`${ROW} ${commit.sha === selection ? 'bg-btn-active text-accent' : 'text-ink hover:bg-btn-hover'}`}
-            >
-              <span className="shrink-0 text-[9px] text-ink-dim/50">{commit.sha.slice(0, 7)}</span>
-              <span className="min-w-0 flex-1 truncate">{commit.message}</span>
-              <span className="shrink-0 text-[9px] text-ink-dim">{commit.fileCount}f</span>
-              <ChangeCounts additions={commit.additions} deletions={commit.deletions} />
-              <RelativeTime iso={commit.date} className="shrink-0 text-[9px] text-ink-dim" />
-            </SelectableRow>
-          ))}
+          <PullCommitColumn pull={pull} selection={selection} onSelect={setSelection} />
         </ResizableColumn>
         <ResizableColumn icon="▤" title={`files · ${fileSet?.files.length ?? 0}`} size={fileSize} onSize={setFileSize}>
-          {fileSet === null ? (
-            <p className={`px-1.5 py-[1px] text-[11px] leading-4 ${fileError ? 'text-error-ink' : 'text-ink-dim'}`}>
-              {fileError ?? 'Loading…'}
-            </p>
-          ) : (
-            <ChangedFileTree
-              files={fileSet.files}
-              selected={path}
-              onSelect={(filename) => {
-                setPath(filename);
-                diffPanes.current?.scrollToFile(filename);
-              }}
-            />
-          )}
+          <PullFilesColumn
+            fileSet={fileSet}
+            fileError={fileError}
+            path={path}
+            onSelect={(filename) => {
+              setPath(filename);
+              diffPanes.current?.scrollToFile(filename);
+            }}
+          />
         </ResizableColumn>
         {fileSet === null && fileError !== null ? (
           <p className="flex-1 px-2 py-1 text-[11px] text-error-ink">{fileError}</p>
@@ -164,4 +137,8 @@ export function PullRequestView({
 function editablePull(pull: PullRequestSummary, selection: string): PullRequestSummary | null {
   const open = pull.state === 'open' && !pull.merged;
   return selection === WHOLE_PULL && open ? pull : null;
+}
+
+function reloadFailure(issue: unknown): string {
+  return `Commit saved; reloading the diff failed: ${issue instanceof Error ? issue.message : String(issue)}`;
 }

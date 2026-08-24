@@ -63,24 +63,13 @@ export function useHunkEdit({
 
   async function commit() {
     if (!edit || !pull || message === null) return;
+    const refresh = onCommitted;
     setCommitting(true);
     setFailure(null);
     try {
-      await apiPostJson(
-        `/api/github/commit-file?owner=${encodeURIComponent(owner)}&name=${encodeURIComponent(repo)}&number=${pull.number}`,
-        token,
-        {
-          path: filename,
-          headRef,
-          startLine: edit.block.startLine,
-          endLine: edit.block.endLine,
-          original: edit.block.text,
-          updated: edit.draft,
-          message,
-        },
-      );
+      await postHunkCommit({ owner, repo, pull, headRef, filename, token, edit, message });
       close();
-      onCommitted?.();
+      refresh?.();
     } catch (issue: unknown) {
       setFailure(issue instanceof Error ? issue.message : String(issue));
     } finally {
@@ -101,4 +90,38 @@ export function useHunkEdit({
     setDraft: (draft: string) => setEdit((was) => (was ? { ...was, draft } : was)),
     setMessage,
   };
+}
+
+function postHunkCommit({
+  owner,
+  repo,
+  pull,
+  headRef,
+  filename,
+  token,
+  edit,
+  message,
+}: {
+  owner: string;
+  repo: string;
+  pull: PullRequestSummary;
+  headRef: string;
+  filename: string;
+  token: string | null;
+  edit: HunkEdit;
+  message: string;
+}) {
+  return apiPostJson(
+    `/api/github/commit-file?owner=${encodeURIComponent(owner)}&name=${encodeURIComponent(repo)}&number=${pull.number}`,
+    token,
+    {
+      path: filename,
+      headRef,
+      startLine: edit.block.startLine,
+      endLine: edit.block.endLine,
+      original: edit.block.text,
+      updated: edit.draft,
+      message,
+    },
+  );
 }
