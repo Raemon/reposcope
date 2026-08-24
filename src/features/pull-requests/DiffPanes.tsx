@@ -281,15 +281,16 @@ interface SideTokens {
 
 function useDiffTokens(rows: DiffRow[], filename: string): SideTokens {
   const lang = langForPath(filename);
-  const left = useTokenized(useMemo(() => sideText(rows, 'left'), [rows]), lang);
-  const right = useTokenized(useMemo(() => sideText(rows, 'right'), [rows]), lang);
-  return useMemo(
-    () => ({ left: alignToRows(rows, 'left', left), right: alignToRows(rows, 'right', right) }),
-    [rows, left, right],
-  );
+  return { left: useSideTokens(rows, 'left', lang), right: useSideTokens(rows, 'right', lang) };
 }
 
-function sideText(rows: DiffRow[], side: 'left' | 'right'): string {
+function useSideTokens(rows: DiffRow[], side: 'left' | 'right', lang: string | null) {
+  const source = useMemo(() => sideSourceText(rows, side), [rows, side]);
+  const lines = useTokenized(source, lang);
+  return useMemo(() => tokensPerRow(rows, side, lines), [rows, side, lines]);
+}
+
+function sideSourceText(rows: DiffRow[], side: 'left' | 'right'): string {
   return rows
     .map((row) => row[side])
     .filter((cell): cell is DiffCell => cell !== null)
@@ -297,9 +298,9 @@ function sideText(rows: DiffRow[], side: 'left' | 'right'): string {
     .join('\n');
 }
 
-function alignToRows(rows: DiffRow[], side: 'left' | 'right', lines: ThemedToken[][] | null) {
-  let index = 0;
-  return rows.map((row) => (row[side] ? (lines?.[index++] ?? null) : null));
+function tokensPerRow(rows: DiffRow[], side: 'left' | 'right', lines: ThemedToken[][] | null) {
+  let sourceLine = 0;
+  return rows.map((row) => (row[side] ? (lines?.[sourceLine++] ?? null) : null));
 }
 
 interface SideProps {
