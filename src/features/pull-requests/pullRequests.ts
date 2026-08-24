@@ -96,6 +96,10 @@ export interface MergeResult {
   message: string;
 }
 
+export interface CloseResult {
+  closed: boolean;
+}
+
 export interface PullComment {
   id: number;
   author: string;
@@ -223,6 +227,11 @@ export async function mergePullRequest(owner: string, name: string, number: numb
     {},
   );
   return { merged: result.merged ?? false, message: result.message ?? '' };
+}
+
+export async function closePullRequest(owner: string, name: string, number: number): Promise<CloseResult> {
+  const pull = await githubSend<GithubPull>(`${API}/repos/${owner}/${name}/pulls/${number}`, 'PATCH', { state: 'closed' });
+  return { closed: pull.state === 'closed' };
 }
 
 async function markReadyForReview(pullId: string): Promise<void> {

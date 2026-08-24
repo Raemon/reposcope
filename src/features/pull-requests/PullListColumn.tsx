@@ -4,7 +4,7 @@ import { AllPullRequestList } from './AllPullRequestList';
 import { ColumnPreview, type PreviewToken } from './ColumnPreview';
 import { PullRequestList } from './PullRequestMenu';
 import { ResizableColumn, type ColumnSize } from './ResizableColumn';
-import { useStandingPulls, useStandingRepoPulls } from './mergeStore';
+import { useStandingPulls, useStandingRepoPulls } from './pullActionStore';
 import { repoPullsPath } from './pullPaths';
 import type { PullRequestSummary } from './pullRequests';
 import { useAllPullRequests } from './useAllPullRequests';

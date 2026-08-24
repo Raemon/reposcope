@@ -2,14 +2,12 @@
 
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
-import { useStandingPulls } from './mergeStore';
-import { prefetchPull } from './prefetchPull';
+import { PullListRow } from './PullListRow';
+import { useStandingPulls } from './pullActionStore';
 import { allPullsRoute, pullRoute } from './pullPaths';
 import type { CrossRepoPull } from './pullRequests';
 import { useAllPullRequests } from './useAllPullRequests';
 import { timeAgo } from '@/features/repo-insights/ui/timeAgo';
-import { useGithubToken } from '@/features/sources/sourceStore';
-import { SelectableLink } from '@/features/surface-ui/SelectableLink';
 
 const NOTE = 'px-2 py-1 text-[11px] leading-4';
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -65,18 +63,12 @@ export function AllPullRequestList() {
 }
 
 function PullRow({ pull, pathname }: { pull: CrossRepoPull; pathname: string }) {
-  const token = useGithubToken();
-  const href = allPullsRoute(pull.owner, pull.repo, pull.number);
-  const active = pathname === pullRoute(pull.owner, pull.repo, pull.number);
   return (
-    <SelectableLink
-      href={href}
+    <PullListRow
+      target={{ owner: pull.owner, repo: pull.repo, number: pull.number }}
+      href={allPullsRoute(pull.owner, pull.repo, pull.number)}
       title={`${pull.owner}/${pull.repo} #${pull.number} — ${pull.title}`}
-      current={active}
-      onPointerEnter={() => prefetchPull(pull.owner, pull.repo, pull.number, token)}
-      className={`flex items-baseline gap-1.5 px-2 py-[1px] text-[11px] leading-4 ${
-        active ? 'bg-btn-active text-accent' : 'text-ink hover:bg-btn-hover'
-      }`}
+      current={pathname === pullRoute(pull.owner, pull.repo, pull.number)}
     >
       <span className="max-w-[9rem] shrink-0 truncate text-[9px] text-ink-dim">{pull.repo}</span>
       <span className="shrink-0 text-[9px] text-ink-dim">#{pull.number}</span>
@@ -85,6 +77,6 @@ function PullRow({ pull, pathname }: { pull: CrossRepoPull; pathname: string }) 
       <span className="shrink-0 text-[9px] text-ink-dim">
         {pull.author} · {timeAgo(pull.updatedAt)}
       </span>
-    </SelectableLink>
+    </PullListRow>
   );
 }
