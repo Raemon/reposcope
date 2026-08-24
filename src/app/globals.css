@@ -32,8 +32,10 @@
   --color-error-ink: var(--error-ink);
 
   --color-del-bg: var(--del-bg);
+  --color-del-emph: var(--del-emph);
   --color-del-ink: var(--del-ink);
   --color-add-bg: var(--add-bg);
+  --color-add-emph: var(--add-emph);
   --color-add-ink: var(--add-ink);
 
   --color-meter-1: var(--meter-1);
@@ -78,8 +80,10 @@
   --error-ink: #8c1414;
 
   --del-bg: #fbe9ea;
+  --del-emph: #f5c2c6;
   --del-ink: #8c1414;
   --add-bg: #e4f4e6;
+  --add-emph: #b9e3c0;
   --add-ink: #14591f;
 
   --meter-1: #3d2200;
@@ -124,8 +128,10 @@
     --error-ink: #ffa199;
 
     --del-bg: #35211f;
+    --del-emph: #63302c;
     --del-ink: #ffa199;
     --add-bg: #1d2f20;
+    --add-emph: #2f5636;
     --add-ink: #8ee29a;
 
     --meter-1: #ffcf7a;
@@ -184,8 +190,10 @@
   --error-ink: #ffa199;
 
   --del-bg: #35211f;
+  --del-emph: #63302c;
   --del-ink: #ffa199;
   --add-bg: #1d2f20;
+  --add-emph: #2f5636;
   --add-ink: #8ee29a;
 
   --meter-1: #ffcf7a;
