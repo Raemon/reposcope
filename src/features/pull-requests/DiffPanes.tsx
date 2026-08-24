@@ -2,7 +2,7 @@
 
 import { useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { ChangeCounts } from './ChangeCounts';
-import { ColumnHeader, CollapsedColumn, DragHandle, useDragWidth, type ColumnSize } from './ResizableColumn';
+import { DragHandle, useDragWidth, type ColumnSize } from './ResizableColumn';
 import { splitDiff, type DiffCell, type DiffRow } from './splitDiff';
 import type { ChangedFile } from './pullRequests';
 
@@ -87,32 +87,21 @@ function FileSection({ file, sectionRef }: { file: ChangedFile; sectionRef: (nod
 
 function FileDiff({ patch }: { patch: string }) {
   const [removedSize, setRemovedSize] = useState<ColumnSize>({ width: 520, open: true });
-  const [addedOpen, setAddedOpen] = useState(true);
   const startDrag = useDragWidth(removedSize, setRemovedSize);
 
   const rows = splitDiff(patch);
   return (
     <div className="flex">
-      {removedSize.open ? (
-        <section
-          className="relative flex shrink-0 flex-col border-r border-panel-edge"
-          style={{ width: addedOpen ? removedSize.width : undefined, flex: addedOpen ? undefined : '1 1 0%' }}
-        >
-          <ColumnHeader icon="−" title="removed" hideTitle onCollapse={() => setRemovedSize({ ...removedSize, open: false })} />
-          <DiffSide rows={rows} side="left" labels />
-          {addedOpen && <DragHandle onPointerDown={startDrag} />}
-        </section>
-      ) : (
-        <CollapsedColumn icon="−" title="removed" onExpand={() => setRemovedSize({ ...removedSize, open: true })} />
-      )}
-      {addedOpen ? (
-        <section className="flex min-w-0 flex-1 flex-col">
-          <ColumnHeader icon="+" title="added" hideTitle onCollapse={() => setAddedOpen(false)} />
-          <DiffSide rows={rows} side="right" labels={!removedSize.open} />
-        </section>
-      ) : (
-        <CollapsedColumn icon="+" title="added" onExpand={() => setAddedOpen(true)} />
-      )}
+      <section
+        className="relative flex shrink-0 flex-col border-r border-panel-edge"
+        style={{ width: removedSize.width }}
+      >
+        <DiffSide rows={rows} side="left" labels />
+        <DragHandle onPointerDown={startDrag} />
+      </section>
+      <section className="flex min-w-0 flex-1 flex-col">
+        <DiffSide rows={rows} side="right" labels={false} />
+      </section>
     </div>
   );
 }
