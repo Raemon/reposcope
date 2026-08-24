@@ -64,6 +64,7 @@ export interface PullRequestCommits {
   headRef: string;
   additions: number;
   deletions: number;
+  conflicted: boolean;
   commits: CommitSummary[];
 }
 
@@ -94,6 +95,8 @@ interface GithubPull {
   head: { ref: string; sha: string };
   additions?: number;
   deletions?: number;
+  mergeable?: boolean | null;
+  mergeable_state?: string;
 }
 
 interface GithubComment {
@@ -172,6 +175,7 @@ export async function describePullRequest(owner: string, name: string, number: n
     headRef: pull.head.ref,
     additions: pull.additions ?? 0,
     deletions: pull.deletions ?? 0,
+    conflicted: hasConflicts(pull),
     commits: (await summarizeCommits(owner, name, commits)).reverse(),
   };
 }
@@ -275,6 +279,10 @@ function pullComment(comment: GithubComment): PullComment {
     body: comment.body ?? '',
     path: comment.path ?? null,
   };
+}
+
+function hasConflicts(pull: GithubPull): boolean {
+  return pull.mergeable === false || pull.mergeable_state === 'dirty';
 }
 
 function summarizePull(pull: GithubPull): PullRequestSummary {
