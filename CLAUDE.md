@@ -15,3 +15,5 @@ https://reposcope-five.vercel.app/repo/<owner>/<repo>/pull/<number>
 ```
 
 For UI changes that aren't deployed yet, run the dev server and screenshot the same path locally (`http://localhost:2111/repo/<owner>/<repo>/pull/<number>`).
+
+Include screenshots as files in public/screenshots/
