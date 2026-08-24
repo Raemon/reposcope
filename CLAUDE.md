@@ -42,3 +42,5 @@ After you've finished a job and created the draft PR, spin up subagents to revie
 
 After THAT, spin up ANOTHER subagent, that just looks at the code for comments longer than 90 characters 
 (including multiple lines), and streamline all comments down to < 90 chars.
+
+After you have reviewed the code, fixed it, and trimmed long comments, change the PR for "draft" to "ready"
