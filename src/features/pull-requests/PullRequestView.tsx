@@ -97,6 +97,8 @@ export function PullRequestView({
             >
               <span className="shrink-0 text-[9px] text-ink-dim/50">{commit.sha.slice(0, 7)}</span>
               <span className="min-w-0 flex-1 truncate">{commit.message}</span>
+              <span className="shrink-0 text-[9px] text-ink-dim">{commit.fileCount}f</span>
+              <ChangeCounts additions={commit.additions} deletions={commit.deletions} />
               <RelativeTime iso={commit.date} className="shrink-0 text-[9px] text-ink-dim" />
             </SelectableRow>
           ))}
