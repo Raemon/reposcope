@@ -37,6 +37,10 @@ export async function githubSend<T>(url: string, method: string, body: unknown):
   return (await response.json()) as T;
 }
 
+export async function dropGithubCache(owner: string, name: string): Promise<void> {
+  await dropCachedScope(`repos/${owner}/${name}`);
+}
+
 export async function githubGraphql<T>(query: string, variables: Record<string, unknown>): Promise<T> {
   const url = 'https://api.github.com/graphql';
   const response = await fetch(url, {

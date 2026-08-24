@@ -9,7 +9,7 @@ import { PullDiscussion } from './PullDiscussion';
 import { PullRequestList } from './PullRequestMenu';
 import { ResizableColumn, type ColumnSize } from './ResizableColumn';
 import { setCurrentPull } from './currentPullStore';
-import type { ChangedFileSet, PullRequestCommits } from './pullRequests';
+import type { ChangedFileSet, PullRequestCommits, PullRequestSummary } from './pullRequests';
 import { RelativeTime } from '@/features/surface-ui/RelativeTime';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 import { apiJson } from '@/features/sources/apiClient';
@@ -41,27 +41,20 @@ export function PullRequestView({
   const [discussionSize, setDiscussionSize] = useState<ColumnSize>({ width: 320, open: false });
   const [commitSize, setCommitSize] = useState<ColumnSize>({ width: 260, open: true });
   const [fileSize, setFileSize] = useState<ColumnSize>({ width: 280, open: true });
-  const identity = `${owner}/${repo}#${number}`;
-  const [refresh, setRefresh] = useState({ identity, count: 0 });
-  const background = refresh.identity === identity && refresh.count > 0;
   const diffPanes = useRef<DiffPanesHandle>(null);
+  const pullSource = `/api/github/pull?owner=${encodeURIComponent(owner)}&name=${encodeURIComponent(repo)}&number=${number}`;
+  const fileSource = changedFileSource(owner, repo, number, selection);
 
   useEffect(() => () => setCurrentPull(null), []);
 
   useEffect(() => {
     if (!ready) return;
     const controller = new AbortController();
-    if (!background) {
-      setPull(null);
-      setError(null);
-      setSelection(WHOLE_PULL);
-      setCurrentPull(null);
-    }
-    apiJson<PullRequestCommits>(
-      `/api/github/pull?owner=${encodeURIComponent(owner)}&name=${encodeURIComponent(repo)}&number=${number}`,
-      token,
-      controller.signal,
-    )
+    setPull(null);
+    setError(null);
+    setSelection(WHOLE_PULL);
+    setCurrentPull(null);
+    apiJson<PullRequestCommits>(pullSource, token, controller.signal)
       .then((loaded) => {
         setPull(loaded);
         setCurrentPull(loaded);
@@ -71,31 +64,38 @@ export function PullRequestView({
         if (!controller.signal.aborted) setError(issue instanceof Error ? issue.message : String(issue));
       });
     return () => controller.abort();
-  }, [owner, repo, number, token, ready, refresh, background]);
+  }, [pullSource, token, ready]);
 
   useEffect(() => {
     if (!ready) return;
     const controller = new AbortController();
+    setFileSet(null);
     setFileError(null);
-    if (!background) {
-      setFileSet(null);
-      setPath(null);
-    }
-    const repoParams = `owner=${encodeURIComponent(owner)}&name=${encodeURIComponent(repo)}`;
-    const source =
-      selection === WHOLE_PULL
-        ? `/api/github/pull-files?${repoParams}&number=${number}`
-        : `/api/github/commit?${repoParams}&sha=${selection}`;
-    apiJson<ChangedFileSet>(source, token, controller.signal)
+    setPath(null);
+    apiJson<ChangedFileSet>(fileSource, token, controller.signal)
       .then((loaded) => {
         setFileSet(loaded);
-        if (!background) setPath(loaded.files[0]?.filename ?? null);
+        setPath(loaded.files[0]?.filename ?? null);
       })
       .catch((issue: unknown) => {
         if (!controller.signal.aborted) setFileError(issue instanceof Error ? issue.message : String(issue));
       });
     return () => controller.abort();
-  }, [owner, repo, number, selection, token, ready, refresh, background]);
+  }, [fileSource, token, ready]);
+
+  async function reloadInPlace() {
+    try {
+      const [loadedPull, loadedFiles] = await Promise.all([
+        apiJson<PullRequestCommits>(pullSource, token),
+        apiJson<ChangedFileSet>(fileSource, token),
+      ]);
+      setPull(loadedPull);
+      setCurrentPull(loadedPull);
+      setFileSet(loadedFiles);
+    } catch (issue: unknown) {
+      setFileError(issue instanceof Error ? issue.message : String(issue));
+    }
+  }
 
   if (error) return <p className="px-2 py-1 text-[11px] text-error-ink">{error}</p>;
   if (!pull) return <p className="px-2 py-1 text-[11px] text-ink-dim">Loading #{number}…</p>;
@@ -158,13 +158,23 @@ export function PullRequestView({
             owner={owner}
             repo={repo}
             fileSet={fileSet}
-            editable={selection === WHOLE_PULL}
-            onCommitted={() =>
-              setRefresh((was) => ({ identity, count: was.identity === identity ? was.count + 1 : 1 }))
-            }
+            editablePull={editablePull(pull.pull, selection)}
+            onCommitted={reloadInPlace}
           />
         )}
       </div>
     </div>
   );
+}
+
+function editablePull(pull: PullRequestSummary, selection: string): PullRequestSummary | null {
+  const open = pull.state === 'open' && !pull.merged;
+  return selection === WHOLE_PULL && open ? pull : null;
+}
+
+function changedFileSource(owner: string, repo: string, number: number, selection: string): string {
+  const repoParams = `owner=${encodeURIComponent(owner)}&name=${encodeURIComponent(repo)}`;
+  return selection === WHOLE_PULL
+    ? `/api/github/pull-files?${repoParams}&number=${number}`
+    : `/api/github/commit?${repoParams}&sha=${encodeURIComponent(selection)}`;
 }

@@ -5,6 +5,7 @@ export interface EditableBlock {
   lastRow: number;
   startLine: number;
   endLine: number;
+  caretLine: number;
   text: string;
 }
 
@@ -23,7 +24,8 @@ export function editableBlockAt(rows: DiffRow[], index: number): EditableBlock |
     lastRow,
     startLine: first.line,
     endLine: last.line,
-    text: cells.map((cell) => cell.text).join('\n'),
+    caretLine: rows.slice(firstRow, index).filter((row) => row.right).length,
+    text: cells.map((cell) => cell.text.replace(/\r$/, '')).join('\n'),
   };
 }
 
@@ -32,24 +34,27 @@ function withinHunk(row: DiffRow | undefined): boolean {
 }
 
 export function changedCharacters(before: string, after: string): { removed: string; added: string } {
+  const was = [...before];
+  const now = [...after];
   let start = 0;
-  while (start < before.length && start < after.length && before[start] === after[start]) start += 1;
+  while (start < was.length && start < now.length && was[start] === now[start]) start += 1;
   let end = 0;
   while (
-    end < before.length - start &&
-    end < after.length - start &&
-    before[before.length - 1 - end] === after[after.length - 1 - end]
+    end < was.length - start &&
+    end < now.length - start &&
+    was[was.length - 1 - end] === now[now.length - 1 - end]
   ) {
     end += 1;
   }
-  return { removed: before.slice(start, before.length - end), added: after.slice(start, after.length - end) };
+  return { removed: was.slice(start, was.length - end).join(''), added: now.slice(start, now.length - end).join('') };
 }
 
 const MESSAGE_SNIPPET = 60;
 
 export function commitMessageFor(pull: { title: string; number: number }, before: string, after: string): string {
   const { removed, added } = changedCharacters(before, after);
-  return `Minor change to ${pull.title} (#${pull.number}): ${snippet(removed)} -> ${snippet(added)}`;
+  const title = pull.title.replace(/\s+/g, ' ').trim();
+  return `Minor change to ${title} (#${pull.number}): ${snippet(removed)} -> ${snippet(added)}`;
 }
 
 function snippet(text: string): string {

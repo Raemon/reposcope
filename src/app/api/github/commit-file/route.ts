@@ -4,8 +4,9 @@ import { commitFileEdit, type FileEdit } from '@/features/pull-requests/pullRequ
 import { LOGIN_PATTERN, REPO_NAME_PATTERN } from '@/features/sources/sourceTypes';
 
 const NUMBER_PATTERN = /^[0-9]{1,9}$/;
-const PATH_PATTERN = /^(?!\/)(?!.*\.\.)[^\0]{1,1024}$/;
+const PATH_PATTERN = /^(?!\/)(?!.*(?:^|\/)\.\.(?:\/|$))[^\0]{1,1024}$/;
 const MAX_EDIT_BYTES = 200_000;
+const MAX_MESSAGE_CHARS = 2_000;
 
 export async function POST(request: Request) {
   return apiRoute(request, async () =>
@@ -26,9 +27,12 @@ function fileEdit(body: unknown): FileEdit {
   const endLine = counting(edit?.endLine, 'endLine');
   if (endLine < startLine) throw new GithubRequestError(400, 'endLine precedes startLine');
   const updated = text(edit?.updated, 'updated', true);
-  if (updated.length > MAX_EDIT_BYTES) throw new GithubRequestError(413, 'Edit is too large');
-  return { path, startLine, endLine, original: text(edit?.original, 'original', true), updated,
-    message: text(edit?.message, 'message') };
+  if (Buffer.byteLength(updated, 'utf8') > MAX_EDIT_BYTES) throw new GithubRequestError(413, 'Edit is too large');
+  const original = text(edit?.original, 'original', true);
+  if (Buffer.byteLength(original, 'utf8') > MAX_EDIT_BYTES) throw new GithubRequestError(413, 'Edit is too large');
+  const message = text(edit?.message, 'message');
+  if (message.length > MAX_MESSAGE_CHARS) throw new GithubRequestError(413, 'Commit message is too long');
+  return { path, startLine, endLine, original, updated, message };
 }
 
 function text(value: unknown, name: string, allowEmpty = false): string {

@@ -1,5 +1,12 @@
-import { dropCachedScope } from '@/features/codebases/githubCache';
-import { GithubRequestError, githubBytes, githubGraphql, githubJson, githubSend } from '@/features/codebases/githubRequest';
+import {
+  GithubRequestError,
+  dropGithubCache,
+  githubBytes,
+  githubGraphql,
+  githubJson,
+  githubSend,
+} from '@/features/codebases/githubRequest';
+import { userGithubToken } from '@/features/codebases/githubToken';
 import { imageTypeOf } from './imageFiles';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
 
@@ -231,8 +238,10 @@ export async function commitFileEdit(
   number: number,
   edit: FileEdit,
 ): Promise<EditResult> {
+  if (!userGithubToken()) throw new GithubRequestError(401, 'Connect GitHub before committing');
   const pull = await githubJson<GithubPull>(`${API}/repos/${owner}/${name}/pulls/${number}`);
   if (pull.state !== 'open') throw new GithubRequestError(409, `Pull request #${number} is ${pull.state}`);
+  await requireChangedFile(owner, name, number, edit.path);
   const target = pull.head.repo?.full_name ?? `${owner}/${name}`;
   const branch = pull.head.ref;
   const contents = `${API}/repos/${target}/contents/${encodePath(edit.path)}`;
@@ -243,8 +252,15 @@ export async function commitFileEdit(
     sha: held.sha,
     branch,
   });
-  await dropCachedScope(`repos/${owner}/${name}`);
+  await dropGithubCache(owner, name);
   return { sha: commit.commit?.sha ?? '', branch };
+}
+
+async function requireChangedFile(owner: string, name: string, number: number, path: string): Promise<void> {
+  const changed = await listPullRequestFiles(owner, name, number);
+  if (!changed.files.some((file) => file.filename === path)) {
+    throw new GithubRequestError(422, `${path} is not among the files this pull request changes`);
+  }
 }
 
 function decodeContents(held: GithubFileContents): string {
@@ -257,9 +273,15 @@ function decodeContents(held: GithubFileContents): string {
 function spliceLines(text: string, edit: FileEdit): string {
   const lines = text.split('\n');
   if (edit.endLine > lines.length) throw new GithubRequestError(409, staleMessage(edit.path));
-  const standing = lines.slice(edit.startLine - 1, edit.endLine).join('\n');
-  if (standing !== edit.original) throw new GithubRequestError(409, staleMessage(edit.path));
-  return [...lines.slice(0, edit.startLine - 1), ...edit.updated.split('\n'), ...lines.slice(edit.endLine)].join('\n');
+  const standing = lines.slice(edit.startLine - 1, edit.endLine);
+  if (standing.map(stripReturn).join('\n') !== edit.original) throw new GithubRequestError(409, staleMessage(edit.path));
+  const ending = standing.some((line) => line.endsWith('\r')) ? '\r' : '';
+  const replacement = edit.updated.split('\n').map((line) => stripReturn(line) + ending);
+  return [...lines.slice(0, edit.startLine - 1), ...replacement, ...lines.slice(edit.endLine)].join('\n');
+}
+
+function stripReturn(line: string): string {
+  return line.endsWith('\r') ? line.slice(0, -1) : line;
 }
 
 function staleMessage(path: string): string {

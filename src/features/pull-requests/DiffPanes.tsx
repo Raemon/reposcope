@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  Fragment,
   useEffect,
   useImperativeHandle,
   useMemo,
@@ -14,18 +15,18 @@ import { ChangeCounts } from './ChangeCounts';
 import { CodeBlockEditor } from './CodeBlockEditor';
 import { CommitEditModal } from './CommitEditModal';
 import { ImageDiff } from './ImageDiff';
-import { commitMessageFor, editableBlockAt, type EditableBlock } from './editableBlocks';
-import { useCurrentPull } from './currentPullStore';
+import type { EditableBlock } from './editableBlocks';
+import { useHunkEdit, type HunkEdit } from './useHunkEdit';
 import { isImagePath } from './imageFiles';
 import { DragHandle, useDragWidth, type ColumnSize } from './ResizableColumn';
 import { sortByFolder } from './fileTree';
 import { splitDiff, type DiffCell, type DiffRow } from './splitDiff';
 import { langForPath, tokenizeCode, type ThemedToken } from './diffHighlight';
-import type { ChangedFile, ChangedFileSet } from './pullRequests';
-import { apiPostJson } from '@/features/sources/apiClient';
+import type { ChangedFile, ChangedFileSet, PullRequestSummary } from './pullRequests';
 import { useGithubToken } from '@/features/sources/sourceStore';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 
+const ROW_HEIGHT = 15;
 const ROW = 'flex h-[15px] items-center gap-1 leading-[15px]';
 const GUTTER = 'w-[38px] shrink-0 select-none pr-1 text-right text-[9px] text-ink-dim';
 const SCROLL_MS = 100;
@@ -38,14 +39,14 @@ export function DiffPanes({
   owner,
   repo,
   fileSet,
-  editable = false,
+  editablePull = null,
   onCommitted,
   ref,
 }: {
   owner: string;
   repo: string;
   fileSet: ChangedFileSet | null;
-  editable?: boolean;
+  editablePull?: PullRequestSummary | null;
   onCommitted?: () => void;
   ref?: Ref<DiffPanesHandle>;
 }) {
@@ -74,7 +75,7 @@ export function DiffPanes({
           file={file}
           baseRef={fileSet.baseRef}
           headRef={fileSet.headRef}
-          editable={editable}
+          editablePull={editablePull}
           onCommitted={onCommitted}
           sectionRef={(node) => {
             if (node) sections.current.set(file.filename, node);
@@ -105,7 +106,7 @@ function FileSection({
   file,
   baseRef,
   headRef,
-  editable,
+  editablePull,
   onCommitted,
   sectionRef,
 }: {
@@ -114,7 +115,7 @@ function FileSection({
   file: ChangedFile;
   baseRef: string;
   headRef: string;
-  editable: boolean;
+  editablePull: PullRequestSummary | null;
   onCommitted?: () => void;
   sectionRef: (node: HTMLElement | null) => void;
 }) {
@@ -143,7 +144,7 @@ function FileSection({
           file={file}
           baseRef={baseRef}
           headRef={headRef}
-          editable={editable}
+          editablePull={editablePull}
           onCommitted={onCommitted}
         />
       )}
@@ -157,7 +158,7 @@ function FileBody({
   file,
   baseRef,
   headRef,
-  editable,
+  editablePull,
   onCommitted,
 }: {
   owner: string;
@@ -165,7 +166,7 @@ function FileBody({
   file: ChangedFile;
   baseRef: string;
   headRef: string;
-  editable: boolean;
+  editablePull: PullRequestSummary | null;
   onCommitted?: () => void;
 }) {
   const diff = file.patch ? (
@@ -174,7 +175,7 @@ function FileBody({
       repo={repo}
       patch={file.patch}
       filename={file.filename}
-      editable={editable}
+      editablePull={editablePull}
       onCommitted={onCommitted}
     />
   ) : null;
@@ -195,89 +196,29 @@ function FileBody({
   return <Note text={`${file.status} — no textual diff`} />;
 }
 
-interface ActiveEdit {
-  block: EditableBlock;
-  draft: string;
-}
-
 function FileDiff({
   owner,
   repo,
   patch,
   filename,
-  editable,
+  editablePull,
   onCommitted,
 }: {
   owner: string;
   repo: string;
   patch: string;
   filename: string;
-  editable: boolean;
+  editablePull: PullRequestSummary | null;
   onCommitted?: () => void;
 }) {
   const token = useGithubToken();
-  const held = useCurrentPull();
   const [removedSize, setRemovedSize] = useState<ColumnSize>({ width: 520, open: true });
   const startDrag = useDragWidth(removedSize, setRemovedSize);
-  const [edit, setEdit] = useState<ActiveEdit | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-  const [committing, setCommitting] = useState(false);
-  const [failure, setFailure] = useState<string | null>(null);
 
   const rows = useMemo(() => splitDiff(patch), [patch]);
   const tokens = useDiffTokens(patch, filename);
-  const pull = editable && held?.pull.state === 'open' && !held.pull.merged ? held.pull : null;
-
-  useEffect(() => {
-    setEdit(null);
-    setMessage(null);
-    setFailure(null);
-  }, [patch, filename]);
-
-  const dirty = edit !== null && edit.draft !== edit.block.text;
-
-  function beginEdit(rowIndex: number) {
-    if (!pull || edit) return;
-    const block = editableBlockAt(rows, rowIndex);
-    if (block) setEdit({ block, draft: block.text });
-  }
-
-  function askToCommit() {
-    if (!edit || !pull) return;
-    if (!dirty) {
-      setEdit(null);
-      return;
-    }
-    setFailure(null);
-    setMessage(commitMessageFor(pull, edit.block.text, edit.draft));
-  }
-
-  async function commit() {
-    if (!edit || !pull || message === null) return;
-    setCommitting(true);
-    setFailure(null);
-    try {
-      await apiPostJson(
-        `/api/github/commit-file?owner=${encodeURIComponent(owner)}&name=${encodeURIComponent(repo)}&number=${pull.number}`,
-        token,
-        {
-          path: filename,
-          startLine: edit.block.startLine,
-          endLine: edit.block.endLine,
-          original: edit.block.text,
-          updated: edit.draft,
-          message,
-        },
-      );
-      setEdit(null);
-      setMessage(null);
-      onCommitted?.();
-    } catch (issue: unknown) {
-      setFailure(issue instanceof Error ? issue.message : String(issue));
-    } finally {
-      setCommitting(false);
-    }
-  }
+  const pull = editablePull;
+  const hunk = useHunkEdit({ owner, repo, pull, rows, filename, patch, token, onCommitted });
 
   return (
     <div className="flex">
@@ -285,7 +226,7 @@ function FileDiff({
         className="relative flex shrink-0 flex-col border-r border-panel-edge"
         style={{ width: removedSize.width }}
       >
-        <DiffSide rows={rows} side="left" labels tokens={tokens?.left ?? null} />
+        <DiffSide rows={rows} side="left" labels tokens={tokens?.left ?? null} spacer={spacerFor(hunk.edit)} />
         <DragHandle onPointerDown={startDrag} />
       </section>
       <section className="flex min-w-0 flex-1 flex-col">
@@ -295,43 +236,44 @@ function FileDiff({
           labels={false}
           tokens={tokens?.right ?? null}
           editable={pull !== null}
-          onEditBlock={beginEdit}
+          onEditBlock={hunk.begin}
+          editedRows={hunk.edit?.block ?? null}
           editor={
-            edit && (
+            hunk.edit && (
               <CodeBlockEditor
-                value={edit.draft}
+                value={hunk.edit.draft}
                 lang={langForPath(filename)}
-                saving={committing}
-                onChange={(draft) => setEdit((was) => (was ? { ...was, draft } : was))}
-                onSave={askToCommit}
-                onCancel={() => setEdit(null)}
+                caretLine={hunk.edit.block.caretLine}
+                saving={hunk.committing}
+                onChange={hunk.setDraft}
+                onSave={hunk.askToCommit}
+                onCancel={hunk.askToCommit}
+                onHeight={hunk.setHeight}
               />
             )
           }
-          editedRows={edit?.block ?? null}
         />
       </section>
-      {message !== null && edit !== null && (
+      {hunk.message !== null && hunk.edit !== null && (
         <CommitEditModal
           path={filename}
-          message={message}
-          committing={committing}
-          error={failure}
-          onMessage={setMessage}
-          onCommit={commit}
-          onRevert={() => {
-            setEdit(null);
-            setMessage(null);
-            setFailure(null);
-          }}
-          onCancel={() => {
-            setMessage(null);
-            setFailure(null);
-          }}
+          message={hunk.message}
+          committing={hunk.committing}
+          error={hunk.failure}
+          onMessage={hunk.setMessage}
+          onCommit={hunk.commit}
+          onRevert={hunk.close}
+          onCancel={hunk.dismissModal}
         />
       )}
     </div>
   );
+}
+
+function spacerFor(edit: HunkEdit | null): { afterRow: number; height: number } | null {
+  if (!edit || edit.height === 0) return null;
+  const replaced = (edit.block.lastRow - edit.block.firstRow + 1) * ROW_HEIGHT;
+  return { afterRow: edit.block.lastRow, height: Math.max(0, edit.height - replaced) };
 }
 
 interface SideTokens {
@@ -385,6 +327,7 @@ function DiffSide({
   onEditBlock,
   editor,
   editedRows,
+  spacer,
 }: {
   rows: DiffRow[];
   side: 'left' | 'right';
@@ -394,6 +337,7 @@ function DiffSide({
   onEditBlock?: (rowIndex: number) => void;
   editor?: ReactNode;
   editedRows?: EditableBlock | null;
+  spacer?: { afterRow: number; height: number } | null;
 }) {
   const band = (from: number, to: number) => (
     <DiffRows
@@ -404,6 +348,7 @@ function DiffSide({
       tokens={tokens}
       editable={editable}
       onEditBlock={onEditBlock}
+      spacer={spacer}
     />
   );
   if (!editedRows) return band(0, rows.length);
@@ -424,6 +369,7 @@ function DiffRows({
   tokens,
   editable,
   onEditBlock,
+  spacer,
 }: {
   rows: DiffRow[];
   offset: number;
@@ -432,21 +378,24 @@ function DiffRows({
   tokens: (ThemedToken[] | null)[] | null;
   editable: boolean;
   onEditBlock?: (rowIndex: number) => void;
+  spacer?: { afterRow: number; height: number } | null;
 }) {
   return (
     <div className="min-w-0 flex-1 overflow-x-auto">
       <div className="w-max min-w-full">
         {rows.map((row, index) => (
-          <DiffLine
-            key={offset + index}
-            row={row}
-            cell={side === 'left' ? row.left : row.right}
-            side={side}
-            labels={labels}
-            lineTokens={tokens?.[offset + index] ?? null}
-            editable={editable}
-            onEdit={onEditBlock ? () => onEditBlock(offset + index) : undefined}
-          />
+          <Fragment key={offset + index}>
+            <DiffLine
+              row={row}
+              cell={side === 'left' ? row.left : row.right}
+              side={side}
+              labels={labels}
+              lineTokens={tokens?.[offset + index] ?? null}
+              editable={editable}
+              onEdit={onEditBlock ? () => onEditBlock(offset + index + (row.kind === 'hunk' ? 1 : 0)) : undefined}
+            />
+            {spacer?.afterRow === offset + index && <div style={{ height: spacer.height }} />}
+          </Fragment>
         ))}
       </div>
     </div>
@@ -473,7 +422,17 @@ function DiffLine({
   if (row.kind === 'hunk') {
     return (
       <div className={`${ROW} bg-procgen px-1 text-[9px] text-ink-dim`}>
-        <span className="truncate">{labels ? row.label : ''}</span>
+        <span className="min-w-0 flex-1 truncate">{labels ? row.label : ''}</span>
+        {editable && side === 'right' && onEdit && (
+          <button
+            type="button"
+            onClick={onEdit}
+            title="Edit this hunk and commit the change"
+            className="sticky right-0 shrink-0 rounded border border-btn-edge bg-procgen px-1 uppercase tracking-[0.14em] hover:bg-btn-hover hover:text-ink"
+          >
+            edit
+          </button>
+        )}
       </div>
     );
   }
@@ -484,8 +443,7 @@ function DiffLine({
   return (
     <div
       className={`${ROW} ${tone} ${openable ? 'cursor-text' : ''}`}
-      title={openable ? 'Triple-click to edit this section' : undefined}
-      onClick={openable && onEdit ? (event) => event.detail === 3 && onEdit() : undefined}
+      onClick={openable && onEdit ? (event) => event.detail >= 3 && onEdit() : undefined}
     >
       <span className={GUTTER}>{cell.line}</span>
       <span className="diff-code whitespace-pre pr-2 text-[11px]">
