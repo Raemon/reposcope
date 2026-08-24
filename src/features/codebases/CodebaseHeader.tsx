@@ -8,6 +8,7 @@ import { sidebarGroups } from './sidebarGroups';
 import { useSourceResults } from './useSourceResults';
 import { ScopeMark } from '@/features/brand/ScopeMark';
 import { CurrentPullTitle } from '@/features/pull-requests/CurrentPullTitle';
+import { MergePullButton } from '@/features/pull-requests/MergePullButton';
 import { PullRequestMenu } from '@/features/pull-requests/PullRequestMenu';
 import { parseRepoLink, type RepoRef } from '@/features/sources/parseRepoLink';
 import { ThemeToggle } from '@/features/theme/ThemeToggle';
@@ -25,7 +26,8 @@ export function CodebaseHeader() {
       <CodebaseMenu reading={reading} />
       {reading &&
         (pullNumber === null ? <PullRequestMenu repo={reading} /> : <CurrentPullTitle number={pullNumber} />)}
-      <div className="ml-auto">
+      <div className="ml-auto flex shrink-0 items-center gap-2">
+        {reading && pullNumber !== null && <MergePullButton repo={reading} number={pullNumber} />}
         <ThemeToggle />
       </div>
     </header>
