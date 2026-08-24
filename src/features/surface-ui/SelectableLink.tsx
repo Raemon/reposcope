@@ -10,6 +10,7 @@ export function SelectableLink({
   title,
   current,
   ref,
+  onPointerEnter,
   children,
 }: {
   href: string;
@@ -17,6 +18,7 @@ export function SelectableLink({
   title?: string;
   current?: boolean;
   ref?: Ref<HTMLAnchorElement>;
+  onPointerEnter?: () => void;
   children: ReactNode;
 }) {
   const linkClick = useSelectableClick<HTMLAnchorElement>();
@@ -26,6 +28,7 @@ export function SelectableLink({
       href={href}
       {...linkClick}
       title={title}
+      onPointerEnter={onPointerEnter}
       aria-current={current ? 'page' : undefined}
       className={`${className} ${SELECTABLE_TEXT}`}
     >
