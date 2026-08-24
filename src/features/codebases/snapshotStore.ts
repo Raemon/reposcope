@@ -28,7 +28,7 @@ export async function writeSnapshot(owner: string, repo: string, sha: string, co
 async function dropStaleSnapshots(owner: string, repo: string, keptSha: string): Promise<void> {
   const kept = snapshotName(owner, repo, keptSha);
   const prefix = `${repoPrefix(owner, repo)}~`;
-  for (const name of await readdir(DIRECTORY)) {
+  for (const name of await readdir(/*turbopackIgnore: true*/ DIRECTORY)) {
     if (name.startsWith(prefix) && name !== kept) await rm(join(DIRECTORY, name), { force: true });
   }
 }

@@ -1,9 +1,11 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
+import { prefetchPull } from './prefetchPull';
 import type { CrossRepoPull } from './pullRequests';
 import { useAllPullRequests } from './useAllPullRequests';
 import { timeAgo } from '@/features/repo-insights/ui/timeAgo';
+import { useGithubToken } from '@/features/sources/sourceStore';
 import { SelectableLink } from '@/features/surface-ui/SelectableLink';
 
 const NOTE = 'px-2 py-1 text-[11px] leading-4';
@@ -16,8 +18,8 @@ export function AllPullRequestList() {
   const { scanning, repoCount, found, error } = useAllPullRequests();
   const pathname = usePathname();
 
-  if (error) return <p className={`${NOTE} text-error-ink`}>{error}</p>;
   if (!found) {
+    if (error) return <p className={`${NOTE} text-error-ink`}>{error}</p>;
     return (
       <p className={`${NOTE} text-ink-dim`}>
         {repoCount === 0 && !scanning ? 'No repositories yet.' : `Reading ${repoCount || ''} repositories…`}
@@ -27,7 +29,8 @@ export function AllPullRequestList() {
 
   return (
     <nav className="min-h-0 flex-1 overflow-auto py-[1px]">
-      {scanning && <p className={`${NOTE} text-ink-dim`}>Reading more repositories…</p>}
+      {error && <p className={`${NOTE} text-error-ink`}>{error}</p>}
+      {scanning && !error && <p className={`${NOTE} text-ink-dim`}>Reading more repositories…</p>}
       {found.pulls.length === 0 && <p className={`${NOTE} text-ink-dim`}>No open pull requests.</p>}
       {found.pulls.map((pull) => (
         <PullRow key={`${pull.owner}/${pull.repo}#${pull.number}`} pull={pull} pathname={pathname} />
@@ -42,6 +45,7 @@ export function AllPullRequestList() {
 }
 
 function PullRow({ pull, pathname }: { pull: CrossRepoPull; pathname: string }) {
+  const token = useGithubToken();
   const href = allPullHref(pull);
   const active = pathname === href.split('?')[0];
   return (
@@ -49,6 +53,7 @@ function PullRow({ pull, pathname }: { pull: CrossRepoPull; pathname: string }) 
       href={href}
       title={`${pull.owner}/${pull.repo} #${pull.number} — ${pull.title}`}
       current={active}
+      onPointerEnter={() => prefetchPull(pull.owner, pull.repo, pull.number, token)}
       className={`flex items-baseline gap-1.5 px-2 py-[1px] text-[11px] leading-4 ${
         active ? 'bg-btn-active text-accent' : 'text-ink hover:bg-btn-hover'
       }`}

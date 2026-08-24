@@ -21,7 +21,7 @@ export function ChangedFileTree({
       {groupByFolder(files).map((group) => (
         <div key={group.folder}>
           {group.folder && (
-            <p dir="rtl" title={group.folder} className="truncate px-1.5 py-[1px] text-left text-[10px] leading-4 text-ink-dim">
+            <p dir="rtl" title={group.folder} className="truncate px-1.5 py-[1px] text-left text-[10px] leading-4 text-ink-dim opacity-50">
               {group.folder}
             </p>
           )}

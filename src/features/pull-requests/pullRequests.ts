@@ -27,6 +27,9 @@ export interface CommitSummary {
   message: string;
   author: string;
   date: string;
+  additions: number;
+  deletions: number;
+  fileCount: number;
 }
 
 export interface ChangedFile {
@@ -46,6 +49,11 @@ export interface ChangedFileSet {
 
 export interface FileBlob {
   dataUrl: string | null;
+  byteSize: number;
+}
+
+export interface FileText {
+  text: string | null;
   byteSize: number;
 }
 
@@ -111,14 +119,17 @@ interface GithubCommit {
   author: { login: string } | null;
   parents?: { sha: string }[];
   files?: GithubChangedFile[];
+  stats?: { additions: number; deletions: number };
 }
 
 const API = 'https://api.github.com';
 const FILE_PAGE = 100;
 const MAX_FILE_PAGES = 10;
 const MAX_BLOB_BYTES = 6 * 1024 * 1024;
+const MAX_TEXT_BYTES = 2 * 1024 * 1024;
 export const MAX_SCANNED_REPOS = 60;
 const SCAN_WORKERS = 6;
+const COMMIT_STAT_WORKERS = 6;
 
 export async function listPullRequests(owner: string, name: string): Promise<PullRequestSummary[]> {
   const pulls = await githubJson<GithubPull[]>(
@@ -161,7 +172,7 @@ export async function describePullRequest(owner: string, name: string, number: n
     headRef: pull.head.ref,
     additions: pull.additions ?? 0,
     deletions: pull.deletions ?? 0,
-    commits: commits.map(summarizeCommit).reverse(),
+    commits: (await summarizeCommits(owner, name, commits)).reverse(),
   };
 }
 
@@ -222,17 +233,27 @@ export async function listCommitFiles(owner: string, name: string, sha: string):
 }
 
 export async function readFileBlob(owner: string, name: string, ref: string, path: string): Promise<FileBlob> {
-  const encoded = path.split('/').map(encodeURIComponent).join('/');
-  const bytes = await githubBytes(
-    `${API}/repos/${owner}/${name}/contents/${encoded}?ref=${encodeURIComponent(ref)}`,
-    'application/vnd.github.raw',
-  );
+  const bytes = await readRawFile(owner, name, ref, path);
   if (bytes.byteLength > MAX_BLOB_BYTES) return { dataUrl: null, byteSize: bytes.byteLength };
   const type = imageTypeOf(path) ?? 'application/octet-stream';
   return {
     dataUrl: `data:${type};base64,${Buffer.from(bytes).toString('base64')}`,
     byteSize: bytes.byteLength,
   };
+}
+
+export async function readFileText(owner: string, name: string, ref: string, path: string): Promise<FileText> {
+  const bytes = await readRawFile(owner, name, ref, path);
+  if (bytes.byteLength > MAX_TEXT_BYTES) return { text: null, byteSize: bytes.byteLength };
+  return { text: new TextDecoder().decode(bytes), byteSize: bytes.byteLength };
+}
+
+function readRawFile(owner: string, name: string, ref: string, path: string): Promise<Uint8Array> {
+  const encoded = path.split('/').map(encodeURIComponent).join('/');
+  return githubBytes(
+    `${API}/repos/${owner}/${name}/contents/${encoded}?ref=${encodeURIComponent(ref)}`,
+    'application/vnd.github.raw',
+  );
 }
 
 function changedFile(file: GithubChangedFile): ChangedFile {
@@ -274,5 +295,39 @@ function summarizeCommit(commit: GithubCommit): CommitSummary {
     message: commit.commit.message.split('\n')[0] ?? '',
     author: commit.author?.login ?? commit.commit.author?.name ?? '',
     date: commit.commit.author?.date ?? '',
+    additions: commit.stats?.additions ?? 0,
+    deletions: commit.stats?.deletions ?? 0,
+    fileCount: commit.files?.length ?? 0,
   };
+}
+
+async function summarizeCommits(owner: string, name: string, commits: GithubCommit[]): Promise<CommitSummary[]> {
+  const summaries = commits.map(summarizeCommit);
+  const queue = summaries.map((summary, index) => ({ summary, index }));
+  const count = async () => {
+    for (let job = queue.shift(); job; job = queue.shift()) {
+      summaries[job.index] = { ...job.summary, ...(await commitTotals(owner, name, job.summary.sha)) };
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(COMMIT_STAT_WORKERS, queue.length) }, count));
+  return summaries;
+}
+
+interface CommitTotals {
+  additions: number;
+  deletions: number;
+  fileCount: number;
+}
+
+async function commitTotals(owner: string, name: string, sha: string): Promise<CommitTotals> {
+  try {
+    const commit = await githubJson<GithubCommit>(`${API}/repos/${owner}/${name}/commits/${sha}`);
+    return {
+      additions: commit.stats?.additions ?? 0,
+      deletions: commit.stats?.deletions ?? 0,
+      fileCount: commit.files?.length ?? 0,
+    };
+  } catch {
+    return { additions: 0, deletions: 0, fileCount: 0 };
+  }
 }

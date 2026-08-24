@@ -5,6 +5,7 @@ import { DragHandle, useDragWidth, type ColumnSize } from './ResizableColumn';
 import type { FileBlob } from './pullRequests';
 import { apiJson } from '@/features/sources/apiClient';
 import { useGithubToken } from '@/features/sources/sourceStore';
+import { openImageTab } from './openImageTab';
 
 const CHECKERBOARD = {
   backgroundImage:
@@ -77,14 +78,21 @@ function ImagePane({
         ) : !blob.value.dataUrl ? (
           <PaneNote text={`too large to preview (${byteLabel(blob.value.byteSize)})`} />
         ) : (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img
-            src={blob.value.dataUrl}
-            alt={`${label} — ${source.path}`}
-            onLoad={(event) => setShape(`${event.currentTarget.naturalWidth}×${event.currentTarget.naturalHeight}`)}
-            style={CHECKERBOARD}
-            className="max-h-[420px] max-w-full border border-panel-edge object-contain"
-          />
+          <button
+            type="button"
+            title="Open image in a new tab"
+            onClick={() => blob.value?.dataUrl && openImageTab(blob.value.dataUrl)}
+            className="max-w-full cursor-zoom-in"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={blob.value.dataUrl}
+              alt={`${label} — ${source.path}`}
+              onLoad={(event) => setShape(`${event.currentTarget.naturalWidth}×${event.currentTarget.naturalHeight}`)}
+              style={CHECKERBOARD}
+              className="max-h-[420px] max-w-full border border-panel-edge object-contain"
+            />
+          </button>
         )}
       </div>
     </div>
