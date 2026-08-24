@@ -1,7 +1,8 @@
 'use client';
 
 import type { ReactEventHandler } from 'react';
-import type { ImageFileView, ImageSource } from './imageView';
+import type { ChangedFile } from './pullRequests';
+import type { ImageFileView, ImageGallery, ImageSource } from './imageView';
 import { previewSource } from './imageView';
 import { useFileBlob } from './useFileBlob';
 
@@ -15,6 +16,10 @@ export const CHECKERBOARD = {
 export function FilePreview({ className, compact = false, ...view }: ImageFileView & { className: string; compact?: boolean }) {
   const source = previewSource(view.file, view.baseRef, view.headRef);
   return <BlobImage key={`${source.ref}:${source.path}`} owner={view.owner} repo={view.repo} source={source} alt={view.file.filename} compact={compact} className={className} />;
+}
+
+export function GalleryImage({ gallery, file, className, compact = false }: { gallery: ImageGallery; file: ChangedFile; className: string; compact?: boolean }) {
+  return <FilePreview owner={gallery.owner} repo={gallery.repo} file={file} baseRef={gallery.baseRef} headRef={gallery.headRef} compact={compact} className={className} />;
 }
 
 export function BlobImage({

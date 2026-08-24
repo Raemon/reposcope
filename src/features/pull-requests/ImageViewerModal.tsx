@@ -2,7 +2,7 @@
 
 import { createPortal } from 'react-dom';
 import type { ReactNode, RefObject } from 'react';
-import { FilePreview } from './BlobImage';
+import { GalleryImage } from './BlobImage';
 import { baseName } from './fileTree';
 import type { ChangedFile } from './pullRequests';
 import type { ImageGallery } from './imageView';
@@ -75,7 +75,7 @@ function ViewerPicture({ gallery, file }: { gallery: ImageGallery; file: Changed
   return (
     <div className="flex min-h-0 flex-1 items-center justify-center">
       <span onClick={holdClick} className="flex max-h-full min-h-0 max-w-full">
-        <FilePreview owner={gallery.owner} repo={gallery.repo} file={file} baseRef={gallery.baseRef} headRef={gallery.headRef} className="max-h-full max-w-full object-contain" />
+        <GalleryImage gallery={gallery} file={file} className="max-h-full max-w-full object-contain" />
       </span>
     </div>
   );

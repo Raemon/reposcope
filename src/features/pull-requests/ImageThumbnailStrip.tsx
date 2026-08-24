@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { FilePreview } from './BlobImage';
+import { GalleryImage } from './BlobImage';
+import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { ImageViewerModal } from './ImageViewerModal';
 import type { ChangedFile } from './pullRequests';
 import type { ImageGallery } from './imageView';
@@ -56,9 +57,18 @@ function ImageThumb({
   onOpen: () => void;
 }) {
   return (
-    <button type="button" title={file.filename} aria-label={file.filename} onClick={onOpen} className={thumbClass(active)}>
-      <FilePreview owner={gallery.owner} repo={gallery.repo} file={file} baseRef={gallery.baseRef} headRef={gallery.headRef} compact className="max-h-12 max-w-16 object-contain" />
-    </button>
+    <HoverCardTrigger
+      label={file.filename}
+      placement="below"
+      width="wide"
+      interactive={false}
+      focusable={false}
+      card={<GalleryImage gallery={gallery} file={file} className="max-h-[60vh] object-contain" />}
+    >
+      <button type="button" aria-label={file.filename} onClick={onOpen} className={thumbClass(active)}>
+        <GalleryImage gallery={gallery} file={file} compact className="max-h-12 max-w-16 object-contain" />
+      </button>
+    </HoverCardTrigger>
   );
 }
 
