@@ -1,4 +1,4 @@
-import { githubJson } from '@/features/codebases/githubRequest';
+import { githubJson, githubSend } from '@/features/codebases/githubRequest';
 
 export interface PullRequestSummary {
   number: number;
@@ -6,6 +6,8 @@ export interface PullRequestSummary {
   author: string;
   updatedAt: string;
   draft: boolean;
+  state: string;
+  merged: boolean;
 }
 
 export interface CommitSummary {
@@ -34,6 +36,11 @@ export interface PullRequestCommits {
   commits: CommitSummary[];
 }
 
+export interface MergeResult {
+  merged: boolean;
+  message: string;
+}
+
 export interface PullComment {
   id: number;
   author: string;
@@ -49,6 +56,8 @@ interface GithubPull {
   user: { login: string } | null;
   updated_at: string;
   draft?: boolean;
+  state: string;
+  merged?: boolean;
   base: { ref: string };
   head: { ref: string };
   additions?: number;
@@ -106,6 +115,15 @@ export async function describePullRequest(owner: string, name: string, number: n
   };
 }
 
+export async function mergePullRequest(owner: string, name: string, number: number): Promise<MergeResult> {
+  const result = await githubSend<{ merged?: boolean; message?: string }>(
+    `${API}/repos/${owner}/${name}/pulls/${number}/merge`,
+    'PUT',
+    {},
+  );
+  return { merged: result.merged ?? false, message: result.message ?? '' };
+}
+
 export async function listPullRequestFiles(owner: string, name: string, number: number): Promise<ChangedFile[]> {
   const files: ChangedFile[] = [];
   for (let page = 1; page <= MAX_FILE_PAGES; page += 1) {
@@ -159,6 +177,8 @@ function summarizePull(pull: GithubPull): PullRequestSummary {
     author: pull.user?.login ?? '',
     updatedAt: pull.updated_at,
     draft: pull.draft ?? false,
+    state: pull.state,
+    merged: pull.merged ?? false,
   };
 }
 

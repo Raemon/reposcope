@@ -28,6 +28,16 @@ export async function githubJsonIfChanged<T>(url: string, etag: string | null): 
   return { value: (await response.json()) as T, etag: response.headers.get('etag') };
 }
 
+export async function githubSend<T>(url: string, method: string, body: unknown): Promise<T> {
+  const response = await fetch(url, {
+    method,
+    headers: { ...githubHeaders('application/vnd.github+json'), 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) throw new GithubRequestError(response.status, await describeSendFailure(response, url));
+  return (await response.json()) as T;
+}
+
 export async function githubBytes(url: string): Promise<Uint8Array> {
   const response = await githubFetch(url);
   return new Uint8Array(await response.arrayBuffer());
@@ -37,6 +47,12 @@ async function githubFetch(url: string): Promise<Response> {
   const response = await fetch(url, { headers: githubHeaders('application/vnd.github+json') });
   if (response.ok) return response;
   throw new GithubRequestError(response.status, describeFailure(response, url));
+}
+
+async function describeSendFailure(response: Response, url: string): Promise<string> {
+  const body: unknown = await response.json().catch(() => null);
+  const message = (body as { message?: unknown } | null)?.message;
+  return typeof message === 'string' && message ? message : describeFailure(response, url);
 }
 
 function describeFailure(response: Response, url: string): string {
