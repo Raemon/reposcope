@@ -4,6 +4,7 @@ import { AllPullRequestList } from './AllPullRequestList';
 import { ColumnPreview, type PreviewToken } from './ColumnPreview';
 import { PullRequestList } from './PullRequestMenu';
 import { ResizableColumn, type ColumnSize } from './ResizableColumn';
+import { useStandingPulls, useStandingRepoPulls } from './mergeStore';
 import { repoPullsPath } from './pullPaths';
 import type { PullRequestSummary } from './pullRequests';
 import { useAllPullRequests } from './useAllPullRequests';
@@ -24,11 +25,12 @@ export function RepoPullsColumn({ owner, repo, number, size, onSize }: PullColum
   const ready = useStoreReady();
   const token = useGithubToken();
   const { data: pulls } = useCachedJson<PullRequestSummary[]>(repoPullsPath(owner, repo), token, ready);
+  const standingPulls = useStandingRepoPulls(owner, repo, pulls);
   return (
     <ResizableColumn
       icon={ICON}
       title="pull requests"
-      preview={<ColumnPreview tokens={(pulls ?? []).map((pull) => pullToken(pull, `${owner}/${repo}`, pull.number === number))} />}
+      preview={<ColumnPreview tokens={standingPulls.map((pull) => pullToken(pull, `${owner}/${repo}`, pull.number === number))} />}
       size={size}
       onSize={onSize}
     >
@@ -39,14 +41,14 @@ export function RepoPullsColumn({ owner, repo, number, size, onSize }: PullColum
 
 export function AllPullsColumn({ owner, repo, number, size, onSize }: PullColumn) {
   const { found } = useAllPullRequests();
-  const pulls = found?.pulls;
+  const standingPulls = useStandingPulls(found?.pulls);
   return (
     <ResizableColumn
       icon={ICON}
       title="pull requests"
       preview={
         <ColumnPreview
-          tokens={(pulls ?? []).map((pull) =>
+          tokens={standingPulls.map((pull) =>
             pullToken(
               pull,
               `${pull.owner}/${pull.repo}`,

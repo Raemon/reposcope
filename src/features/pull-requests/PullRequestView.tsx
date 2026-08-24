@@ -60,9 +60,9 @@ export function PullRequestView({
   }, [owner, repo, number]);
 
   useEffect(() => {
-    setCurrentPull(pull);
+    setCurrentPull(pull && { owner, repo, pull });
     if (pull) setCommitSize((size) => ({ ...size, open: pull.commits.length > 1 }));
-  }, [pull, setCommitSize]);
+  }, [pull, owner, repo, setCommitSize]);
 
   useEffect(() => {
     if (!fileSet) return;

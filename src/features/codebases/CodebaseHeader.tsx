@@ -29,7 +29,7 @@ export function CodebaseHeader() {
       </Link>
       <CodebaseMenu reading={reading} readingAllPulls={readingAllPulls} />
       {reading &&
-        (pullNumber === null ? <PullRequestMenu repo={reading} /> : <CurrentPullTitle number={pullNumber} />)}
+        (pullNumber === null ? <PullRequestMenu repo={reading} /> : <CurrentPullTitle repo={reading} number={pullNumber} />)}
       <div className="ml-auto flex shrink-0 items-center gap-2">
         {reading && pullNumber !== null && <MergePullButton repo={reading} number={pullNumber} />}
         <ThemeToggle />

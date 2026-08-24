@@ -26,7 +26,7 @@ export function DiffPanes({
   repo: string;
   fileSet: ChangedFileSet | null;
   editablePull?: PullRequestSummary | null;
-  onCommitted?: () => void;
+  onCommitted?: () => void | Promise<void>;
   ref?: Ref<DiffPanesHandle>;
 }) {
   const scroller = useRef<HTMLDivElement | null>(null);

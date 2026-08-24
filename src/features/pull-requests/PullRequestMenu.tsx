@@ -4,7 +4,8 @@ import { usePathname } from 'next/navigation';
 import type { PullRequestSummary } from './pullRequests';
 import { HeaderMenu } from '@/features/codebases/HeaderMenu';
 import { timeAgo } from '@/features/repo-insights/ui/timeAgo';
-import { repoPullsPath } from './pullPaths';
+import { useStandingRepoPulls } from './mergeStore';
+import { pullRoute, repoPullsPath } from './pullPaths';
 import { prefetchPull } from './prefetchPull';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
@@ -24,18 +25,19 @@ export function PullRequestList({ repo }: { repo: RepoRef }) {
   const token = useGithubToken();
   const pathname = usePathname();
   const { data: pulls, error } = useCachedJson<PullRequestSummary[]>(repoPullsPath(repo.owner, repo.name), token, ready);
+  const standingPulls = useStandingRepoPulls(repo.owner, repo.name, pulls);
 
   if (!pulls) {
     if (error) return <p className="px-2 py-1 text-[11px] leading-4 text-error-ink">{error}</p>;
     return <p className="px-2 py-1 text-[11px] leading-4 text-ink-dim">Loading…</p>;
   }
-  if (pulls.length === 0) return <p className="px-2 py-1 text-[11px] leading-4 text-ink-dim">No open pull requests.</p>;
+  if (standingPulls.length === 0) return <p className="px-2 py-1 text-[11px] leading-4 text-ink-dim">No open pull requests.</p>;
 
   return (
     <nav className="min-h-0 flex-1 overflow-auto py-[1px]">
       {error && <p className="px-2 py-1 text-[11px] leading-4 text-error-ink">{error}</p>}
-      {pulls.map((pull) => {
-        const href = `/repo/${repo.owner}/${repo.name}/pull/${pull.number}`;
+      {standingPulls.map((pull) => {
+        const href = pullRoute(repo.owner, repo.name, pull.number);
         const active = pathname === href;
         return (
           <SelectableLink
