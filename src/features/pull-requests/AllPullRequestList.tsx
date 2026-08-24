@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import { mergedAway, useMergeAttempts } from './mergeStore';
 import { prefetchPull } from './prefetchPull';
 import type { CrossRepoPull } from './pullRequests';
 import { useAllPullRequests } from './useAllPullRequests';
@@ -27,6 +28,7 @@ function updatedWithinLastWeek(pull: CrossRepoPull): boolean {
 export function AllPullRequestList() {
   const { scanning, repoCount, found, error } = useAllPullRequests();
   const pathname = usePathname();
+  const attempts = useMergeAttempts();
   const [showingOlder, setShowingOlder] = useState(false);
 
   if (!found) {
@@ -38,16 +40,17 @@ export function AllPullRequestList() {
     );
   }
 
-  const visible = found.pulls.filter(
+  const standingPulls = found.pulls.filter((pull) => !mergedAway(attempts, pull.owner, pull.repo, pull.number));
+  const visible = standingPulls.filter(
     (pull) => showingOlder || updatedWithinLastWeek(pull) || pathname === pullRoute(pull),
   );
-  const olderCount = found.pulls.length - visible.length;
+  const olderCount = standingPulls.length - visible.length;
 
   return (
     <nav className="min-h-0 flex-1 overflow-auto py-[1px]">
       {error && <p className={`${NOTE} text-error-ink`}>{error}</p>}
       {scanning && !error && <p className={`${NOTE} text-ink-dim`}>Reading more repositories…</p>}
-      {found.pulls.length === 0 && <p className={`${NOTE} text-ink-dim`}>No open pull requests.</p>}
+      {standingPulls.length === 0 && <p className={`${NOTE} text-ink-dim`}>No open pull requests.</p>}
       {visible.map((pull) => (
         <PullRow key={`${pull.owner}/${pull.repo}#${pull.number}`} pull={pull} pathname={pathname} />
       ))}
