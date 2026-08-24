@@ -8,6 +8,7 @@ import { DragHandle, useDragWidth, type ColumnSize } from './ResizableColumn';
 import { splitDiff, type DiffCell, type DiffRow } from './splitDiff';
 import { langForPath, tokenizeCode, type ThemedToken } from './diffHighlight';
 import type { ChangedFile, ChangedFileSet } from './pullRequests';
+import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 
 const ROW = 'flex h-[15px] items-center gap-1 leading-[15px]';
 const GUTTER = 'w-[38px] shrink-0 select-none pr-1 text-right text-[9px] text-ink-dim';
@@ -94,10 +95,9 @@ function FileSection({
   const [open, setOpen] = useState(true);
   return (
     <section ref={sectionRef} className="border-b border-panel-edge">
-      <button
-        type="button"
-        onClick={() => setOpen((was) => !was)}
-        aria-expanded={open}
+      <SelectableRow
+        onActivate={() => setOpen((was) => !was)}
+        expanded={open}
         className="sticky top-0 z-20 flex w-full items-baseline gap-2 border-b border-panel-edge bg-panel px-2 py-[2px] text-left text-[11px] leading-4 hover:bg-btn-hover"
       >
         <span aria-hidden className="w-2 shrink-0 text-[9px] text-ink-dim">
@@ -109,7 +109,7 @@ function FileSection({
         </span>
         <span className="shrink-0 text-[9px] uppercase tracking-[0.18em] text-ink-dim">{file.status}</span>
         <ChangeCounts additions={file.additions} deletions={file.deletions} />
-      </button>
+      </SelectableRow>
       {open && <FileBody owner={owner} repo={repo} file={file} baseRef={baseRef} headRef={headRef} />}
     </section>
   );
