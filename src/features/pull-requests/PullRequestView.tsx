@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { AllPullRequestList } from './AllPullRequestList';
+import { ColumnPreview } from './ColumnPreview';
 import { DiffPanes, type DiffPanesHandle } from './DiffPanes';
-import { PullCommitColumn } from './PullCommitColumn';
+import { PullCommitColumn, commitTokens } from './PullCommitColumn';
 import { PullDiscussion } from './PullDiscussion';
-import { PullFilesColumn } from './PullFilesColumn';
-import { PullRequestList } from './PullRequestMenu';
+import { PullFilesColumn, fileTokens } from './PullFilesColumn';
+import { AllPullsColumn, RepoPullsColumn } from './PullListColumn';
 import { ResizableColumn } from './ResizableColumn';
 import { setCurrentPull } from './currentPullStore';
 import { commitFilesPath, pullFilesPath, pullPath } from './pullPaths';
@@ -89,21 +89,30 @@ export function PullRequestView({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex min-h-0 flex-1">
-        <ResizableColumn
-          icon="⇅"
-          title={acrossRepos ? 'all pull requests' : 'pull requests'}
-          size={listSize}
-          onSize={setListSize}
-        >
-          {acrossRepos ? <AllPullRequestList /> : <PullRequestList repo={{ owner, name: repo }} />}
-        </ResizableColumn>
+        {acrossRepos ? (
+          <AllPullsColumn owner={owner} repo={repo} number={number} size={listSize} onSize={setListSize} />
+        ) : (
+          <RepoPullsColumn owner={owner} repo={repo} number={number} size={listSize} onSize={setListSize} />
+        )}
         <ResizableColumn icon="❝" title="discussion" size={discussionSize} onSize={setDiscussionSize}>
           <PullDiscussion owner={owner} repo={repo} number={number} author={pull.pull.author} body={pull.body} />
         </ResizableColumn>
-        <ResizableColumn icon="◆" title={`commits · ${pull.commits.length}`} size={commitSize} onSize={setCommitSize}>
+        <ResizableColumn
+          icon="◆"
+          title="commits"
+          preview={<ColumnPreview tokens={commitTokens(pull, selection)} />}
+          size={commitSize}
+          onSize={setCommitSize}
+        >
           <PullCommitColumn pull={pull} selection={selection} onSelect={setSelection} />
         </ResizableColumn>
-        <ResizableColumn icon="▤" title={`files · ${fileSet?.files.length ?? 0}`} size={fileSize} onSize={setFileSize}>
+        <ResizableColumn
+          icon="▤"
+          title="files"
+          preview={<ColumnPreview tokens={fileTokens(fileSet, path)} />}
+          size={fileSize}
+          onSize={setFileSize}
+        >
           <PullFilesColumn
             fileSet={fileSet}
             fileError={fileError}

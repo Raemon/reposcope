@@ -1,6 +1,7 @@
 'use client';
 
 import { ChangedFileTree } from './ChangedFileTree';
+import type { PreviewToken } from './ColumnPreview';
 import type { ChangedFileSet } from './pullRequests';
 
 export function PullFilesColumn({
@@ -22,4 +23,16 @@ export function PullFilesColumn({
     );
   }
   return <ChangedFileTree files={fileSet.files} selected={path} onSelect={onSelect} />;
+}
+
+export function fileTokens(fileSet: ChangedFileSet | null, selected: string | null): PreviewToken[] {
+  return (fileSet?.files ?? []).map((file) => {
+    const name = file.filename.split('/').pop() ?? file.filename;
+    return {
+      key: file.filename,
+      label: name.slice(0, 2),
+      title: file.filename,
+      accent: file.filename === selected,
+    };
+  });
 }

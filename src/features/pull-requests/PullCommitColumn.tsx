@@ -1,6 +1,7 @@
 'use client';
 
 import { ChangeCounts } from './ChangeCounts';
+import type { PreviewToken } from './ColumnPreview';
 import type { PullRequestCommits } from './pullRequests';
 import { RelativeTime } from '@/features/surface-ui/RelativeTime';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
@@ -41,4 +42,13 @@ export function PullCommitColumn({
       ))}
     </>
   );
+}
+
+export function commitTokens(pull: PullRequestCommits, selection: string): PreviewToken[] {
+  return pull.commits.map((commit) => ({
+    key: commit.sha,
+    label: commit.sha.slice(0, 2),
+    title: `${commit.sha.slice(0, 7)} · ${commit.message}`,
+    accent: commit.sha === selection,
+  }));
 }

@@ -47,10 +47,12 @@ export function DragHandle({ onPointerDown }: { onPointerDown: (event: ReactPoin
 export function CollapsedColumn({
   title,
   icon,
+  preview,
   onExpand,
 }: {
   title: string;
   icon: string;
+  preview?: ReactNode;
   onExpand: () => void;
 }) {
   return (
@@ -58,10 +60,11 @@ export function CollapsedColumn({
       type="button"
       onClick={onExpand}
       aria-label={`Expand ${title}`}
-      className="flex w-6 shrink-0 flex-col items-center gap-1 border-r border-panel-edge bg-panel py-1 text-[10px] uppercase tracking-[0.18em] text-ink-dim hover:bg-btn-hover hover:text-ink"
+      className="flex w-7 min-h-0 shrink-0 flex-col items-center gap-2.5 border-r border-panel-edge bg-panel py-1 text-[10px] uppercase tracking-[0.18em] text-ink-dim hover:bg-btn-hover hover:text-ink"
     >
-      <span aria-hidden className="text-[11px] leading-none">{icon}</span>
-      <span className="[writing-mode:vertical-rl]">{title}</span>
+      <span aria-hidden className="shrink-0 text-[11px] leading-none">{icon}</span>
+      <span className="max-h-[40%] shrink-0 overflow-hidden [writing-mode:vertical-rl]">{title}</span>
+      {preview}
     </button>
   );
 }
@@ -95,6 +98,7 @@ export function ResizableColumn({
   title,
   icon,
   note,
+  preview,
   size,
   onSize,
   children,
@@ -102,12 +106,21 @@ export function ResizableColumn({
   title: string;
   icon: string;
   note?: string;
+  preview?: ReactNode;
   size: ColumnSize;
   onSize: (next: ColumnSize) => void;
   children: ReactNode;
 }) {
   const startDrag = useDragWidth(size, onSize);
-  if (!size.open) return <CollapsedColumn title={title} icon={icon} onExpand={() => onSize({ ...size, open: true })} />;
+  if (!size.open)
+    return (
+      <CollapsedColumn
+        title={title}
+        icon={icon}
+        preview={preview}
+        onExpand={() => onSize({ ...size, open: true })}
+      />
+    );
   return (
     <section
       className="relative flex min-h-0 shrink-0 flex-col border-r border-panel-edge bg-panel"
