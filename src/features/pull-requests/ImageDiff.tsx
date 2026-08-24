@@ -1,23 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { DragHandle, useDragWidth, type ColumnSize } from './ResizableColumn';
-import type { FileBlob } from './pullRequests';
-import { apiJson } from '@/features/sources/apiClient';
-import { useGithubToken } from '@/features/sources/sourceStore';
+import { CHECKERBOARD, type ImageSource } from './imageView';
 import { openImageTab } from './openImageTab';
-
-const CHECKERBOARD = {
-  backgroundImage:
-    'linear-gradient(45deg, var(--color-panel-edge) 25%, transparent 25%), linear-gradient(-45deg, var(--color-panel-edge) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, var(--color-panel-edge) 75%), linear-gradient(-45deg, transparent 75%, var(--color-panel-edge) 75%)',
-  backgroundSize: '12px 12px',
-  backgroundPosition: '0 0, 0 6px, 6px -6px, -6px 0',
-};
-
-interface ImageSource {
-  ref: string;
-  path: string;
-}
+import { useFileBlob } from './useFileBlob';
 
 export function ImageDiff({
   owner,
@@ -97,33 +84,6 @@ function ImagePane({
       </div>
     </div>
   );
-}
-
-function useFileBlob(owner: string, repo: string, source: ImageSource | null) {
-  const token = useGithubToken();
-  const [value, setValue] = useState<FileBlob | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const ref = source?.ref ?? null;
-  const path = source?.path ?? null;
-
-  useEffect(() => {
-    if (!ref || !path) return;
-    const controller = new AbortController();
-    setValue(null);
-    setError(null);
-    apiJson<FileBlob>(
-      `/api/github/blob?owner=${encodeURIComponent(owner)}&name=${encodeURIComponent(repo)}&ref=${encodeURIComponent(ref)}&path=${encodeURIComponent(path)}`,
-      token,
-      controller.signal,
-    )
-      .then(setValue)
-      .catch((issue: unknown) => {
-        if (!controller.signal.aborted) setError(issue instanceof Error ? issue.message : String(issue));
-      });
-    return () => controller.abort();
-  }, [owner, repo, ref, path, token]);
-
-  return { value, error };
 }
 
 function PaneNote({ text }: { text: string }) {
