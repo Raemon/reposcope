@@ -210,7 +210,7 @@ export async function describePullRequest(
     additions: pull.additions ?? 0,
     deletions: pull.deletions ?? 0,
     conflicted: hasConflicts(pull),
-    commits: (await summarizeCommits(owner, name, commits)).reverse(),
+    commits: await summarizeCommits(owner, name, commits),
   };
 }
 
