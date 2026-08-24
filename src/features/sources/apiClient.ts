@@ -8,10 +8,18 @@ export class ApiClientError extends Error {
 }
 
 export async function apiJson<T>(path: string, token: string | null, signal?: AbortSignal): Promise<T> {
-  const response = await fetch(path, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-    signal,
-  });
+  return readJson<T>(await fetch(path, { headers: authHeaders(token), signal }));
+}
+
+export async function apiPost<T>(path: string, token: string | null): Promise<T> {
+  return readJson<T>(await fetch(path, { method: 'POST', headers: authHeaders(token) }));
+}
+
+function authHeaders(token: string | null): Record<string, string> {
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function readJson<T>(response: Response): Promise<T> {
   const body: unknown = await response.json().catch(() => null);
   if (response.ok) return body as T;
   const message =

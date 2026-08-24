@@ -3,9 +3,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChangeCounts } from './ChangeCounts';
 import { DiffPanes, type DiffPanesHandle } from './DiffPanes';
+import { PullDiscussion } from './PullDiscussion';
+import { PullRequestList } from './PullRequestMenu';
 import { ResizableColumn, type ColumnSize } from './ResizableColumn';
-import type { ChangedFile, PullRequestCommits } from './pullRequests';
-import { timeAgo } from '@/features/repo-insights/ui/timeAgo';
+import { setCurrentPull } from './currentPullStore';
+import type { ChangedFileSet, PullRequestCommits } from './pullRequests';
 import { RelativeTime } from '@/features/surface-ui/RelativeTime';
 import { apiJson } from '@/features/sources/apiClient';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
@@ -20,11 +22,15 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
   const [error, setError] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [selection, setSelection] = useState<string>(WHOLE_PULL);
-  const [files, setFiles] = useState<ChangedFile[] | null>(null);
+  const [fileSet, setFileSet] = useState<ChangedFileSet | null>(null);
   const [path, setPath] = useState<string | null>(null);
+  const [listSize, setListSize] = useState<ColumnSize>({ width: 300, open: false });
+  const [discussionSize, setDiscussionSize] = useState<ColumnSize>({ width: 320, open: false });
   const [commitSize, setCommitSize] = useState<ColumnSize>({ width: 260, open: true });
   const [fileSize, setFileSize] = useState<ColumnSize>({ width: 280, open: true });
   const diffPanes = useRef<DiffPanesHandle>(null);
+
+  useEffect(() => () => setCurrentPull(null), []);
 
   useEffect(() => {
     if (!ready) return;
@@ -32,6 +38,7 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
     setPull(null);
     setError(null);
     setSelection(WHOLE_PULL);
+    setCurrentPull(null);
     apiJson<PullRequestCommits>(
       `/api/github/pull?owner=${encodeURIComponent(owner)}&name=${encodeURIComponent(repo)}&number=${number}`,
       token,
@@ -39,6 +46,7 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
     )
       .then((loaded) => {
         setPull(loaded);
+        setCurrentPull(loaded);
         setCommitSize((size) => ({ ...size, open: loaded.commits.length > 1 }));
       })
       .catch((issue: unknown) => {
@@ -50,7 +58,7 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
   useEffect(() => {
     if (!ready) return;
     const controller = new AbortController();
-    setFiles(null);
+    setFileSet(null);
     setFileError(null);
     setPath(null);
     const repoParams = `owner=${encodeURIComponent(owner)}&name=${encodeURIComponent(repo)}`;
@@ -58,10 +66,10 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
       selection === WHOLE_PULL
         ? `/api/github/pull-files?${repoParams}&number=${number}`
         : `/api/github/commit?${repoParams}&sha=${selection}`;
-    apiJson<ChangedFile[]>(source, token, controller.signal)
+    apiJson<ChangedFileSet>(source, token, controller.signal)
       .then((loaded) => {
-        setFiles(loaded);
-        setPath(loaded[0]?.filename ?? null);
+        setFileSet(loaded);
+        setPath(loaded.files[0]?.filename ?? null);
       })
       .catch((issue: unknown) => {
         if (!controller.signal.aborted) setFileError(issue instanceof Error ? issue.message : String(issue));
@@ -74,14 +82,13 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="flex items-baseline gap-2 border-b border-panel-edge bg-panel px-2 py-[2px] text-[11px] leading-4">
-        <span className="shrink-0 text-accent">#{pull.pull.number}</span>
-        <span className="min-w-0 flex-1 truncate text-ink">{pull.pull.title}</span>
-        <span className="shrink-0 text-[9px] text-ink-dim">
-          {pull.pull.author} · {pull.headRef} → {pull.baseRef} · {timeAgo(pull.pull.updatedAt)}
-        </span>
-      </header>
       <div className="flex min-h-0 flex-1">
+        <ResizableColumn icon="⇅" title="pull requests" size={listSize} onSize={setListSize}>
+          <PullRequestList repo={{ owner, name: repo }} />
+        </ResizableColumn>
+        <ResizableColumn icon="❝" title="discussion" size={discussionSize} onSize={setDiscussionSize}>
+          <PullDiscussion owner={owner} repo={repo} number={number} author={pull.pull.author} body={pull.body} />
+        </ResizableColumn>
         <ResizableColumn icon="◆" title={`commits · ${pull.commits.length}`} size={commitSize} onSize={setCommitSize}>
           <button
             type="button"
@@ -104,13 +111,13 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
             </button>
           ))}
         </ResizableColumn>
-        <ResizableColumn icon="▤" title={`files · ${files?.length ?? 0}`} size={fileSize} onSize={setFileSize}>
+        <ResizableColumn icon="▤" title={`files · ${fileSet?.files.length ?? 0}`} size={fileSize} onSize={setFileSize}>
           {fileError !== null ? (
             <p className="px-1.5 py-[1px] text-[11px] leading-4 text-error-ink">{fileError}</p>
-          ) : files === null ? (
+          ) : fileSet === null ? (
             <p className="px-1.5 py-[1px] text-[11px] leading-4 text-ink-dim">Loading…</p>
           ) : (
-            files.map((candidate) => (
+            fileSet.files.map((candidate) => (
               <button
                 key={candidate.filename}
                 type="button"
@@ -132,7 +139,7 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
         {fileError !== null ? (
           <p className="flex-1 px-2 py-1 text-[11px] text-error-ink">{fileError}</p>
         ) : (
-          <DiffPanes ref={diffPanes} files={files} />
+          <DiffPanes ref={diffPanes} owner={owner} repo={repo} fileSet={fileSet} />
         )}
       </div>
     </div>

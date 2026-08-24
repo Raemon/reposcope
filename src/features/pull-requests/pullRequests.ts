@@ -1,4 +1,5 @@
-import { githubJson } from '@/features/codebases/githubRequest';
+import { githubBytes, githubGraphql, githubJson, githubSend } from '@/features/codebases/githubRequest';
+import { imageTypeOf } from './imageFiles';
 
 export interface PullRequestSummary {
   number: number;
@@ -6,6 +7,8 @@ export interface PullRequestSummary {
   author: string;
   updatedAt: string;
   draft: boolean;
+  state: string;
+  merged: boolean;
 }
 
 export interface CommitSummary {
@@ -24,8 +27,20 @@ export interface ChangedFile {
   patch: string | null;
 }
 
+export interface ChangedFileSet {
+  baseRef: string;
+  headRef: string;
+  files: ChangedFile[];
+}
+
+export interface FileBlob {
+  dataUrl: string | null;
+  byteSize: number;
+}
+
 export interface PullRequestCommits {
   pull: PullRequestSummary;
+  body: string | null;
   baseRef: string;
   headRef: string;
   additions: number;
@@ -33,16 +48,41 @@ export interface PullRequestCommits {
   commits: CommitSummary[];
 }
 
+export interface MergeResult {
+  merged: boolean;
+  message: string;
+}
+
+export interface PullComment {
+  id: number;
+  author: string;
+  createdAt: string;
+  body: string;
+  path: string | null;
+}
+
 interface GithubPull {
   number: number;
+  node_id: string;
   title: string;
+  body?: string | null;
   user: { login: string } | null;
   updated_at: string;
   draft?: boolean;
-  base: { ref: string };
-  head: { ref: string };
+  state: string;
+  merged?: boolean;
+  base: { ref: string; sha: string };
+  head: { ref: string; sha: string };
   additions?: number;
   deletions?: number;
+}
+
+interface GithubComment {
+  id: number;
+  user: { login: string } | null;
+  created_at: string;
+  body?: string;
+  path?: string;
 }
 
 interface GithubChangedFile {
@@ -58,12 +98,14 @@ interface GithubCommit {
   sha: string;
   commit: { message: string; author: { name: string; date: string } | null };
   author: { login: string } | null;
+  parents?: { sha: string }[];
   files?: GithubChangedFile[];
 }
 
 const API = 'https://api.github.com';
 const FILE_PAGE = 100;
 const MAX_FILE_PAGES = 10;
+const MAX_BLOB_BYTES = 6 * 1024 * 1024;
 
 export async function listPullRequests(owner: string, name: string): Promise<PullRequestSummary[]> {
   const pulls = await githubJson<GithubPull[]>(
@@ -79,6 +121,7 @@ export async function describePullRequest(owner: string, name: string, number: n
   ]);
   return {
     pull: summarizePull(pull),
+    body: pull.body ?? null,
     baseRef: pull.base.ref,
     headRef: pull.head.ref,
     additions: pull.additions ?? 0,
@@ -87,7 +130,34 @@ export async function describePullRequest(owner: string, name: string, number: n
   };
 }
 
-export async function listPullRequestFiles(owner: string, name: string, number: number): Promise<ChangedFile[]> {
+export async function mergePullRequest(owner: string, name: string, number: number): Promise<MergeResult> {
+  const pull = await githubJson<GithubPull>(`${API}/repos/${owner}/${name}/pulls/${number}`);
+  if (pull.draft) await markReadyForReview(pull.node_id);
+  const result = await githubSend<{ merged?: boolean; message?: string }>(
+    `${API}/repos/${owner}/${name}/pulls/${number}/merge`,
+    'PUT',
+    {},
+  );
+  return { merged: result.merged ?? false, message: result.message ?? '' };
+}
+
+async function markReadyForReview(pullId: string): Promise<void> {
+  try {
+    await githubGraphql(
+      'mutation($pullId: ID!) { markPullRequestReadyForReview(input: { pullRequestId: $pullId }) { pullRequest { isDraft } } }',
+      { pullId },
+    );
+  } catch (error) {
+    if (!alreadyReady(error)) throw error;
+  }
+}
+
+function alreadyReady(error: unknown): boolean {
+  return error instanceof Error && /not a draft/i.test(error.message);
+}
+
+export async function listPullRequestFiles(owner: string, name: string, number: number): Promise<ChangedFileSet> {
+  const pull = await githubJson<GithubPull>(`${API}/repos/${owner}/${name}/pulls/${number}`);
   const files: ChangedFile[] = [];
   for (let page = 1; page <= MAX_FILE_PAGES; page += 1) {
     const batch = await githubJson<GithubChangedFile[]>(
@@ -96,12 +166,38 @@ export async function listPullRequestFiles(owner: string, name: string, number: 
     files.push(...batch.map(changedFile));
     if (batch.length < FILE_PAGE) break;
   }
-  return files;
+  return { baseRef: pull.base.sha, headRef: pull.head.sha, files };
 }
 
-export async function listCommitFiles(owner: string, name: string, sha: string): Promise<ChangedFile[]> {
+export async function listPullComments(owner: string, name: string, number: number): Promise<PullComment[]> {
+  const [conversation, review] = await Promise.all([
+    githubJson<GithubComment[]>(`${API}/repos/${owner}/${name}/issues/${number}/comments?per_page=100`),
+    githubJson<GithubComment[]>(`${API}/repos/${owner}/${name}/pulls/${number}/comments?per_page=100`),
+  ]);
+  return [...conversation, ...review].map(pullComment).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
+export async function listCommitFiles(owner: string, name: string, sha: string): Promise<ChangedFileSet> {
   const commit = await githubJson<GithubCommit>(`${API}/repos/${owner}/${name}/commits/${sha}`);
-  return (commit.files ?? []).map(changedFile);
+  return {
+    baseRef: commit.parents?.[0]?.sha ?? commit.sha,
+    headRef: commit.sha,
+    files: (commit.files ?? []).map(changedFile),
+  };
+}
+
+export async function readFileBlob(owner: string, name: string, ref: string, path: string): Promise<FileBlob> {
+  const encoded = path.split('/').map(encodeURIComponent).join('/');
+  const bytes = await githubBytes(
+    `${API}/repos/${owner}/${name}/contents/${encoded}?ref=${encodeURIComponent(ref)}`,
+    'application/vnd.github.raw',
+  );
+  if (bytes.byteLength > MAX_BLOB_BYTES) return { dataUrl: null, byteSize: bytes.byteLength };
+  const type = imageTypeOf(path) ?? 'application/octet-stream';
+  return {
+    dataUrl: `data:${type};base64,${Buffer.from(bytes).toString('base64')}`,
+    byteSize: bytes.byteLength,
+  };
 }
 
 function changedFile(file: GithubChangedFile): ChangedFile {
@@ -115,6 +211,16 @@ function changedFile(file: GithubChangedFile): ChangedFile {
   };
 }
 
+function pullComment(comment: GithubComment): PullComment {
+  return {
+    id: comment.id,
+    author: comment.user?.login ?? '',
+    createdAt: comment.created_at,
+    body: comment.body ?? '',
+    path: comment.path ?? null,
+  };
+}
+
 function summarizePull(pull: GithubPull): PullRequestSummary {
   return {
     number: pull.number,
@@ -122,6 +228,8 @@ function summarizePull(pull: GithubPull): PullRequestSummary {
     author: pull.user?.login ?? '',
     updatedAt: pull.updated_at,
     draft: pull.draft ?? false,
+    state: pull.state,
+    merged: pull.merged ?? false,
   };
 }
 
