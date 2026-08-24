@@ -7,7 +7,7 @@ import { PullDiscussion } from './PullDiscussion';
 import { PullRequestList } from './PullRequestMenu';
 import { ResizableColumn, type ColumnSize } from './ResizableColumn';
 import { setCurrentPull } from './currentPullStore';
-import type { ChangedFile, PullRequestCommits } from './pullRequests';
+import type { ChangedFileSet, PullRequestCommits } from './pullRequests';
 import { RelativeTime } from '@/features/surface-ui/RelativeTime';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 import { apiJson } from '@/features/sources/apiClient';
@@ -23,7 +23,7 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
   const [error, setError] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [selection, setSelection] = useState<string>(WHOLE_PULL);
-  const [files, setFiles] = useState<ChangedFile[] | null>(null);
+  const [fileSet, setFileSet] = useState<ChangedFileSet | null>(null);
   const [path, setPath] = useState<string | null>(null);
   const [listSize, setListSize] = useState<ColumnSize>({ width: 300, open: false });
   const [discussionSize, setDiscussionSize] = useState<ColumnSize>({ width: 320, open: false });
@@ -59,7 +59,7 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
   useEffect(() => {
     if (!ready) return;
     const controller = new AbortController();
-    setFiles(null);
+    setFileSet(null);
     setFileError(null);
     setPath(null);
     const repoParams = `owner=${encodeURIComponent(owner)}&name=${encodeURIComponent(repo)}`;
@@ -67,10 +67,10 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
       selection === WHOLE_PULL
         ? `/api/github/pull-files?${repoParams}&number=${number}`
         : `/api/github/commit?${repoParams}&sha=${selection}`;
-    apiJson<ChangedFile[]>(source, token, controller.signal)
+    apiJson<ChangedFileSet>(source, token, controller.signal)
       .then((loaded) => {
-        setFiles(loaded);
-        setPath(loaded[0]?.filename ?? null);
+        setFileSet(loaded);
+        setPath(loaded.files[0]?.filename ?? null);
       })
       .catch((issue: unknown) => {
         if (!controller.signal.aborted) setFileError(issue instanceof Error ? issue.message : String(issue));
@@ -110,13 +110,13 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
             </SelectableRow>
           ))}
         </ResizableColumn>
-        <ResizableColumn icon="▤" title={`files · ${files?.length ?? 0}`} size={fileSize} onSize={setFileSize}>
+        <ResizableColumn icon="▤" title={`files · ${fileSet?.files.length ?? 0}`} size={fileSize} onSize={setFileSize}>
           {fileError !== null ? (
             <p className="px-1.5 py-[1px] text-[11px] leading-4 text-error-ink">{fileError}</p>
-          ) : files === null ? (
+          ) : fileSet === null ? (
             <p className="px-1.5 py-[1px] text-[11px] leading-4 text-ink-dim">Loading…</p>
           ) : (
-            files.map((candidate) => (
+            fileSet.files.map((candidate) => (
               <SelectableRow
                 key={candidate.filename}
                 onActivate={() => {
@@ -137,7 +137,7 @@ export function PullRequestView({ owner, repo, number }: { owner: string; repo: 
         {fileError !== null ? (
           <p className="flex-1 px-2 py-1 text-[11px] text-error-ink">{fileError}</p>
         ) : (
-          <DiffPanes ref={diffPanes} files={files} />
+          <DiffPanes ref={diffPanes} owner={owner} repo={repo} fileSet={fileSet} />
         )}
       </div>
     </div>
