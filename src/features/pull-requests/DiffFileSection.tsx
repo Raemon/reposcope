@@ -5,6 +5,7 @@ import { ChangeCounts } from './ChangeCounts';
 import { FileDiff } from './FileDiff';
 import { ImageDiff } from './ImageDiff';
 import { isImagePath } from './imageFiles';
+import { imageSides } from './imageView';
 import type { ChangedFile } from './pullRequests';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 
@@ -23,7 +24,7 @@ export function DiffFileSection({
   headRef: string;
   sectionRef: (node: HTMLElement | null) => void;
 }) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(!isImagePath(file.filename));
   return (
     <section ref={sectionRef} className="border-b border-panel-edge">
       <SelectableRow
@@ -61,14 +62,10 @@ function FileBody({
 }) {
   const diff = file.patch ? <FileDiff owner={owner} repo={repo} file={file} baseRef={baseRef} headRef={headRef} /> : null;
   if (isImagePath(file.filename)) {
+    const { before, after } = imageSides(file, baseRef, headRef);
     return (
       <>
-        <ImageDiff
-          owner={owner}
-          repo={repo}
-          before={file.status === 'added' ? null : { ref: baseRef, path: file.previousFilename ?? file.filename }}
-          after={file.status === 'removed' ? null : { ref: headRef, path: file.filename }}
-        />
+        <ImageDiff owner={owner} repo={repo} before={before} after={after} />
         {diff}
       </>
     );

@@ -1,12 +1,13 @@
 import { GithubRequestError } from '@/features/codebases/githubRequest';
-import { withGithubToken } from '@/features/codebases/githubToken';
+import { userGithubTokenRejected, withGithubToken } from '@/features/codebases/githubToken';
+import { GITHUB_AUTH_HEADER, GITHUB_AUTH_REJECTED } from './githubAuthHeader';
 
 export function apiRoute<T>(request: Request, work: () => Promise<T>): Promise<Response> {
   return withGithubToken(bearerToken(request), async () => {
     try {
-      return Response.json(await work());
+      return jsonResponse(await work());
     } catch (error) {
-      return Response.json({ error: errorMessage(error) }, { status: errorStatus(error) });
+      return jsonResponse({ error: errorMessage(error) }, errorStatus(error));
     }
   });
 }
@@ -20,6 +21,14 @@ export function requireParam(request: Request, name: string, pattern: RegExp): s
 function bearerToken(request: Request): string | null {
   const match = request.headers.get('authorization')?.match(/^Bearer\s+(\S+)$/i);
   return match?.[1] ?? null;
+}
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return Response.json(body, { status, headers: rejectedAuthHeader() });
+}
+
+function rejectedAuthHeader(): Record<string, string> {
+  return userGithubTokenRejected() ? { [GITHUB_AUTH_HEADER]: GITHUB_AUTH_REJECTED } : {};
 }
 
 function errorStatus(error: unknown): number {

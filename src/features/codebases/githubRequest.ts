@@ -1,5 +1,5 @@
 import { cacheKey, dropCachedScope, readCachedResponse, writeCachedResponse, type CachedResponse } from './githubCache';
-import { githubToken, githubTokenIdentity } from './githubToken';
+import { githubToken, githubTokenIdentity, rejectGithubToken } from './githubToken';
 
 export class GithubRequestError extends Error {
   constructor(
@@ -26,14 +26,18 @@ export async function githubBytes(url: string, accept = ACCEPT): Promise<Uint8Ar
 }
 
 export async function githubSend<T>(url: string, method: string, body: unknown): Promise<T> {
+  const tokenUsed = githubToken();
   const response = await fetch(url, {
     method,
     cache: 'no-store',
-    headers: { ...githubHeaders(), 'Content-Type': 'application/json' },
+    headers: { ...githubHeaders(ACCEPT, tokenUsed), 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
   await dropCachedScope(scopeOf(url));
-  if (!response.ok) throw new GithubRequestError(response.status, await describeSendFailure(response, url));
+  if (!response.ok) {
+    rejectIfUnauthorized(response.status, tokenUsed);
+    throw new GithubRequestError(response.status, await describeSendFailure(response, url));
+  }
   return (await response.json()) as T;
 }
 
@@ -43,13 +47,17 @@ export async function dropGithubCache(owner: string, name: string): Promise<void
 
 export async function githubGraphql<T>(query: string, variables: Record<string, unknown>): Promise<T> {
   const url = 'https://api.github.com/graphql';
+  const tokenUsed = githubToken();
   const response = await fetch(url, {
     method: 'POST',
     cache: 'no-store',
-    headers: { ...githubHeaders('application/json'), 'Content-Type': 'application/json' },
+    headers: { ...githubHeaders('application/json', tokenUsed), 'Content-Type': 'application/json' },
     body: JSON.stringify({ query, variables }),
   });
-  if (!response.ok) throw new GithubRequestError(response.status, await describeSendFailure(response, url));
+  if (!response.ok) {
+    rejectIfUnauthorized(response.status, tokenUsed);
+    throw new GithubRequestError(response.status, await describeSendFailure(response, url));
+  }
   const payload = (await response.json()) as { data?: T; errors?: { message?: string }[] };
   const failure = payload.errors?.[0]?.message;
   if (failure) throw new GithubRequestError(response.status, failure);
@@ -80,17 +88,50 @@ async function revalidate(
   held: CachedResponse | null,
   fresh: boolean,
 ): Promise<CachedResponse> {
-  const response = await fetch(url, { cache: 'no-store', headers: conditionalHeaders(accept, held) }).catch(() => null);
-  if (!response) {
-    if (held && !fresh) return held;
-    throw new GithubRequestError(503, `GitHub is unreachable for ${url}`);
-  }
+  const tokenUsed = githubToken();
+  const fallback = fresh ? null : held;
+  const response = await fetch(url, { cache: 'no-store', headers: conditionalHeaders(accept, held, tokenUsed) }).catch(() => null);
+  if (!response) return unreachable(url, fallback);
   if (response.status === 304 && held) return store(scope, key, { ...held, storedAt: Date.now() });
-  if (!response.ok) {
-    if (held && !fresh && STALE_ON_STATUS.includes(response.status)) return held;
-    throw new GithubRequestError(response.status, describeFailure(response, url));
-  }
+  if (response.status === 401 && tokenUsed) return readAfterRejectedToken(url, accept, tokenUsed, response);
+  if (!response.ok) return staleOrThrow(response, url, fallback);
   return store(scope, key, await capture(response));
+}
+
+function unreachable(url: string, held: CachedResponse | null): CachedResponse {
+  if (held) return held;
+  throw new GithubRequestError(503, `GitHub is unreachable for ${url}`);
+}
+
+function staleOrThrow(response: Response, url: string, held: CachedResponse | null): CachedResponse {
+  if (held && STALE_ON_STATUS.includes(response.status)) return held;
+  throw new GithubRequestError(response.status, describeFailure(response, url));
+}
+
+async function readAfterRejectedToken(
+  url: string,
+  accept: string,
+  tokenUsed: string,
+  unauthorized: Response,
+): Promise<CachedResponse> {
+  rejectGithubToken(tokenUsed);
+  if (githubToken() === tokenUsed) throw unauthorizedError(unauthorized, url);
+  try {
+    return await cachedResponse(url, accept);
+  } catch (error) {
+    throw remapUnauthorizedFallback(error, unauthorized, url);
+  }
+}
+
+function unauthorizedError(response: Response, url: string): GithubRequestError {
+  return new GithubRequestError(401, describeFailure(response, url));
+}
+
+function remapUnauthorizedFallback(error: unknown, unauthorized: Response, url: string): unknown {
+  if (error instanceof GithubRequestError && (error.status === 401 || error.status === 404)) {
+    return unauthorizedError(unauthorized, url);
+  }
+  return error;
 }
 
 async function capture(response: Response): Promise<CachedResponse> {
@@ -135,8 +176,8 @@ function pathOf(url: string): string {
   }
 }
 
-function conditionalHeaders(accept: string, held: CachedResponse | null): Record<string, string> {
-  const headers = githubHeaders(accept);
+function conditionalHeaders(accept: string, held: CachedResponse | null, token: string | null): Record<string, string> {
+  const headers = githubHeaders(accept, token);
   if (held?.etag) headers['If-None-Match'] = held.etag;
   else if (held?.lastModified) headers['If-Modified-Since'] = held.lastModified;
   return headers;
@@ -151,11 +192,15 @@ async function describeSendFailure(response: Response, url: string): Promise<str
 function describeFailure(response: Response, url: string): string {
   const exhausted = response.headers.get('x-ratelimit-remaining') === '0';
   if (exhausted) return `GitHub rate limit exhausted (${response.status} for ${url}); connect GitHub or set GITHUB_TOKEN`;
+  if (response.status === 401) return `GitHub rejected the credentials for ${url}; reconnect GitHub`;
   return `GitHub ${response.status} for ${url}`;
 }
 
-function githubHeaders(accept = ACCEPT): Record<string, string> {
-  const token = githubToken();
+function rejectIfUnauthorized(status: number, token: string | null): void {
+  if (status === 401 && token) rejectGithubToken(token);
+}
+
+function githubHeaders(accept = ACCEPT, token = githubToken()): Record<string, string> {
   return {
     Accept: accept,
     'X-GitHub-Api-Version': '2022-11-28',
