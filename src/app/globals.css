@@ -147,6 +147,18 @@
   }
 }
 
+:root {
+  --kind-ts: light-dark(#2f6fc4, #7fb6f2);
+  --kind-tsx: light-dark(#12808f, #56c8d8);
+  --kind-js: light-dark(#7d6a10, #ccb459);
+  --kind-data: light-dark(#9c5b1c, #e09a55);
+  --kind-style: light-dark(#7b3fa0, #c48ce0);
+  --kind-prose: light-dark(#5a6b7d, #a3b3c4);
+  --kind-markup: light-dark(#b1452a, #ea8a6a);
+  --kind-shell: light-dark(#3f7a4a, #7fc98e);
+  --kind-image: light-dark(#9c3d84, #dd8ec8);
+}
+
 .diff-code span {
   color: var(--shiki-light, inherit);
 }
