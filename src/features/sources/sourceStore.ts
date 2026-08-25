@@ -52,7 +52,7 @@ export function removeSource(source: CodebaseSource): void {
   writeSources(readSources().filter((candidate) => sourceKey(candidate) !== key));
 }
 
-function readGithubToken(): string | null {
+export function readGithubToken(): string | null {
   return readItem(TOKEN_KEY);
 }
 
@@ -74,6 +74,7 @@ export function disconnectGithub(): void {
 }
 
 export function signOutGithub(reason: string): void {
+  if (readGithubToken() === null) return;
   writeItem(SIGNED_OUT_KEY, JSON.stringify({ reason, access: readGithubAccess() }));
   forgetGithubSession();
 }

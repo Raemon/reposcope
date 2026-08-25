@@ -2,6 +2,8 @@ import type { OAuthConfig } from './githubOAuthConfig';
 
 const TOKEN_URL = 'https://github.com/login/oauth/access_token';
 
+export class GrantRejectedError extends Error {}
+
 export interface GithubGrant {
   token: string;
   refreshToken: string | null;
@@ -37,7 +39,7 @@ async function requestGrant(config: OAuthConfig, fields: Record<string, string>)
 }
 
 function grantOf(body: TokenResponse): GithubGrant {
-  if (!body.access_token) throw new Error(`GitHub token exchange failed: ${body.error_description ?? body.error ?? 'no token'}`);
+  if (!body.access_token) throw new GrantRejectedError(`GitHub token exchange failed: ${body.error_description ?? body.error ?? 'no token'}`);
   return {
     token: body.access_token,
     refreshToken: body.refresh_token ?? null,
@@ -46,7 +48,7 @@ function grantOf(body: TokenResponse): GithubGrant {
   };
 }
 
-function lifetime(value: number | string | undefined): number | null {
+export function lifetime(value: number | string | null | undefined): number | null {
   const seconds = typeof value === 'string' ? Number(value) : value;
   return typeof seconds === 'number' && Number.isFinite(seconds) && seconds > 0 ? seconds : null;
 }

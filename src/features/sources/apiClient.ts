@@ -1,8 +1,5 @@
 import { GITHUB_AUTH_HEADER, GITHUB_AUTH_REJECTED } from '@/features/github-auth/githubAuthHeader';
-import { freshGithubToken, renewGithubToken } from './githubSession';
-import { signOutGithub } from './sourceStore';
-
-const SIGN_IN_EXPIRED = 'GitHub sign-in expired';
+import { freshGithubToken, replacementGithubToken } from './githubSession';
 
 interface Call {
   method?: string;
@@ -37,17 +34,15 @@ export async function apiPostJson<T>(path: string, token: string | null, body: u
 }
 
 async function send<T>(path: string, token: string | null, call: Call): Promise<T> {
-  const response = await fetch(path, authorized(call, await freshGithubToken(token)));
-  return readJson<T>(tokenRejected(response) ? await retryRenewed(path, call, response) : response);
+  const sent = await freshGithubToken(token);
+  const response = await fetch(path, authorized(call, sent));
+  return readJson<T>(tokenRejected(response) ? await retryRenewed(path, call, response, sent) : response);
 }
 
-async function retryRenewed(path: string, call: Call, rejected: Response): Promise<Response> {
-  const renewed = await renewGithubToken();
-  if (renewed === null) {
-    signOutGithub(SIGN_IN_EXPIRED);
-    return rejected;
-  }
-  return fetch(path, authorized(call, renewed));
+async function retryRenewed(path: string, call: Call, rejected: Response, sent: string | null): Promise<Response> {
+  const replacement = await replacementGithubToken(sent);
+  if (replacement === null) return rejected;
+  return fetch(path, authorized(call, replacement));
 }
 
 function authorized(call: Call, token: string | null): RequestInit {

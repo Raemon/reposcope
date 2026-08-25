@@ -1,5 +1,5 @@
 import { oauthConfig } from '@/features/github-auth/githubOAuthConfig';
-import { refreshGrant } from '@/features/github-auth/githubOAuthTokens';
+import { GrantRejectedError, refreshGrant } from '@/features/github-auth/githubOAuthTokens';
 
 export async function POST(request: Request) {
   const config = oauthConfig();
@@ -11,6 +11,7 @@ export async function POST(request: Request) {
   try {
     return Response.json(await refreshGrant(refreshToken, config));
   } catch (error) {
-    return Response.json({ error: error instanceof Error ? error.message : 'GitHub refresh failed' }, { status: 401 });
+    const status = error instanceof GrantRejectedError ? 401 : 502;
+    return Response.json({ error: error instanceof Error ? error.message : 'GitHub refresh failed' }, { status });
   }
 }
