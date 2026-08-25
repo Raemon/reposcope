@@ -1,15 +1,19 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { ChangeCounts } from './ChangeCounts';
 import type { PreviewToken } from './ColumnPreview';
 import { useColumnNav, type ColumnRow } from './columnNav';
 import type { PullRequestCommits } from './pullRequests';
+import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { RelativeTime } from '@/features/surface-ui/RelativeTime';
 import { rowStateClass } from '@/features/surface-ui/rowState';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 
-const ROW = 'flex w-full items-baseline gap-1.5 px-1.5 py-[1px] text-left text-[11px] leading-4';
+const ROW = 'flex w-full items-center gap-1.5 py-[2px] pr-1.5 text-left font-serif text-[12px] leading-[1.15]';
+const META = 'shrink-0 font-mono text-[9px]';
+const HASH_CHARS = 3;
+const COPIED_MS = 1200;
 export const WHOLE_PULL = 'all';
 
 export function PullCommitColumn({
@@ -26,16 +30,15 @@ export function PullCommitColumn({
   return (
     <>
       <CommitRow row={rowFor(WHOLE_PULL)} onActivate={() => onSelect(WHOLE_PULL)}>
-        <span className="min-w-0 flex-1 truncate">all changes</span>
+        <span className="min-w-0 flex-1">all changes</span>
         <ChangeCounts additions={pull.additions} deletions={pull.deletions} />
       </CommitRow>
       {pull.commits.map((commit) => (
-        <CommitRow key={commit.sha} row={rowFor(commit.sha)} onActivate={() => onSelect(commit.sha)}>
-          <span className="shrink-0 text-[9px] text-ink-dim/50">{commit.sha.slice(0, 7)}</span>
-          <span className="min-w-0 flex-1 truncate">{commit.message}</span>
-          <span className="shrink-0 text-[9px] text-ink-dim">{commit.fileCount}f</span>
+        <CommitRow key={commit.sha} row={rowFor(commit.sha)} onActivate={() => onSelect(commit.sha)} sha={commit.sha}>
+          <span className="min-w-0 flex-1 break-words">{commit.message}</span>
+          <span className={`${META} text-ink-dim`}>{commit.fileCount}f</span>
           <ChangeCounts additions={commit.additions} deletions={commit.deletions} />
-          <RelativeTime iso={commit.date} className="shrink-0 text-[9px] text-ink-dim" />
+          <RelativeTime iso={commit.date} className={`${META} text-ink-dim`} />
         </CommitRow>
       ))}
     </>
@@ -45,16 +48,42 @@ export function PullCommitColumn({
 function CommitRow({
   row,
   onActivate,
+  sha,
   children,
 }: {
   row: ColumnRow;
   onActivate: () => void;
+  sha?: string;
   children: ReactNode;
 }) {
   return (
-    <SelectableRow {...row.props} onActivate={onActivate} className={`${ROW} ${rowStateClass(row.state)}`}>
-      {children}
-    </SelectableRow>
+    <div className={`flex items-center ${rowStateClass(row.state)}`}>
+      {sha ? <CopyHash sha={sha} /> : <span className={`${META} pl-1.5`}>{' '.repeat(HASH_CHARS)}</span>}
+      <SelectableRow {...row.props} onActivate={onActivate} className={ROW}>
+        {children}
+      </SelectableRow>
+    </div>
+  );
+}
+
+function CopyHash({ sha }: { sha: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    void navigator.clipboard.writeText(sha);
+    setCopied(true);
+    setTimeout(() => setCopied(false), COPIED_MS);
+  };
+  return (
+    <HoverCardTrigger label={copied ? `copied ${sha}` : `copy ${sha}`} className="shrink-0" focusable={false} tooltipStyle>
+      <button
+        type="button"
+        aria-label={`Copy commit hash ${sha}`}
+        onClick={copy}
+        className={`${META} pl-1.5 hover:text-accent ${copied ? 'text-accent' : 'text-ink-dim/50'}`}
+      >
+        {sha.slice(0, HASH_CHARS)}
+      </button>
+    </HoverCardTrigger>
   );
 }
 

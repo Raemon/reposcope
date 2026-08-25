@@ -90,13 +90,13 @@ function PullRow({
       href={allPullsRoute(pull.owner, pull.repo, pull.number)}
       current={pathname === pullRoute(pull.owner, pull.repo, pull.number)}
     >
-      <span className="shrink-0 truncate text-[9px] text-ink-dim" style={{ width: `${repoColumnCh}ch` }}>
+      <span className="shrink-0 truncate font-mono text-[9px] text-ink-dim" style={{ width: `${repoColumnCh}ch` }}>
         {pull.repo}
       </span>
-      <span className="shrink-0 text-[9px] text-ink-dim">#{pull.number}</span>
-      <span className="min-w-0 flex-1 truncate">{pull.title}</span>
+      <span className="shrink-0 font-mono text-[9px] text-ink-dim">#{pull.number}</span>
+      <span className="min-w-0 flex-1 break-words">{pull.title}</span>
       {pull.draft && <span className="shrink-0 rounded bg-btn px-1 text-[9px]">draft</span>}
-      <span className="shrink-0 text-[9px] text-ink-dim">
+      <span className="shrink-0 font-mono text-[9px] text-ink-dim">
         {pull.author} · {timeAgo(pull.updatedAt)}
       </span>
     </PullListRow>

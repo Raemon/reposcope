@@ -29,13 +29,13 @@ export function PullListRow({
     <div
       data-nav-cursor={row.props.cursor || undefined}
       onPointerEnter={row.props.onPointerEnter}
-      className={`group flex items-baseline ${rowStateClass(row.state)}`}
+      className={`group flex items-center ${rowStateClass(row.state)}`}
     >
       <SelectableLink
         href={href}
         current={current}
         onPointerEnter={() => prefetchPull(target.owner, target.repo, target.number, token)}
-        className="flex min-w-0 flex-1 items-baseline gap-1.5 px-2 py-[1px] text-[11px] leading-4"
+        className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-[2px] font-serif text-[12px] leading-[1.15]"
       >
         {children}
       </SelectableLink>
