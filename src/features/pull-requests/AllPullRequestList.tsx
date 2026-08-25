@@ -8,7 +8,7 @@ import { useStandingPulls } from './pullActionStore';
 import { allPullsRoute, pullRoute } from './pullPaths';
 import type { CrossRepoPull } from './pullRequests';
 import { useAllPullRequests } from './useAllPullRequests';
-import { timeAgo } from '@/features/repo-insights/ui/timeAgo';
+import { timeAgo } from '@/features/surface-ui/timeAgo';
 
 const NOTE = 'px-2 py-1 text-[11px] leading-4';
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;

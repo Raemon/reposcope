@@ -39,9 +39,3 @@ function SearchIcon() {
     </svg>
   );
 }
-
-export function matchesFilter(filter: string, ...haystacks: (string | undefined)[]): boolean {
-  const needle = filter.trim().toLowerCase();
-  if (needle === '') return true;
-  return haystacks.some((held) => held !== undefined && held.toLowerCase().includes(needle));
-}
