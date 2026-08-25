@@ -19,7 +19,6 @@ import { disconnectGithub, useGithubAccess, useGithubToken, useSources, useStore
 import { GithubSignedOutNotice } from '@/features/sources/GithubSignedOutNotice';
 
 const ALL_PULLS = '/pulls';
-const INSIGHTS = '/insights';
 
 export function CodebaseHeader() {
   const pathname = usePathname();
@@ -61,9 +60,6 @@ function CodebaseMenu({ reading }: { reading: RepoRef | null }) {
         <>
           <MenuRow href={ALL_PULLS} active={readingAllPulls} label="All">
             open pull requests from every codebase, newest first
-          </MenuRow>
-          <MenuRow href={INSIGHTS} active={pathname === INSIGHTS} label="Insights">
-            server boundaries and callers, codebase by codebase
           </MenuRow>
           {!ready ? (
             <p className="px-2 py-1 text-[11px] leading-4 text-ink-dim">Loading…</p>

@@ -8,7 +8,7 @@ interface Call {
   signal?: AbortSignal;
 }
 
-export class ApiClientError extends Error {
+class ApiClientError extends Error {
   constructor(
     readonly status: number,
     message: string,

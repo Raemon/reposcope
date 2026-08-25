@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { timeAgoShort } from '@/features/repo-insights/ui/timeAgo';
+import { timeAgoShort } from './timeAgo';
 
 export function RelativeTime({ iso, className = '' }: { iso: string; className?: string }) {
   const [anchor, setAnchor] = useState<DOMRect | null>(null);

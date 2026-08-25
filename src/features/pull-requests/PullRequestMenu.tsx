@@ -3,7 +3,7 @@
 import { usePathname } from 'next/navigation';
 import type { PullRequestSummary } from './pullRequests';
 import { HeaderMenu } from '@/features/codebases/HeaderMenu';
-import { timeAgo } from '@/features/repo-insights/ui/timeAgo';
+import { timeAgo } from '@/features/surface-ui/timeAgo';
 import { PullListRow } from './PullListRow';
 import { useStandingRepoPulls } from './pullActionStore';
 import { pullRoute, repoPullsPath } from './pullPaths';

@@ -22,8 +22,8 @@ export function Landing({ error, oauthConfigured }: { error: string | null; oaut
       <h1 className="text-xl text-accent">reposcope</h1>
       <p className="mt-2 text-xs leading-5 text-ink-dim">
         {onboarding ? 'Point reposcope at GitHub repositories. ' : 'Pick a repository below to read it. '}
-        Each one is fetched from GitHub in memory, parsed, and rendered as its server boundary: URL layers, the code
-        each operation reaches, and the in-repo callers that make it matter to a person.
+        Each one lists its open pull requests, read straight from GitHub: the discussion, the commits, and the diff
+        side by side.
       </p>
       {error && (
         <p className="mt-3 rounded bg-error-bg px-3 py-2 text-xs text-error-ink">{error}</p>

@@ -6,7 +6,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'reposcope — codebase viewer',
-  description: 'Read the server boundary of any repository straight from GitHub.',
+  description: 'Read the open pull requests of any repository straight from GitHub.',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

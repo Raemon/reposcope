@@ -1,7 +1,7 @@
 'use client';
 
 import { useCurrentPull } from './currentPullStore';
-import { timeAgo } from '@/features/repo-insights/ui/timeAgo';
+import { timeAgo } from '@/features/surface-ui/timeAgo';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
 
 export function CurrentPullTitle({ repo, number }: { repo: RepoRef; number: number }) {
