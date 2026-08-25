@@ -1,5 +1,6 @@
 'use client';
 
+import { GithubSignedOutNotice } from './GithubSignedOutNotice';
 import { SourceControls } from './SourceControls';
 import { useGithubAccess, useGithubToken, useSources, useStoreReady } from './sourceStore';
 import { CodebaseList } from '@/features/codebases/CodebaseList';
@@ -27,6 +28,7 @@ export function Landing({ error, oauthConfigured }: { error: string | null; oaut
       {error && (
         <p className="mt-3 rounded bg-error-bg px-3 py-2 text-xs text-error-ink">{error}</p>
       )}
+      <GithubSignedOutNotice className="mt-3 rounded bg-error-bg px-3 py-2 !text-xs" />
       {!onboarding && (
         <>
           <p className="mb-1 mt-5 text-[10px] uppercase tracking-[0.18em] text-ink-dim">Your codebases</p>
