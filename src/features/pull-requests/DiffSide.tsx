@@ -3,9 +3,11 @@
 import { Fragment, type ReactNode } from 'react';
 import { hunkHasEditableLines, type EditableBlock } from './editableBlocks';
 import { codeSegments } from './codeSegments';
+import type { DiffLine } from './diffLines';
 import type { ThemedToken } from './diffHighlight';
 import type { CharRange, IntralineRanges } from './intralineDiff';
-import type { DiffCell, DiffRow } from './splitDiff';
+import type { DiffRow } from './splitDiff';
+import type { SideTokens } from './useDiffSideHighlight';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 
 const ROW = 'flex h-[15px] items-center gap-1 leading-[15px]';
@@ -21,9 +23,9 @@ export interface HunkControl {
 
 export interface SideProps {
   rows: DiffRow[];
-  side: 'left' | 'right';
+  lines: DiffLine[];
   labels: boolean;
-  tokens: (ThemedToken[] | null)[] | null;
+  tokens: SideTokens | null;
   emphasis: (IntralineRanges | null)[];
   expand: HunkControl;
   editable?: boolean;
@@ -34,22 +36,28 @@ export interface SideProps {
 }
 
 export function DiffSide(props: SideProps) {
-  const { rows, editedRows, editor } = props;
-  if (!editedRows) return <DiffRows {...props} from={0} to={rows.length} />;
+  const { lines, editedRows, editor } = props;
+  if (!editedRows) return <DiffLines {...props} from={0} to={lines.length} />;
+  const edited = editedLineRange(lines, editedRows);
   return (
     <div className="min-w-0 flex-1">
-      <DiffRows {...props} from={0} to={editedRows.firstRow} />
+      <DiffLines {...props} from={0} to={edited.first} />
       {editor}
-      <DiffRows {...props} from={editedRows.lastRow + 1} to={rows.length} />
+      <DiffLines {...props} from={edited.last + 1} to={lines.length} />
     </div>
   );
 }
 
-function DiffRows({
+function editedLineRange(lines: DiffLine[], block: EditableBlock): { first: number; last: number } {
+  const covered = lines.flatMap((line, index) => (line.row >= block.firstRow && line.row <= block.lastRow ? [index] : []));
+  return { first: covered[0] ?? lines.length, last: covered[covered.length - 1] ?? lines.length - 1 };
+}
+
+function DiffLines({
   rows,
+  lines,
   from,
   to,
-  side,
   labels,
   tokens,
   emphasis,
@@ -59,31 +67,39 @@ function DiffRows({
   spacer,
 }: SideProps & { from: number; to: number }) {
   if (from >= to) return null;
+  const spacerLine = spacer ? lastLineOfRow(lines, spacer.afterRow) : -1;
   return (
     <div className="min-w-0 flex-1 overflow-x-auto">
       <div className="w-max min-w-full">
-        {rows.slice(from, to).map((row, offset) => {
+        {lines.slice(from, to).map((line, offset) => {
           const index = from + offset;
           return (
             <Fragment key={index}>
-              <DiffLine
-                row={row}
-                cell={row[side]}
-                side={side}
+              <DiffLineView
+                line={line}
                 labels={labels}
-                lineTokens={tokens?.[index] ?? null}
-                ranges={(side === 'left' ? emphasis[index]?.before : emphasis[index]?.after) ?? null}
+                lineTokens={tokens?.[line.side][line.row] ?? null}
+                ranges={rangesFor(emphasis[line.row], line.side)}
                 expand={expand}
                 editable={editable}
-                onEdit={editStarter(rows, index, onEditBlock)}
+                onEdit={editStarter(rows, line.row, onEditBlock)}
               />
-              {spacer?.afterRow === index && <div style={{ height: spacer.height }} />}
+              {spacerLine === index && <div style={{ height: spacer?.height }} />}
             </Fragment>
           );
         })}
       </div>
     </div>
   );
+}
+
+function lastLineOfRow(lines: DiffLine[], row: number): number {
+  for (let index = lines.length - 1; index >= 0; index -= 1) if (lines[index]?.row === row) return index;
+  return -1;
+}
+
+function rangesFor(emphasis: IntralineRanges | null | undefined, side: 'left' | 'right'): CharRange[] | null {
+  return (side === 'left' ? emphasis?.before : emphasis?.after) ?? null;
 }
 
 function editStarter(rows: DiffRow[], index: number, onEditBlock?: (rowIndex: number) => void) {
@@ -93,10 +109,8 @@ function editStarter(rows: DiffRow[], index: number, onEditBlock?: (rowIndex: nu
   return () => onEditBlock(index + (hunk ? 1 : 0));
 }
 
-function DiffLine({
-  row,
-  cell,
-  side,
+function DiffLineView({
+  line,
   labels,
   lineTokens,
   ranges,
@@ -104,9 +118,7 @@ function DiffLine({
   editable,
   onEdit,
 }: {
-  row: DiffRow;
-  cell: DiffCell | null;
-  side: 'left' | 'right';
+  line: DiffLine;
   labels: boolean;
   lineTokens: ThemedToken[] | null;
   ranges: CharRange[] | null;
@@ -114,11 +126,12 @@ function DiffLine({
   editable?: boolean;
   onEdit?: () => void;
 }) {
-  if (row.kind === 'hunk') {
-    return <HunkLine label={labels ? row.label : ''} expand={expand} onEdit={editable && side === 'right' ? onEdit : undefined} />;
+  const { cell, side } = line;
+  if (line.kind === 'hunk') {
+    return <HunkLine label={labels ? line.label : ''} expand={expand} onEdit={editable && side === 'right' ? onEdit : undefined} />;
   }
   if (!cell) return <div className={`${ROW} bg-procgen/40`} />;
-  const changed = row.kind === 'change';
+  const changed = line.kind === 'change';
   const openable = Boolean(editable && side === 'right');
   return (
     <div

@@ -15,6 +15,7 @@ import type { ChangedFileSet, PullRequestCommits, PullRequestSummary } from './p
 import { useStickyColumn } from './stickyColumns';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 import { useCachedJson } from '@/features/sources/useCachedJson';
+import { usePollWhileVisible } from '@/features/sources/usePollWhileVisible';
 
 const WHOLE_PULL = 'all';
 
@@ -52,6 +53,8 @@ export function PullRequestView({
   const error = pullState.error;
   const fileSet = fileState.data;
   const fileError = fileState.error;
+
+  usePollWhileVisible(() => Promise.all([pullState.reload(), fileState.reload()]), ready);
 
   useEffect(() => () => setCurrentPull(null), []);
 
@@ -164,6 +167,7 @@ export function PullRequestView({
               ref={diffPanes}
               owner={owner}
               repo={repo}
+              number={number}
               fileSet={fileSet}
               selected={path}
               editablePull={editablePull(pull.pull, selection)}

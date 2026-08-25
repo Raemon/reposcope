@@ -7,7 +7,7 @@ import { ColumnPreview, type PreviewToken } from './ColumnPreview';
 import { useRegisterColumn } from './columnNav';
 import { PullRequestList } from './PullRequestMenu';
 import { ResizableColumn, type ColumnSize } from './ResizableColumn';
-import { useStandingPulls, useStandingRepoPulls } from './mergeStore';
+import { useStandingPulls, useStandingRepoPulls } from './pullActionStore';
 import { allPullsRoute, pullRoute, repoPullsPath } from './pullPaths';
 import type { PullRequestSummary } from './pullRequests';
 import { useAllPullRequests } from './useAllPullRequests';
@@ -23,7 +23,7 @@ export interface PullColumn {
   onSize: (next: ColumnSize) => void;
 }
 
-interface PullTarget {
+interface PullNavTarget {
   route: string;
   href: string;
   label: string;
@@ -58,7 +58,7 @@ function PullsColumn({
   onSize,
   children,
 }: {
-  targets: PullTarget[];
+  targets: PullNavTarget[];
   size: ColumnSize;
   onSize: (next: ColumnSize) => void;
   children: ReactNode;
@@ -88,7 +88,7 @@ function PullsColumn({
   );
 }
 
-function pullTarget(owner: string, repo: string, pull: PullRequestSummary, acrossRepos: boolean): PullTarget {
+function pullTarget(owner: string, repo: string, pull: PullRequestSummary, acrossRepos: boolean): PullNavTarget {
   const route = pullRoute(owner, repo, pull.number);
   return {
     route,
@@ -98,11 +98,11 @@ function pullTarget(owner: string, repo: string, pull: PullRequestSummary, acros
   };
 }
 
-function pullToken(target: PullTarget, accent: boolean): PreviewToken {
+function pullToken(target: PullNavTarget, accent: boolean): PreviewToken {
   return { key: target.route, label: target.label, title: target.title, accent };
 }
 
-function visitTarget(router: { push: (href: string) => void }, targets: PullTarget[], route: string) {
+function visitTarget(router: { push: (href: string) => void }, targets: PullNavTarget[], route: string) {
   const target = targets.find((held) => held.route === route);
   if (target) router.push(target.href);
 }

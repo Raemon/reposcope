@@ -2,10 +2,12 @@
 
 import { useCallback, useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { DiffFileSection } from './DiffFileSection';
+import { DiffLayoutToggle } from './DiffLayoutToggle';
 import { EditTarget } from './editTarget';
 import { ImageThumbnailStrip } from './ImageThumbnailStrip';
 import { imageFilesOf, isImagePath } from './imageFiles';
 import { orderedFiles as filesInOrder } from './PullFilesColumn';
+import { ReviewThreadProvider } from './reviewThreadStore';
 import type { ChangedFile, ChangedFileSet, PullRequestSummary } from './pullRequests';
 
 const SCROLL_MS = 100;
@@ -18,6 +20,7 @@ export interface DiffPanesHandle {
 export function DiffPanes({
   owner,
   repo,
+  number,
   fileSet,
   selected,
   editablePull = null,
@@ -26,6 +29,7 @@ export function DiffPanes({
 }: {
   owner: string;
   repo: string;
+  number: number;
   fileSet: ChangedFileSet | null;
   selected: string | null;
   editablePull?: PullRequestSummary | null;
@@ -54,32 +58,37 @@ export function DiffPanes({
   const orderedFiles = filesInOrder(fileSet);
   return (
     <EditTarget value={editablePull && { pull: editablePull, headRef: fileSet.headRef, onCommitted }}>
-      <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
-        <ImageStrip
-          key={`${fileSet.baseRef}:${fileSet.headRef}`}
-          owner={owner}
-          repo={repo}
-          fileSet={fileSet}
-          files={imageFilesOf(orderedFiles)}
-        />
-        {orderedFiles.map((file) => (
-          <DiffFileSection
-            key={file.filename}
-            owner={owner}
-            repo={repo}
-            file={file}
-            baseRef={fileSet.baseRef}
-            headRef={fileSet.headRef}
-            selected={file.filename === selected}
-            open={toggled[file.filename] ?? !isImagePath(file.filename)}
-            onToggle={() => toggleFile(file.filename)}
-            sectionRef={(node) => {
-              if (node) sections.current.set(file.filename, node);
-              else sections.current.delete(file.filename);
-            }}
-          />
-        ))}
-      </div>
+      <ReviewThreadProvider owner={owner} repo={repo} number={number}>
+        <div className="flex min-h-0 flex-1 flex-col">
+          <DiffLayoutToggle />
+          <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
+            <ImageStrip
+              key={`${fileSet.baseRef}:${fileSet.headRef}`}
+              owner={owner}
+              repo={repo}
+              fileSet={fileSet}
+              files={imageFilesOf(orderedFiles)}
+            />
+            {orderedFiles.map((file) => (
+              <DiffFileSection
+                key={file.filename}
+                owner={owner}
+                repo={repo}
+                file={file}
+                baseRef={fileSet.baseRef}
+                headRef={fileSet.headRef}
+                selected={file.filename === selected}
+                open={toggled[file.filename] ?? !isImagePath(file.filename)}
+                onToggle={() => toggleFile(file.filename)}
+                sectionRef={(node) => {
+                  if (node) sections.current.set(file.filename, node);
+                  else sections.current.delete(file.filename);
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      </ReviewThreadProvider>
     </EditTarget>
   );
 }

@@ -4,11 +4,14 @@ import { useContext, useMemo, useState } from 'react';
 import { CodeBlockEditor } from './CodeBlockEditor';
 import { CommitEditModal } from './CommitEditModal';
 import { DiffSide, type HunkControl } from './DiffSide';
+import { useDiffLayout } from './diffLayoutStore';
+import { columnLines, unifiedLines } from './diffLines';
 import { langForPath } from './diffHighlight';
 import { ROW_HEIGHT, SAVE_BAR } from './diffMetrics';
 import { EditTarget } from './editTarget';
 import { type EditableBlock } from './editableBlocks';
 import { expandDiff } from './expandDiff';
+import { InlineThreads } from './InlineThreads';
 import { DragHandle, useDragWidth, type ColumnSize } from './ResizableColumn';
 import { splitDiff, type DiffRow } from './splitDiff';
 import { useDiffTokens, useIntralineEmphasis } from './useDiffSideHighlight';
@@ -33,12 +36,16 @@ export function FileDiff({
 }) {
   const token = useGithubToken();
   const target = useContext(EditTarget);
+  const unified = useDiffLayout() === 'unified';
   const [removedSize, setRemovedSize] = useState<ColumnSize>({ width: 520, open: true });
   const startDrag = useDragWidth(removedSize, setRemovedSize);
   const [wantWholeFile, setWantWholeFile] = useState(false);
+  const [threadOverflow, setThreadOverflow] = useState(0);
   const wholeFile = useWholeFile(owner, repo, file, baseRef, headRef, wantWholeFile);
   const patchRows = useMemo(() => splitDiff(file.patch ?? ''), [file.patch]);
   const rows = useMemo(() => rowsForDisplay(patchRows, wholeFile.lines), [patchRows, wholeFile.lines]);
+  const columns = useMemo(() => ({ left: columnLines(rows, 'left'), right: columnLines(rows, 'right') }), [rows]);
+  const merged = useMemo(() => unifiedLines(rows), [rows]);
   const emphasis = useIntralineEmphasis(rows);
   const tokens = useDiffTokens(rows, file.filename);
   const growing = useHeightTransition(rows);
@@ -57,26 +64,34 @@ export function FileDiff({
   const showingWholeFile = rows !== patchRows;
   const canEdit = pull !== null && !wantWholeFile;
   const expand = expandControl(wholeFile, showingWholeFile, hunkEdit, setWantWholeFile);
+  const shared = { rows, tokens, emphasis, expand };
+  const editing = {
+    editable: canEdit,
+    onEditBlock: hunkEdit.begin,
+    editedRows: canEdit ? hunkEdit.edit?.block ?? null : null,
+    editor: canEdit && hunkEdit.edit ? hunkEditor(file.filename, hunkEdit) : null,
+  };
   return (
-    <div ref={growing} className="flex">
-      <section className="relative flex shrink-0 flex-col border-r border-panel-edge" style={{ width: removedSize.width }}>
-        <DiffSide rows={rows} side="left" labels tokens={tokens?.left ?? null} emphasis={emphasis} expand={expand} spacer={canEdit ? spacerFor(hunkEdit.edit) : null} />
-        <DragHandle onPointerDown={startDrag} />
-      </section>
-      <section className="flex min-w-0 flex-1 flex-col">
-        <DiffSide
-          rows={rows}
-          side="right"
-          labels={false}
-          tokens={tokens?.right ?? null}
-          emphasis={emphasis}
-          expand={expand}
-          editable={canEdit}
-          onEditBlock={hunkEdit.begin}
-          editedRows={canEdit ? hunkEdit.edit?.block ?? null : null}
-          editor={canEdit && hunkEdit.edit ? hunkEditor(file.filename, hunkEdit) : null}
-        />
-      </section>
+    <div ref={growing} className="relative" style={{ paddingBottom: threadOverflow }}>
+      <InlineThreads
+        path={file.filename}
+        rows={rows}
+        lines={unified ? merged : columns.right}
+        onOverflow={setThreadOverflow}
+      />
+      {unified ? (
+        <DiffSide {...shared} lines={merged} labels {...editing} />
+      ) : (
+        <div className="flex">
+          <section className="relative flex shrink-0 flex-col border-r border-panel-edge" style={{ width: removedSize.width }}>
+            <DiffSide {...shared} lines={columns.left} labels spacer={canEdit ? spacerFor(hunkEdit.edit) : null} />
+            <DragHandle onPointerDown={startDrag} />
+          </section>
+          <section className="flex min-w-0 flex-1 flex-col">
+            <DiffSide {...shared} lines={columns.right} labels={false} {...editing} />
+          </section>
+        </div>
+      )}
       {hunkEdit.message !== null && hunkEdit.edit !== null && (
         <CommitEditModal
           path={file.filename}
