@@ -67,8 +67,8 @@ function FileBody({
   const diff = file.patch ? (
     <FileDiff owner={owner} repo={repo} file={file} baseRef={baseRef} headRef={headRef} outline={!expanded} />
   ) : null;
+  if (!expanded) return diff;
   if (isImagePath(file.filename)) {
-    if (!expanded) return diff;
     const { before, after } = imageSides(file, baseRef, headRef);
     return (
       <>
@@ -78,7 +78,6 @@ function FileBody({
     );
   }
   if (diff) return diff;
-  if (!expanded) return null;
   return <Note text={`${file.status} — no textual diff`} />;
 }
 

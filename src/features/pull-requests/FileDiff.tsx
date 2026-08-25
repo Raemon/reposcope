@@ -89,7 +89,7 @@ export function FileDiff({
           </section>
         </div>
       )}
-      {hunkEdit.message !== null && hunkEdit.edit !== null && (
+      {canEdit && hunkEdit.message !== null && hunkEdit.edit !== null && (
         <CommitEditModal
           path={file.filename}
           message={hunkEdit.message}

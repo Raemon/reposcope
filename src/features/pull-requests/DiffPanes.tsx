@@ -31,7 +31,7 @@ export function DiffPanes({
   onCommitted?: () => void | Promise<void>;
   ref?: Ref<DiffPanesHandle>;
 }) {
-  const folds = useFileFolds();
+  const folds = useFileFolds(fileSet ? `${fileSet.baseRef}:${fileSet.headRef}` : '');
   const scroller = useRef<HTMLDivElement | null>(null);
   const sections = useRef(new Map<string, HTMLElement>());
 

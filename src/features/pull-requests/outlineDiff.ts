@@ -1,6 +1,9 @@
 import type { DiffCell, DiffRow } from './splitDiff';
 
 const FOLD_GAP = ' … ';
+const SIDES = ['left', 'right'] as const;
+
+type Side = (typeof SIDES)[number];
 
 const DECLARING_KEYWORD =
   /^\s*(?:(?:export|default|public|private|protected|static|abstract|async|declare|pub)\s+)*(?:function\s*\(|(?:function|class|interface|type|enum|namespace|module|def|func|fn|impl|struct|trait)\s+[\w$<])/;
@@ -14,44 +17,68 @@ interface OpenBlock {
   outerDepth: number;
 }
 
+interface SideOutline {
+  depth: number;
+  open: OpenBlock[];
+}
+
 interface Outline {
   headers: DiffRow[];
-  open: OpenBlock[];
-  depth: number;
+  sides: Record<Side, SideOutline>;
 }
 
 export function outlineRows(rows: DiffRow[]): DiffRow[] {
-  const outline: Outline = { headers: [], open: [], depth: 0 };
-  for (const row of rows) if (row.kind !== 'hunk') absorbRow(outline, row);
+  const outline: Outline = { headers: [], sides: { left: emptySide(), right: emptySide() } };
+  for (const row of rows) {
+    if (row.kind === 'hunk') forgetOpenBlocks(outline);
+    else absorbRow(outline, row);
+  }
   return outline.headers;
 }
 
+function emptySide(): SideOutline {
+  return { depth: 0, open: [] };
+}
+
+function forgetOpenBlocks(outline: Outline): void {
+  for (const side of SIDES) outline.sides[side] = emptySide();
+}
+
 function absorbRow(outline: Outline, row: DiffRow): void {
-  const text = rowText(row);
-  if (isDeclaration(text)) outline.headers.push(openBlock(outline, row, text));
-  outline.depth = Math.max(0, outline.depth + braceDelta(text));
-  closeFinishedBlocks(outline, text.trim());
+  const header = headerFor(row);
+  if (header) outline.headers.push(header);
+  if (row.kind === 'change') markOpenBlocksTouched(outline);
+  for (const side of SIDES) absorbCell(outline.sides[side], side, row, header);
 }
 
-function openBlock(outline: Outline, row: DiffRow, text: string): DiffRow {
-  const header = { ...row, left: copyCell(row.left), right: copyCell(row.right) };
-  if (braceDelta(text) > 0) outline.open.push({ header, outerDepth: outline.depth });
-  return header;
+function headerFor(row: DiffRow): DiffRow | null {
+  const declares = SIDES.some((side) => declaresBlock(row[side]));
+  return declares ? { ...row, left: copyCell(row.left), right: copyCell(row.right) } : null;
 }
 
-function closeFinishedBlocks(outline: Outline, closing: string): void {
-  while (outline.open.length > 0 && outline.depth <= lastOpen(outline).outerDepth) {
-    appendClosing(outline.open.pop()!.header, closing);
+function markOpenBlocksTouched(outline: Outline): void {
+  for (const side of SIDES) for (const block of outline.sides[side].open) block.header.touched = true;
+}
+
+function absorbCell(side: SideOutline, sideName: Side, row: DiffRow, header: DiffRow | null): void {
+  const cell = row[sideName];
+  if (!cell) return;
+  const delta = braceDelta(cell.text);
+  if (header && delta > 0 && declaresBlock(cell)) side.open.push({ header, outerDepth: side.depth });
+  side.depth = Math.max(0, side.depth + delta);
+  closeFinishedBlocks(side, sideName, cell.text.trim());
+}
+
+function closeFinishedBlocks(side: SideOutline, sideName: Side, closingLine: string): void {
+  while (finishedBlock(side)) {
+    const block = side.open.pop()!;
+    block.header[sideName] = withClosing(block.header[sideName], finishedBlock(side) ? '}' : closingLine);
   }
 }
 
-function lastOpen(outline: Outline): OpenBlock {
-  return outline.open[outline.open.length - 1]!;
-}
-
-function appendClosing(header: DiffRow, closing: string): void {
-  header.left = withClosing(header.left, closing);
-  header.right = withClosing(header.right, closing);
+function finishedBlock(side: SideOutline): boolean {
+  const innermost = side.open[side.open.length - 1];
+  return innermost !== undefined && side.depth <= innermost.outerDepth;
 }
 
 function withClosing(cell: DiffCell | null, closing: string): DiffCell | null {
@@ -62,8 +89,8 @@ function copyCell(cell: DiffCell | null): DiffCell | null {
   return cell && { ...cell };
 }
 
-function rowText(row: DiffRow): string {
-  return (row.right ?? row.left)?.text ?? '';
+function declaresBlock(cell: DiffCell | null): boolean {
+  return cell !== null && isDeclaration(cell.text);
 }
 
 function isDeclaration(text: string): boolean {
@@ -79,9 +106,10 @@ function braceDelta(text: string): number {
 
 function stripLiterals(text: string): string {
   return text
-    .replace(/\/\/.*$/, '')
+    .replace(/'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|`(?:[^`\\]|\\.)*`/g, '')
     .replace(/\/\*.*?\*\//g, '')
-    .replace(/'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|`(?:[^`\\]|\\.)*`/g, '');
+    .replace(/\/\/.*$/, '')
+    .replace(/\/(?:[^/\\[\n]|\\.|\[(?:[^\]\\]|\\.)*\])+\/[gimsuy]*/g, '');
 }
 
 function count(text: string, character: string): number {
