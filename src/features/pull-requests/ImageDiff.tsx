@@ -1,11 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { DragHandle, useDragWidth, type ColumnSize } from './ResizableColumn';
+import { setDiffPaneWidth, useDiffPaneWidth } from './diffPaneWidth';
+import { DragHandle, useDragWidth } from './ResizableColumn';
 import { CheckerImg } from './BlobImage';
 import { type ImageSource } from './imageView';
 import { openImageTab } from './openImageTab';
 import { useFileBlob } from './useFileBlob';
+import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 
 export function ImageDiff({
   owner,
@@ -18,8 +20,8 @@ export function ImageDiff({
   before: ImageSource | null;
   after: ImageSource | null;
 }) {
-  const [beforeSize, setBeforeSize] = useState<ColumnSize>({ width: 520, open: true });
-  const startDrag = useDragWidth(beforeSize, setBeforeSize);
+  const beforeSize = { width: useDiffPaneWidth(), open: true };
+  const startDrag = useDragWidth(beforeSize, setDiffPaneWidth);
   return (
     <div className="flex">
       <section
@@ -66,20 +68,21 @@ function ImagePane({
         ) : !blob.value.dataUrl ? (
           <PaneNote text={`too large to preview (${byteLabel(blob.value.byteSize)})`} />
         ) : (
-          <button
-            type="button"
-            title="Open image in a new tab"
-            onClick={() => blob.value?.dataUrl && openImageTab(blob.value.dataUrl)}
-            className="max-w-full cursor-zoom-in"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <CheckerImg
-              src={blob.value.dataUrl}
-              alt={`${label} — ${source.path}`}
-              onLoad={(event) => setShape(`${event.currentTarget.naturalWidth}×${event.currentTarget.naturalHeight}`)}
-              className="max-h-[420px] max-w-full object-contain"
-            />
-          </button>
+          <HoverCardTrigger label="Open image in a new tab" focusable={false} tooltipStyle>
+            <button
+              type="button"
+              onClick={() => blob.value?.dataUrl && openImageTab(blob.value.dataUrl)}
+              className="max-w-full cursor-zoom-in"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <CheckerImg
+                src={blob.value.dataUrl}
+                alt={`${label} — ${source.path}`}
+                onLoad={(event) => setShape(`${event.currentTarget.naturalWidth}×${event.currentTarget.naturalHeight}`)}
+                className="max-h-[420px] max-w-full object-contain"
+              />
+            </button>
+          </HoverCardTrigger>
         )}
       </div>
     </div>

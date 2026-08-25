@@ -88,7 +88,6 @@ function PullRow({
     <PullListRow
       target={{ owner: pull.owner, repo: pull.repo, number: pull.number }}
       href={allPullsRoute(pull.owner, pull.repo, pull.number)}
-      title={`${pull.owner}/${pull.repo} #${pull.number} — ${pull.title}`}
       current={pathname === pullRoute(pull.owner, pull.repo, pull.number)}
     >
       <span className="shrink-0 truncate text-[9px] text-ink-dim" style={{ width: `${repoColumnCh}ch` }}>

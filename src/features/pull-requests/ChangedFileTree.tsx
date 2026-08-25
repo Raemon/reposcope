@@ -32,7 +32,6 @@ export function ChangedFileTree({
                 key={file.filename}
                 {...row.props}
                 onActivate={() => onSelect(file.filename)}
-                title={file.filename}
                 className={`${ROW} ${group.folder ? 'pl-4' : 'pl-1.5'} ${rowStateClass(row.state)}`}
               >
                 <KindMarker path={file.filename} />
@@ -58,7 +57,7 @@ function KindMarker({ path }: { path: string }) {
 function FolderLabel({ folder }: { folder: string }) {
   if (!folder) return null;
   return (
-    <p dir="rtl" title={folder} className="truncate px-1.5 py-[1px] text-left text-[10px] leading-4 text-ink-dim opacity-50">
+    <p dir="rtl" className="truncate px-1.5 py-[1px] text-left text-[10px] leading-4 text-ink-dim opacity-50">
       {folder}
     </p>
   );

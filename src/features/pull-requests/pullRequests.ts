@@ -6,7 +6,7 @@ import {
   githubJson,
   githubSend,
 } from '@/features/codebases/githubRequest';
-import { userGithubToken } from '@/features/codebases/githubToken';
+import { requireGithubUser } from '@/features/github-auth/requireGithubUser';
 import { imageTypeOf } from './imageFiles';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
 
@@ -219,6 +219,7 @@ export async function describePullRequest(
 }
 
 export async function mergePullRequest(owner: string, name: string, number: number): Promise<MergeResult> {
+  requireGithubUser('merging');
   const pull = await githubJson<GithubPull>(`${API}/repos/${owner}/${name}/pulls/${number}`);
   if (pull.draft) await markReadyForReview(pull.node_id);
   const result = await githubSend<{ merged?: boolean; message?: string }>(
@@ -230,6 +231,7 @@ export async function mergePullRequest(owner: string, name: string, number: numb
 }
 
 export async function closePullRequest(owner: string, name: string, number: number): Promise<CloseResult> {
+  requireGithubUser('closing pull requests');
   const pull = await githubSend<GithubPull>(`${API}/repos/${owner}/${name}/pulls/${number}`, 'PATCH', { state: 'closed' });
   return { closed: pull.state === 'closed' };
 }
@@ -283,7 +285,7 @@ export async function commitFileEdit(
   number: number,
   edit: FileEdit,
 ): Promise<EditResult> {
-  if (!userGithubToken()) throw new GithubRequestError(401, 'Connect GitHub before committing');
+  requireGithubUser('committing');
   const pull = await githubJson<GithubPull>(`${API}/repos/${owner}/${name}/pulls/${number}`, true);
   if (pull.state !== 'open') throw new GithubRequestError(409, `Pull request #${number} is ${pull.state}`);
   if (pull.head.sha !== edit.headRef) throw new GithubRequestError(409, staleMessage(edit.path));

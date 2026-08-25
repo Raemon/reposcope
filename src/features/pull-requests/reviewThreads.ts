@@ -1,4 +1,5 @@
 import { githubGraphql, githubJson, githubSend } from '@/features/codebases/githubRequest';
+import { requireGithubUser } from '@/features/github-auth/requireGithubUser';
 
 const API = 'https://api.github.com';
 
@@ -62,6 +63,7 @@ export async function replyToReviewThread(
   rootId: number,
   body: string,
 ): Promise<ReviewComment> {
+  requireGithubUser('replying to a review');
   const posted = await githubSend<GithubReviewComment>(
     `${API}/repos/${owner}/${name}/pulls/${number}/comments/${rootId}/replies`,
     'POST',
@@ -71,6 +73,7 @@ export async function replyToReviewThread(
 }
 
 export async function setThreadResolved(threadId: string, resolved: boolean): Promise<{ resolved: boolean }> {
+  requireGithubUser('resolving a thread');
   const field = resolved ? 'resolveReviewThread' : 'unresolveReviewThread';
   const result = await githubGraphql<Record<string, { thread: { isResolved: boolean } }>>(
     `mutation($threadId: ID!) { ${field}(input: { threadId: $threadId }) { thread { isResolved } } }`,
@@ -80,6 +83,7 @@ export async function setThreadResolved(threadId: string, resolved: boolean): Pr
 }
 
 export async function setCommentReaction(nodeId: string, reacted: boolean): Promise<{ reacted: boolean }> {
+  requireGithubUser('reacting to a comment');
   const field = reacted ? 'addReaction' : 'removeReaction';
   await githubGraphql(
     `mutation($nodeId: ID!) { ${field}(input: { subjectId: $nodeId, content: THUMBS_UP }) { clientMutationId } }`,
