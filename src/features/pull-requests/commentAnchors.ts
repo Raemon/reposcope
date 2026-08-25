@@ -8,14 +8,9 @@ export interface AnchoredThread {
   anchorTop: number;
 }
 
-export function anchorThreads(
-  threads: ReviewThread[],
-  rows: DiffRow[],
-  lines: DiffLine[],
-  nearest = false,
-): AnchoredThread[] {
+export function anchorThreads(threads: ReviewThread[], rows: DiffRow[], lines: DiffLine[]): AnchoredThread[] {
   return threads
-    .map((thread) => ({ thread, anchorTop: anchorTopOf(thread, rows, lines, nearest) }))
+    .map((thread) => ({ thread, anchorTop: anchorTopOf(thread, rows, lines) }))
     .filter((anchored): anchored is AnchoredThread => anchored.anchorTop !== null)
     .sort((a, b) => a.anchorTop - b.anchorTop);
 }
@@ -29,26 +24,16 @@ export function stackedTops(anchors: AnchoredThread[], heights: Record<number, n
   });
 }
 
-function anchorTopOf(thread: ReviewThread, rows: DiffRow[], lines: DiffLine[], nearest: boolean): number | null {
-  const row = rowOf(thread, rows, nearest);
+function anchorTopOf(thread: ReviewThread, rows: DiffRow[], lines: DiffLine[]): number | null {
+  const row = rowOf(thread, rows);
   if (row < 0) return null;
   const index = displayIndexOf(row, thread.side, lines);
   return index < 0 ? null : index * ROW_HEIGHT;
 }
 
-function rowOf(thread: ReviewThread, rows: DiffRow[], nearest: boolean): number {
+function rowOf(thread: ReviewThread, rows: DiffRow[]): number {
   if (thread.line === null) return -1;
-  const exact = rows.findIndex((row) => row[thread.side]?.line === thread.line);
-  return exact >= 0 || !nearest ? exact : lastRowAbove(thread.line, thread.side, rows);
-}
-
-function lastRowAbove(line: number, side: 'left' | 'right', rows: DiffRow[]): number {
-  let above = -1;
-  rows.forEach((row, index) => {
-    const at = row[side]?.line;
-    if (at !== undefined && at <= line) above = index;
-  });
-  return above;
+  return rows.findIndex((row) => row[thread.side]?.line === thread.line);
 }
 
 function displayIndexOf(row: number, side: 'left' | 'right', lines: DiffLine[]): number {

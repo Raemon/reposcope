@@ -12,7 +12,7 @@ const CHOICES: { layout: DiffLayout; icon: string; label: string }[] = [
 export function DiffLayoutToggle() {
   const current = useDiffLayout();
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex shrink-0 items-center justify-end gap-1 border-b border-panel-edge bg-panel px-1.5 py-[1px]">
       {CHOICES.map(({ layout, icon, label }) => (
         <HoverCardTrigger key={layout} label={`Show diffs in a ${label} view`} focusable={false} tooltipStyle>
           <button
