@@ -7,6 +7,7 @@ import { useReviewTarget, type ReviewThreadTarget } from './reviewThreadStore';
 import { ThreadReplyBox } from './ThreadReplyBox';
 import { useThreadAction } from './useThreadAction';
 import { renderMarkdown } from '@/features/markdown/renderMarkdown';
+import { HoverCardHtml, HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { RelativeTime } from '@/features/surface-ui/RelativeTime';
 import { useGithubToken } from '@/features/sources/sourceStore';
 import { apiPost, apiPostJson } from '@/features/sources/apiClient';
@@ -97,9 +98,10 @@ function ThreadComment({
         <RelativeTime iso={comment.createdAt} className="shrink-0" />
       </header>
       {body !== 'hidden' && (
-        <div
+        <HoverCardHtml
           className={`markdown-body break-words pr-6 text-[11px] leading-4 text-ink ${body === 'clamped' ? 'max-h-40 overflow-y-auto' : ''}`}
-          dangerouslySetInnerHTML={{ __html: renderMarkdown(comment.body, repo) }}
+          html={renderMarkdown(comment.body, repo)}
+          tooltipStyle
         />
       )}
     </div>
@@ -127,32 +129,40 @@ function ThreadActions({
   const first = thread.comments[0];
   return (
     <div className="absolute bottom-0 right-0 flex items-center gap-0.5 rounded-tl border-l border-t border-panel-edge/60 bg-panel px-1 text-[10px] opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
-      <button type="button" title="Reply" onClick={onReply} disabled={busy} className={ACTION}>
-        ↩
-      </button>
-      <button
-        type="button"
-        title={first?.viewerReacted ? 'Remove 👍' : 'React 👍'}
-        onClick={onReact}
-        disabled={busy}
-        className={`${ACTION} ${first?.viewerReacted ? 'text-accent' : ''}`}
-      >
-        👍{first?.thumbsUp || ''}
-      </button>
-      {onResolve && (
+      <HoverCardTrigger label="Reply" focusable={false} tooltipStyle>
+        <button type="button" aria-label="Reply" onClick={onReply} disabled={busy} className={ACTION}>
+          ↩
+        </button>
+      </HoverCardTrigger>
+      <HoverCardTrigger label={first?.viewerReacted ? 'Remove 👍' : 'React 👍'} focusable={false} tooltipStyle>
         <button
           type="button"
-          title={thread.resolved ? 'Unresolve' : 'Resolve'}
-          onClick={onResolve}
+          aria-label={first?.viewerReacted ? 'Remove thumbs up reaction' : 'Add thumbs up reaction'}
+          onClick={onReact}
           disabled={busy}
-          className={ACTION}
+          className={`${ACTION} ${first?.viewerReacted ? 'text-accent' : ''}`}
         >
-          {thread.resolved ? '↺' : '✓'}
+          👍{first?.thumbsUp || ''}
         </button>
+      </HoverCardTrigger>
+      {onResolve && (
+        <HoverCardTrigger label={thread.resolved ? 'Unresolve' : 'Resolve'} focusable={false} tooltipStyle>
+          <button
+            type="button"
+            aria-label={thread.resolved ? 'Unresolve thread' : 'Resolve thread'}
+            onClick={onResolve}
+            disabled={busy}
+            className={ACTION}
+          >
+            {thread.resolved ? '↺' : '✓'}
+          </button>
+        </HoverCardTrigger>
       )}
-      <a href={first?.url} target="_blank" rel="noopener noreferrer" title="Open on GitHub" className={ACTION}>
-        ↗
-      </a>
+      <HoverCardTrigger label="Open on GitHub" focusable={false} tooltipStyle>
+        <a href={first?.url} target="_blank" rel="noopener noreferrer" aria-label="Open on GitHub" className={ACTION}>
+          ↗
+        </a>
+      </HoverCardTrigger>
     </div>
   );
 }

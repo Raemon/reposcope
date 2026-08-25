@@ -8,6 +8,7 @@ import type { ThemedToken } from './diffHighlight';
 import type { CharRange, IntralineRanges } from './intralineDiff';
 import type { DiffRow } from './splitDiff';
 import type { SideTokens } from './useDiffSideHighlight';
+import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 
 const ROW = 'flex h-[15px] items-center gap-1 leading-[15px]';
@@ -166,9 +167,11 @@ function emphasisTone(side: 'left' | 'right'): string {
 
 function HunkLine({ label, expand, onEdit }: { label: string; expand: HunkControl; onEdit?: () => void }) {
   const edit = onEdit ? (
-    <button type="button" onClick={onEdit} title="Edit this hunk and commit the change" className={EDIT_BTN}>
-      edit
-    </button>
+    <HoverCardTrigger label="Edit this hunk and commit the change" focusable={false} tooltipStyle>
+      <button type="button" onClick={onEdit} className={EDIT_BTN}>
+        edit
+      </button>
+    </HoverCardTrigger>
   ) : null;
   const body = (
     <>

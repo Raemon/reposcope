@@ -15,7 +15,8 @@ import { PullRequestMenu } from '@/features/pull-requests/PullRequestMenu';
 import { type RepoRef } from '@/features/sources/parseRepoLink';
 import { SelectableLink } from '@/features/surface-ui/SelectableLink';
 import { ThemeToggle } from '@/features/theme/ThemeToggle';
-import { clearGithubToken, removeSource, useGithubAccess, useGithubToken, useSources, useStoreReady } from '@/features/sources/sourceStore';
+import { disconnectGithub, useGithubAccess, useGithubToken, useSources, useStoreReady } from '@/features/sources/sourceStore';
+import { GithubSignedOutNotice } from '@/features/sources/GithubSignedOutNotice';
 
 const ALL_PULLS = '/pulls';
 const INSIGHTS = '/insights';
@@ -33,6 +34,7 @@ export function CodebaseHeader() {
       {reading &&
         (pullNumber === null ? <PullRequestMenu repo={reading} /> : <CurrentPullTitle repo={reading} number={pullNumber} />)}
       <div className="ml-auto flex shrink-0 items-center gap-2">
+        <GithubSignedOutNotice />
         {reading && pullNumber !== null && <MergePullButton repo={reading} number={pullNumber} />}
         <ThemeToggle />
       </div>
@@ -84,10 +86,7 @@ function CodebaseMenu({ reading }: { reading: RepoRef | null }) {
             <div className="border-t border-panel-edge px-2 py-1">
               <button
                 type="button"
-                onClick={() => {
-                  clearGithubToken();
-                  removeSource({ kind: 'viewer' });
-                }}
+                onClick={disconnectGithub}
                 className="text-[10px] text-ink-dim hover:text-error-ink"
               >
                 disconnect GitHub

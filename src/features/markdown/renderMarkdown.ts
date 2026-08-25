@@ -19,18 +19,18 @@ function urlBases({ owner, repo }: RepoRef): UrlBases {
   };
 }
 
-function titleAttribute(title: string | null | undefined): string {
-  return title ? ` title="${escapeHtml(title)}"` : '';
+function hovercardAttribute(title: string | null | undefined): string {
+  return title ? ` data-hovercard="${escapeHtml(title)}"` : '';
 }
 
 function renderLink(href: string | null, title: string | null | undefined, inner: string): string {
   if (!href) return inner;
-  return `<a href="${escapeHtml(href)}"${titleAttribute(title)} target="_blank" rel="noopener noreferrer">${inner}</a>`;
+  return `<a href="${escapeHtml(href)}"${hovercardAttribute(title)} target="_blank" rel="noopener noreferrer">${inner}</a>`;
 }
 
 function renderImage(src: string | null, title: string | null | undefined, alt: string): string {
   if (!src) return escapeHtml(alt);
-  return `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}"${titleAttribute(title)} loading="lazy" />`;
+  return `<img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}"${hovercardAttribute(title)} loading="lazy" />`;
 }
 
 function createMarked(repo: RepoRef): Marked {
