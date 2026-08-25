@@ -1,7 +1,7 @@
-export function ScopeMark({ size = 64, title }: { size?: number; title?: string }) {
+export function ScopeMark({ size = 26, title }: { size?: number; title?: string }) {
   return (
     <svg
-      viewBox="-32 -32 128 128"
+      viewBox="4 4 56 56"
       width={size}
       height={size}
       role="img"
