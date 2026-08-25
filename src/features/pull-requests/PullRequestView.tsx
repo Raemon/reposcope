@@ -1,13 +1,14 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ColumnPreview } from './ColumnPreview';
 import { DiffPanes, type DiffPanesHandle } from './DiffPanes';
-import { PullCommitColumn, commitTokens } from './PullCommitColumn';
+import { PullCommitColumn, commitItems, commitTokens } from './PullCommitColumn';
 import { PullDiscussion } from './PullDiscussion';
-import { PullFilesColumn, fileTokens } from './PullFilesColumn';
+import { PullFilesColumn, fileTokens, orderedFiles } from './PullFilesColumn';
 import { AllPullsColumn, RepoPullsColumn } from './PullListColumn';
-import { ResizableColumn } from './ResizableColumn';
+import { ResizableColumn, type ColumnSize } from './ResizableColumn';
+import { useRegisterColumn } from './columnNav';
 import { setCurrentPull } from './currentPullStore';
 import { commitFilesPath, pullFilesPath, pullPath } from './pullPaths';
 import type { ChangedFileSet, PullRequestCommits, PullRequestSummary } from './pullRequests';
@@ -72,6 +73,38 @@ export function PullRequestView({
     setPath((held) => (held && fileSet.files.some((file) => file.filename === held) ? held : fileSet.files[0]?.filename ?? null));
   }, [fileSet]);
 
+  const revealFile = useCallback((filename: string) => {
+    setPath(filename);
+    diffPanes.current?.scrollToFile(filename);
+  }, []);
+  const fileItems = useMemo(() => orderedFiles(fileSet).map((file) => file.filename), [fileSet]);
+
+  useRegisterColumn('discussion', {
+    ...collapsibleColumn(discussionSize, setDiscussionSize),
+    items: [],
+    selected: null,
+  });
+  useRegisterColumn('commits', {
+    ...collapsibleColumn(commitSize, setCommitSize),
+    items: pull ? commitItems(pull) : [],
+    selected: selection,
+    onSelect: setSelection,
+  });
+  useRegisterColumn('files', {
+    ...collapsibleColumn(fileSize, setFileSize),
+    items: fileItems,
+    selected: path,
+    onSelect: revealFile,
+  });
+  useRegisterColumn('diff', {
+    items: fileItems,
+    selected: path,
+    open: true,
+    collapsible: false,
+    onSelect: revealFile,
+    onActivate: (filename) => diffPanes.current?.toggleFile(filename),
+  });
+
   async function reloadInPlace() {
     const asked = fileRoute;
     try {
@@ -93,26 +126,28 @@ export function PullRequestView({
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex min-h-0 flex-1">
         {acrossRepos ? (
-          <AllPullsColumn owner={owner} repo={repo} number={number} size={listSize} onSize={setListSize} />
+          <AllPullsColumn size={listSize} onSize={setListSize} />
         ) : (
-          <RepoPullsColumn owner={owner} repo={repo} number={number} size={listSize} onSize={setListSize} />
+          <RepoPullsColumn owner={owner} repo={repo} size={listSize} onSize={setListSize} />
         )}
-        <ResizableColumn icon="❝" title="discussion" size={discussionSize} onSize={setDiscussionSize}>
+        <ResizableColumn navId="discussion" icon="❝" title="discussion" size={discussionSize} onSize={setDiscussionSize}>
           <PullDiscussion owner={owner} repo={repo} number={number} author={pull.pull.author} body={pull.body} />
         </ResizableColumn>
         <ResizableColumn
+          navId="commits"
           icon="◆"
           title="commits"
-          preview={<ColumnPreview tokens={commitTokens(pull, selection)} />}
+          preview={<ColumnPreview column="commits" tokens={commitTokens(pull, selection)} />}
           size={commitSize}
           onSize={setCommitSize}
         >
           <PullCommitColumn pull={pull} selection={selection} onSelect={setSelection} />
         </ResizableColumn>
         <ResizableColumn
+          navId="files"
           icon="▤"
           title="files"
-          preview={<ColumnPreview tokens={fileTokens(fileSet, path)} />}
+          preview={<ColumnPreview column="files" tokens={fileTokens(fileSet, path)} />}
           size={fileSize}
           onSize={setFileSize}
         >
@@ -120,10 +155,7 @@ export function PullRequestView({
             fileSet={fileSet}
             fileError={fileError}
             path={path}
-            onSelect={(filename) => {
-              setPath(filename);
-              diffPanes.current?.scrollToFile(filename);
-            }}
+            onSelect={revealFile}
           />
         </ResizableColumn>
         {fileSet === null && fileError !== null ? (
@@ -137,6 +169,7 @@ export function PullRequestView({
               repo={repo}
               number={number}
               fileSet={fileSet}
+              selected={path}
               editablePull={editablePull(pull.pull, selection)}
               onCommitted={reloadInPlace}
             />
@@ -145,6 +178,10 @@ export function PullRequestView({
       </div>
     </div>
   );
+}
+
+function collapsibleColumn(size: ColumnSize, onSize: (next: (held: ColumnSize) => ColumnSize) => void) {
+  return { open: size.open, collapsible: true, setOpen: (open: boolean) => onSize((held) => ({ ...held, open })) };
 }
 
 function editablePull(pull: PullRequestSummary, selection: string): PullRequestSummary | null {

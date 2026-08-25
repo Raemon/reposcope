@@ -8,13 +8,14 @@ import { EditTarget } from './editTarget';
 import { ImageThumbnailStrip } from './ImageThumbnailStrip';
 import { imageFilesOf } from './imageFiles';
 import { ReviewThreadProvider } from './reviewThreadStore';
-import { sortByFolder } from './fileTree';
+import { orderedFiles as filesInOrder } from './PullFilesColumn';
 import type { ChangedFile, ChangedFileSet, PullRequestSummary } from './pullRequests';
 
 const SCROLL_MS = 100;
 
 export interface DiffPanesHandle {
   scrollToFile: (path: string) => void;
+  toggleFile: (path: string) => void;
 }
 
 export function DiffPanes({
@@ -22,6 +23,7 @@ export function DiffPanes({
   repo,
   number,
   fileSet,
+  selected,
   editablePull = null,
   onCommitted,
   ref,
@@ -30,6 +32,7 @@ export function DiffPanes({
   repo: string;
   number: number;
   fileSet: ChangedFileSet | null;
+  selected: string | null;
   editablePull?: PullRequestSummary | null;
   onCommitted?: () => void | Promise<void>;
   ref?: Ref<DiffPanesHandle>;
@@ -45,11 +48,12 @@ export function DiffPanes({
       if (!container || !section) return;
       animateScrollTop(container, scrollerOffset(container, section));
     },
+    toggleFile: folds.toggle,
   }));
 
   if (!fileSet) return <p className="flex-1 px-2 py-1 text-[11px] text-ink-dim">Loading…</p>;
   if (fileSet.files.length === 0) return <p className="flex-1 px-2 py-1 text-[11px] text-ink-dim">No files changed</p>;
-  const orderedFiles = sortByFolder(fileSet.files);
+  const orderedFiles = filesInOrder(fileSet);
   return (
     <EditTarget value={editablePull && { pull: editablePull, headRef: fileSet.headRef, onCommitted }}>
       <ReviewThreadProvider owner={owner} repo={repo} number={number}>
@@ -71,6 +75,7 @@ export function DiffPanes({
                 file={file}
                 baseRef={fileSet.baseRef}
                 headRef={fileSet.headRef}
+                selected={file.filename === selected}
                 expanded={folds.expanded(file.filename)}
                 onToggle={() => folds.toggle(file.filename)}
                 sectionRef={(node) => {

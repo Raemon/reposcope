@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import { useColumnNav } from './columnNav';
 import { PullListRow } from './PullListRow';
 import { useStandingPulls } from './pullActionStore';
 import { allPullsRoute, pullRoute } from './pullPaths';
@@ -20,6 +21,7 @@ export function AllPullRequestList() {
   const { scanning, repoCount, found, error } = useAllPullRequests();
   const pathname = usePathname();
   const standingPulls = useStandingPulls(found?.pulls);
+  const { cursor } = useColumnNav('pulls');
   const [showingOlder, setShowingOlder] = useState(false);
 
   if (!found) {
@@ -31,9 +33,10 @@ export function AllPullRequestList() {
     );
   }
 
-  const visible = standingPulls.filter(
-    (pull) => showingOlder || updatedWithinLastWeek(pull) || pathname === pullRoute(pull.owner, pull.repo, pull.number),
-  );
+  const visible = standingPulls.filter((pull) => {
+    const route = pullRoute(pull.owner, pull.repo, pull.number);
+    return showingOlder || updatedWithinLastWeek(pull) || pathname === route || cursor === route;
+  });
   const olderCount = standingPulls.length - visible.length;
 
   return (

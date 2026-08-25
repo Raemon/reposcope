@@ -1,11 +1,13 @@
 'use client';
 
 import { ChangeCounts } from './ChangeCounts';
+import { useColumnNav } from './columnNav';
 import { FileDiff } from './FileDiff';
 import { ImageDiff } from './ImageDiff';
 import { isImagePath } from './imageFiles';
 import { imageSides } from './imageView';
 import type { ChangedFile } from './pullRequests';
+import { rowStateClass, type RowState } from '@/features/surface-ui/rowState';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 
 export function DiffFileSection({
@@ -14,6 +16,7 @@ export function DiffFileSection({
   file,
   baseRef,
   headRef,
+  selected,
   expanded,
   onToggle,
   sectionRef,
@@ -23,21 +26,24 @@ export function DiffFileSection({
   file: ChangedFile;
   baseRef: string;
   headRef: string;
+  selected: boolean;
   expanded: boolean;
   onToggle: () => void;
   sectionRef: (node: HTMLElement | null) => void;
 }) {
+  const row = useColumnNav('diff').row(file.filename, selected);
   return (
     <section ref={sectionRef} className="border-b border-panel-edge">
       <SelectableRow
+        {...row.props}
         onActivate={onToggle}
         expanded={expanded}
-        className="sticky top-0 z-20 flex w-full items-baseline gap-2 border-b border-panel-edge bg-panel px-2 py-[2px] text-left text-[11px] leading-4 hover:bg-btn-hover"
+        className={`sticky top-0 z-20 flex w-full items-baseline gap-2 border-b border-panel-edge px-2 py-[2px] text-left text-[11px] leading-4 ${sectionTone(row.state)}`}
       >
         <span aria-hidden className="w-2 shrink-0 text-[9px] text-ink-dim">
           {expanded ? '▾' : '▸'}
         </span>
-        <span className="min-w-0 flex-1 truncate text-ink">
+        <span className="min-w-0 flex-1 truncate">
           {file.previousFilename && <span className="text-ink-dim">{file.previousFilename} → </span>}
           {file.filename}
         </span>
@@ -47,6 +53,10 @@ export function DiffFileSection({
       <FileBody owner={owner} repo={repo} file={file} baseRef={baseRef} headRef={headRef} expanded={expanded} />
     </section>
   );
+}
+
+function sectionTone(state: RowState): string {
+  return state === 'plain' ? 'bg-panel text-ink' : rowStateClass(state);
 }
 
 function FileBody({

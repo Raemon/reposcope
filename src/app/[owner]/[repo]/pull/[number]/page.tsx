@@ -1,3 +1,4 @@
+import { ColumnNavProvider } from '@/features/pull-requests/columnNav';
 import { PullRequestView } from '@/features/pull-requests/PullRequestView';
 
 export default async function PullRequestPage({
@@ -9,5 +10,9 @@ export default async function PullRequestPage({
 }) {
   const { owner, repo, number } = await params;
   const { from } = await searchParams;
-  return <PullRequestView owner={owner} repo={repo} number={Number(number)} acrossRepos={from === 'all'} />;
+  return (
+    <ColumnNavProvider>
+      <PullRequestView owner={owner} repo={repo} number={Number(number)} acrossRepos={from === 'all'} />
+    </ColumnNavProvider>
+  );
 }

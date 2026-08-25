@@ -18,6 +18,7 @@
   --color-btn-edge: var(--btn-edge);
   --color-btn-hover: var(--btn-hover);
   --color-btn-active: var(--btn-active);
+  --color-btn-both: var(--btn-both);
 
   --color-art-panel: var(--art-panel);
   --color-art-edge: var(--art-edge);
@@ -65,6 +66,7 @@
   --btn-edge: #737e8e;
   --btn-hover: #d2dbe7;
   --btn-active: #bfcbdb;
+  --btn-both: #a9b8cc;
 
   --art-panel: #dde4ed;
   --art-edge: #76818f;
@@ -112,6 +114,7 @@
     --btn-edge: #7a7264;
     --btn-hover: #37322b;
     --btn-active: #474036;
+    --btn-both: #574f42;
 
     --art-panel: #262421;
     --art-edge: #7d7568;
@@ -173,6 +176,7 @@
   --btn-edge: #7a7264;
   --btn-hover: #37322b;
   --btn-active: #474036;
+  --btn-both: #574f42;
 
   --art-panel: #262421;
   --art-edge: #7d7568;

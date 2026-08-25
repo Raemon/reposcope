@@ -3,9 +3,12 @@
 import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { closePull } from './closePull';
+import { useColumnNav } from './columnNav';
 import type { PullTarget } from './pullActionStore';
 import { prefetchPull } from './prefetchPull';
+import { pullRoute } from './pullPaths';
 import { useGithubToken } from '@/features/sources/sourceStore';
+import { rowStateClass } from '@/features/surface-ui/rowState';
 import { SelectableLink } from '@/features/surface-ui/SelectableLink';
 
 export function PullListRow({
@@ -22,8 +25,13 @@ export function PullListRow({
   children: ReactNode;
 }) {
   const token = useGithubToken();
+  const row = useColumnNav('pulls').row(pullRoute(target.owner, target.repo, target.number), current);
   return (
-    <div className={`group flex items-baseline ${current ? 'bg-btn-active text-accent' : 'text-ink hover:bg-btn-hover'}`}>
+    <div
+      data-nav-cursor={row.props.cursor || undefined}
+      onPointerEnter={row.props.onPointerEnter}
+      className={`group flex items-baseline ${rowStateClass(row.state)}`}
+    >
       <SelectableLink
         href={href}
         title={title}
