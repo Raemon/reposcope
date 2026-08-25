@@ -5,7 +5,7 @@ import { ThemeScript } from '@/features/theme/ThemeScript';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'reposcope — codebase viewer',
+  title: 'reposcope — pull request viewer',
   description: 'Read the open pull requests of any repository straight from GitHub.',
 };
 

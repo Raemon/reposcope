@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { AllPullRequestList } from './AllPullRequestList';
-import { PullRequestList } from './PullRequestMenu';
+import { PullRequestList } from './PullRequestList';
 
 export function AllPullsSurface() {
   return (
@@ -14,7 +14,7 @@ export function AllPullsSurface() {
 
 export function RepoPullsSurface({ owner, repo }: { owner: string; repo: string }) {
   return (
-    <PullsSurface heading={`${owner}/${repo}`} note="open pull requests, most recently updated first">
+    <PullsSurface heading="Pull requests" note="open in this codebase, most recently updated first">
       <PullRequestList repo={{ owner, name: repo }} />
     </PullsSurface>
   );
@@ -27,7 +27,7 @@ function PullsSurface({ heading, note, children }: { heading: string; note: stri
         <h1 className="text-[11px] leading-4 text-accent">{heading}</h1>
         <p className="text-[10px] text-ink-dim">{note}</p>
       </div>
-      <div className="min-h-0 flex-1 overflow-auto">{children}</div>
+      {children}
     </div>
   );
 }

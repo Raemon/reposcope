@@ -24,13 +24,14 @@ export function CodebaseHeader() {
   const pathname = usePathname();
   const reading = repoBeingRead(pathname);
   const pullNumber = pullBeingRead(pathname);
+  const readingPullList = reading !== null && pathname === repoRoute(reading.owner, reading.name);
   return (
     <header className="flex items-center gap-2 border-b border-panel-edge bg-panel px-2 py-5">
       <Link href="/" aria-label="reposcope home" className="shrink-0">
         <ScopeMark size={20} title="reposcope home" />
       </Link>
       <CodebaseMenu reading={reading} />
-      {reading &&
+      {reading && !readingPullList &&
         (pullNumber === null ? <PullRequestMenu repo={reading} /> : <CurrentPullTitle repo={reading} number={pullNumber} />)}
       <div className="ml-auto flex shrink-0 items-center gap-2">
         <GithubSignedOutNotice />
