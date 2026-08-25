@@ -42,7 +42,6 @@ export function PullRequestList({ repo }: { repo: RepoRef }) {
             key={pull.number}
             target={{ owner: repo.owner, repo: repo.name, number: pull.number }}
             href={href}
-            title={pull.title}
             current={pathname === href}
           >
             <span className="shrink-0 text-[9px] text-ink-dim">#{pull.number}</span>
