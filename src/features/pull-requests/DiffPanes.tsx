@@ -29,7 +29,7 @@ export function DiffPanes({
 }: {
   owner: string;
   repo: string;
-  number: number;
+  number: number | null;
   fileSet: ChangedFileSet | null;
   selected: string | null;
   editablePull?: PullRequestSummary | null;

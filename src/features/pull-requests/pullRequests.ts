@@ -8,6 +8,7 @@ import {
 } from '@/features/codebases/githubRequest';
 import { requireGithubUser } from '@/features/github-auth/requireGithubUser';
 import { imageTypeOf } from './imageFiles';
+import { mapWithWorkers } from './workerPool';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
 
 export interface PullRequestSummary {
@@ -65,15 +66,18 @@ export interface FileText {
   byteSize: number;
 }
 
-export interface PullRequestCommits {
+export interface ChangeSummary {
+  additions: number;
+  deletions: number;
+  commits: CommitSummary[];
+}
+
+export interface PullRequestCommits extends ChangeSummary {
   pull: PullRequestSummary;
   body: string | null;
   baseRef: string;
   headRef: string;
-  additions: number;
-  deletions: number;
   conflicted: boolean;
-  commits: CommitSummary[];
 }
 
 export interface FileEdit {
@@ -140,7 +144,7 @@ interface GithubFileContents {
   encoding?: string;
 }
 
-interface GithubChangedFile {
+export interface GithubChangedFile {
   filename: string;
   previous_filename?: string;
   status: string;
@@ -149,7 +153,7 @@ interface GithubChangedFile {
   patch?: string;
 }
 
-interface GithubCommit {
+export interface GithubCommit {
   sha: string;
   commit: { message: string; author: { name: string; date: string } | null };
   author: { login: string } | null;
@@ -378,7 +382,7 @@ function readRawFile(owner: string, name: string, ref: string, path: string): Pr
   );
 }
 
-function changedFile(file: GithubChangedFile): ChangedFile {
+export function changedFile(file: GithubChangedFile): ChangedFile {
   return {
     filename: file.filename,
     previousFilename: file.previous_filename ?? null,
@@ -427,16 +431,10 @@ function summarizeCommit(commit: GithubCommit): CommitSummary {
   };
 }
 
-async function summarizeCommits(owner: string, name: string, commits: GithubCommit[]): Promise<CommitSummary[]> {
+export async function summarizeCommits(owner: string, name: string, commits: GithubCommit[]): Promise<CommitSummary[]> {
   const summaries = commits.map(summarizeCommit);
-  const queue = summaries.map((summary, index) => ({ summary, index }));
-  const count = async () => {
-    for (let job = queue.shift(); job; job = queue.shift()) {
-      summaries[job.index] = { ...job.summary, ...(await commitTotals(owner, name, job.summary.sha)) };
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(COMMIT_STAT_WORKERS, queue.length) }, count));
-  return summaries;
+  const totals = await mapWithWorkers(summaries, COMMIT_STAT_WORKERS, (held) => commitTotals(owner, name, held.sha));
+  return summaries.map((summary, at) => ({ ...summary, ...totals[at] }));
 }
 
 interface CommitTotals {

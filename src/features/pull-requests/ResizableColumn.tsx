@@ -5,6 +5,8 @@ import { useColumnNav, type ColumnRow } from './columnNav';
 import { COLUMN_HEADER, type ColumnId } from './navColumn';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 
+const HEADER_ROW = 'flex w-full shrink-0 items-center gap-1.5 border-panel-edge px-1.5 py-[1px] text-left';
+
 const MIN_WIDTH = 140;
 const MAX_WIDTH = 900;
 
@@ -79,6 +81,48 @@ export function CollapsedColumn({
   );
 }
 
+export function SectionHeader({
+  icon,
+  title,
+  titleTone,
+  note,
+  chevron,
+  tone,
+  label,
+  expanded,
+  cursor,
+  onPointerEnter,
+  onActivate,
+}: {
+  icon: string;
+  title: string;
+  titleTone: string;
+  note?: string;
+  chevron: string;
+  tone: string;
+  label: string;
+  expanded?: boolean;
+  cursor?: boolean;
+  onPointerEnter?: () => void;
+  onActivate: () => void;
+}) {
+  return (
+    <SelectableRow
+      cursor={cursor}
+      onPointerEnter={onPointerEnter}
+      onActivate={onActivate}
+      label={label}
+      expanded={expanded}
+      className={`${HEADER_ROW} ${tone}`}
+    >
+      <span aria-hidden className="shrink-0 text-[11px] leading-4 text-ink-dim">{icon}</span>
+      <span className={`shrink-0 text-[10px] uppercase tracking-[0.18em] ${titleTone}`}>{title}</span>
+      {note && <span className="min-w-0 flex-1 truncate text-[10px] text-ink-dim">{note}</span>}
+      <span aria-hidden className="ml-auto shrink-0 px-1 text-[11px] leading-none text-ink-dim">{chevron}</span>
+    </SelectableRow>
+  );
+}
+
 export function ColumnHeader({
   title,
   icon,
@@ -95,17 +139,17 @@ export function ColumnHeader({
   onCollapse: () => void;
 }) {
   return (
-    <SelectableRow
+    <SectionHeader
       {...row.props}
-      onActivate={onCollapse}
+      icon={icon}
+      title={title}
+      titleTone={focused ? 'text-accent' : 'text-ink-dim'}
+      note={note}
+      chevron="‹"
+      tone={`border-b ${headerTone(row, focused)}`}
       label={`Collapse ${title}`}
-      className={`flex w-full shrink-0 items-center gap-1.5 border-b border-panel-edge px-1.5 py-[1px] text-left ${headerTone(row, focused)}`}
-    >
-      <span aria-hidden className="shrink-0 text-[11px] leading-4 text-ink-dim">{icon}</span>
-      <span className={`shrink-0 text-[10px] uppercase tracking-[0.18em] ${focused ? 'text-accent' : 'text-ink-dim'}`}>{title}</span>
-      {note && <span className="min-w-0 flex-1 truncate text-[10px] text-ink-dim">{note}</span>}
-      <span aria-hidden className="ml-auto shrink-0 px-1 text-[11px] leading-none text-ink-dim">‹</span>
-    </SelectableRow>
+      onActivate={onCollapse}
+    />
   );
 }
 
@@ -117,6 +161,7 @@ export function ResizableColumn({
   preview,
   size,
   onSize,
+  footer,
   children,
 }: {
   navId: ColumnId;
@@ -126,6 +171,7 @@ export function ResizableColumn({
   preview?: ReactNode;
   size: ColumnSize;
   onSize: (next: ColumnSize) => void;
+  footer?: ReactNode;
   children: ReactNode;
 }) {
   const nav = useColumnNav(navId);
@@ -158,6 +204,7 @@ export function ResizableColumn({
         onCollapse={() => onSize({ ...size, open: false })}
       />
       <div ref={nav.bodyRef} className="min-h-0 flex-1 overflow-auto">{children}</div>
+      {footer}
       <DragHandle onPointerDown={startDrag} />
     </section>
   );
