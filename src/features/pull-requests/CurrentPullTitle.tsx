@@ -12,11 +12,25 @@ export function CurrentPullTitle({ repo, number }: { repo: RepoRef; number: numb
       {pull && (
         <>
           <span className="min-w-0 truncate text-ink">{pull.pull.title}</span>
-          <span className="shrink-0 pl-3 text-[10px] text-ink-dim/70">
-            {pull.pull.author} · {pull.headRef} → {pull.baseRef} · {timeAgo(pull.pull.updatedAt)}
-          </span>
+          <div className="flex shrink-0 items-baseline gap-1.5 pl-3 text-[10px] text-ink-dim/60">
+            <span className="text-ink-dim">{pull.pull.author}</span>
+            <Dot />
+            <span>
+              {pull.headRef} <span className="text-ink-dim/40">→</span> {pull.baseRef}
+            </span>
+            <Dot />
+            <span>{timeAgo(pull.pull.updatedAt)}</span>
+          </div>
         </>
       )}
     </div>
+  );
+}
+
+function Dot() {
+  return (
+    <span aria-hidden className="text-ink-dim/30">
+      ·
+    </span>
   );
 }

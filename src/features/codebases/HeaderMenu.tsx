@@ -9,7 +9,7 @@ export function HeaderMenu({
   width,
   children,
 }: {
-  label: string;
+  label: ReactNode;
   width: string;
   children: (close: () => void) => ReactNode;
 }) {
@@ -44,12 +44,12 @@ export function HeaderMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         {...labelClick}
-        className={`flex max-w-[22rem] items-baseline gap-1.5 rounded px-2 py-1 text-[13px] ${SELECTABLE_TEXT} ${
+        className={`flex max-w-[22rem] items-baseline gap-1 rounded px-1.5 py-0.5 text-[13px] ${SELECTABLE_TEXT} ${
           open ? 'bg-btn-active text-accent' : 'text-ink hover:bg-btn-hover'
         }`}
       >
         <span className="truncate">{label}</span>
-        <span aria-hidden className="shrink-0 text-[10px] text-ink-dim">
+        <span aria-hidden className="shrink-0 text-[9px] text-ink-dim/60">
           ▾
         </span>
       </button>
