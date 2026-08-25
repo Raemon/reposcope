@@ -11,6 +11,7 @@ import { ROW_HEIGHT, SAVE_BAR } from './diffMetrics';
 import { EditTarget } from './editTarget';
 import { type EditableBlock } from './editableBlocks';
 import { expandDiff } from './expandDiff';
+import { outlineRows } from './outlineDiff';
 import { DragHandle, useDragWidth, type ColumnSize } from './ResizableColumn';
 import { splitDiff, type DiffRow } from './splitDiff';
 import { useDiffTokens, useIntralineEmphasis } from './useDiffSideHighlight';
@@ -26,12 +27,14 @@ export function FileDiff({
   file,
   baseRef,
   headRef,
+  outline = false,
 }: {
   owner: string;
   repo: string;
   file: ChangedFile;
   baseRef: string;
   headRef: string;
+  outline?: boolean;
 }) {
   const token = useGithubToken();
   const target = useContext(EditTarget);
@@ -41,7 +44,8 @@ export function FileDiff({
   const [wantWholeFile, setWantWholeFile] = useState(false);
   const wholeFile = useWholeFile(owner, repo, file, baseRef, headRef, wantWholeFile);
   const patchRows = useMemo(() => splitDiff(file.patch ?? ''), [file.patch]);
-  const rows = useMemo(() => rowsForDisplay(patchRows, wholeFile.lines), [patchRows, wholeFile.lines]);
+  const fullRows = useMemo(() => rowsForDisplay(patchRows, wholeFile.lines), [patchRows, wholeFile.lines]);
+  const rows = useMemo(() => (outline ? outlineRows(fullRows) : fullRows), [outline, fullRows]);
   const columns = useMemo(() => ({ left: columnLines(rows, 'left'), right: columnLines(rows, 'right') }), [rows]);
   const merged = useMemo(() => unifiedLines(rows), [rows]);
   const emphasis = useIntralineEmphasis(rows);
@@ -59,8 +63,8 @@ export function FileDiff({
     token,
     onCommitted: target?.onCommitted,
   });
-  const showingWholeFile = rows !== patchRows;
-  const canEdit = pull !== null && !wantWholeFile;
+  const showingWholeFile = fullRows !== patchRows;
+  const canEdit = pull !== null && !wantWholeFile && !outline;
   const expand = expandControl(wholeFile, showingWholeFile, hunkEdit, setWantWholeFile);
   const shared = { rows, tokens, emphasis, expand };
   const editing = {
@@ -69,6 +73,7 @@ export function FileDiff({
     editedRows: canEdit ? hunkEdit.edit?.block ?? null : null,
     editor: canEdit && hunkEdit.edit ? hunkEditor(file.filename, hunkEdit) : null,
   };
+  if (outline && rows.length === 0) return <OutlineEmpty />;
   return (
     <div ref={growing}>
       {unified ? (
@@ -98,6 +103,10 @@ export function FileDiff({
       )}
     </div>
   );
+}
+
+function OutlineEmpty() {
+  return <p className="px-2 py-[2px] text-[10px] text-ink-dim">no declarations — expand to see the diff</p>;
 }
 
 function rowsForDisplay(patchRows: DiffRow[], lines: WholeFile['lines']): DiffRow[] {
