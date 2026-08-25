@@ -13,8 +13,8 @@ import { type EditableBlock } from './editableBlocks';
 import { expandDiff } from './expandDiff';
 import { InlineThreads } from './InlineThreads';
 import { outlineRows } from './outlineDiff';
-import { setDiffPaneWidth, useDiffPaneWidth } from './diffPaneWidth';
-import { DragHandle, useDragWidth } from './ResizableColumn';
+import { useDiffPaneDrag } from './diffPaneWidth';
+import { DragHandle } from './ResizableColumn';
 import { splitDiff, type DiffRow } from './splitDiff';
 import { useDiffTokens, useIntralineEmphasis } from './useDiffSideHighlight';
 import { useHeightTransition } from './useHeightTransition';
@@ -41,8 +41,7 @@ export function FileDiff({
   const token = useGithubToken();
   const target = useContext(EditTarget);
   const unified = useDiffLayout() === 'unified';
-  const removedSize = { width: useDiffPaneWidth(), open: true };
-  const startDrag = useDragWidth(removedSize, setDiffPaneWidth);
+  const { width: removedWidth, startDrag } = useDiffPaneDrag();
   const [wantWholeFile, setWantWholeFile] = useState(false);
   const [threadOverflow, setThreadOverflow] = useState(0);
   const wholeFile = useWholeFile(owner, repo, file, baseRef, headRef, wantWholeFile);
@@ -90,7 +89,7 @@ export function FileDiff({
         <DiffSide {...shared} lines={merged} labels {...editing} />
       ) : (
         <div className="flex">
-          <section className="relative flex shrink-0 flex-col border-r border-panel-edge" style={{ width: removedSize.width }}>
+          <section className="relative flex shrink-0 flex-col border-r border-panel-edge" style={{ width: removedWidth }}>
             <DiffSide {...shared} lines={columns.left} labels spacer={canEdit ? spacerFor(hunkEdit.edit) : null} />
             <DragHandle onPointerDown={startDrag} />
           </section>

@@ -4,30 +4,32 @@ import { useCallback, type Dispatch, type SetStateAction } from 'react';
 import { localPref, usePref } from './localPref';
 import { clampWidth, type ColumnSize } from './ResizableColumn';
 
-const DEFAULTS: Record<string, ColumnSize> = {
+const DEFAULTS = {
   pulls: { width: 300, open: false },
   'all-pulls': { width: 380, open: true },
   discussion: { width: 320, open: false },
   commits: { width: 260, open: true },
   files: { width: 280, open: true },
-};
+} satisfies Record<string, ColumnSize>;
+
+type ColumnName = keyof typeof DEFAULTS;
 
 const columnsPref = localPref<Partial<Record<string, ColumnSize>>>('reposcope.columns', {}, decodeColumns);
 
-export function setStickyColumn(name: string, next: SetStateAction<ColumnSize>, defaultOpen?: boolean): void {
+export function setStickyColumn(name: ColumnName, next: SetStateAction<ColumnSize>, defaultOpen?: boolean): void {
   const held = columnsPref.read();
   const base = held[name] ?? defaultSize(name, defaultOpen);
   columnsPref.set({ ...held, [name]: typeof next === 'function' ? next(base) : next });
 }
 
-export function useStickyColumn(name: string, defaultOpen?: boolean): [ColumnSize, Dispatch<SetStateAction<ColumnSize>>] {
+export function useStickyColumn(name: ColumnName, defaultOpen?: boolean): [ColumnSize, Dispatch<SetStateAction<ColumnSize>>] {
   const size = usePref(columnsPref)[name] ?? defaultSize(name, defaultOpen);
   const remember = useCallback<Dispatch<SetStateAction<ColumnSize>>>((next) => setStickyColumn(name, next, defaultOpen), [name, defaultOpen]);
   return [size, remember];
 }
 
-function defaultSize(name: string, defaultOpen?: boolean): ColumnSize {
-  const held = DEFAULTS[name] ?? { width: 300, open: true };
+function defaultSize(name: ColumnName, defaultOpen?: boolean): ColumnSize {
+  const held = DEFAULTS[name];
   return defaultOpen === undefined ? held : { ...held, open: defaultOpen };
 }
 

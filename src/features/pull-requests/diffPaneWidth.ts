@@ -1,15 +1,17 @@
 'use client';
 
 import { localPref, usePref } from './localPref';
-import { clampWidth, type ColumnSize } from './ResizableColumn';
+import { clampWidth, useDragWidth, type ColumnSize } from './ResizableColumn';
 
 const widthPref = localPref('reposcope.diffPaneWidth', 520, decodeWidth);
 
-export function useDiffPaneWidth(): number {
-  return usePref(widthPref);
+export function useDiffPaneDrag() {
+  const width = usePref(widthPref);
+  const startDrag = useDragWidth({ width, open: true }, rememberWidth);
+  return { width, startDrag };
 }
 
-export function setDiffPaneWidth(next: ColumnSize): void {
+function rememberWidth(next: ColumnSize): void {
   widthPref.set(clampWidth(next.width));
 }
 

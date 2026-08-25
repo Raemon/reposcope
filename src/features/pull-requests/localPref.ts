@@ -17,12 +17,14 @@ export function localPref<T>(key: string, fallback: T, decode: (stored: unknown)
     fallback,
     read() {
       const raw = readItem(key);
-      if (raw === null) return fallback;
+      if (raw === null) return cached?.value ?? fallback;
       if (cached?.raw !== raw) cached = { raw, value: decode(parseRaw(raw)) ?? fallback };
       return cached.value;
     },
     set(next: T) {
-      writeItem(key, JSON.stringify(next));
+      const raw = JSON.stringify(next);
+      writeItem(key, raw);
+      cached = { raw, value: next }; // write-through keeps prefs usable when storage is blocked
       for (const listener of listeners) listener();
     },
     subscribe(listener: () => void) {

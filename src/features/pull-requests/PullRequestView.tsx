@@ -49,7 +49,8 @@ export function PullRequestView({
   const error = pullState.error;
   const fileSet = fileState.data;
   const fileError = fileState.error;
-  const [commitSize, setCommitSize] = useStickyColumn('commits', pull ? pull.commits.length > 1 : undefined);
+  const commitsOpenByDefault = pull ? pull.commits.length > 1 : undefined;
+  const [commitSize, setCommitSize] = useStickyColumn('commits', commitsOpenByDefault);
 
   usePollWhileVisible(() => Promise.all([pullState.reload(), fileState.reload()]), ready);
 
