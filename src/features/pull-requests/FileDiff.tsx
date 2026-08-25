@@ -11,6 +11,7 @@ import { ROW_HEIGHT, SAVE_BAR } from './diffMetrics';
 import { EditTarget } from './editTarget';
 import { type EditableBlock } from './editableBlocks';
 import { expandDiff } from './expandDiff';
+import { InlineThreads } from './InlineThreads';
 import { outlineRows } from './outlineDiff';
 import { DragHandle, useDragWidth, type ColumnSize } from './ResizableColumn';
 import { splitDiff, type DiffRow } from './splitDiff';
@@ -42,6 +43,7 @@ export function FileDiff({
   const [removedSize, setRemovedSize] = useState<ColumnSize>({ width: 520, open: true });
   const startDrag = useDragWidth(removedSize, setRemovedSize);
   const [wantWholeFile, setWantWholeFile] = useState(false);
+  const [threadOverflow, setThreadOverflow] = useState(0);
   const wholeFile = useWholeFile(owner, repo, file, baseRef, headRef, wantWholeFile);
   const patchRows = useMemo(() => splitDiff(file.patch ?? ''), [file.patch]);
   const fullRows = useMemo(() => rowsForDisplay(patchRows, wholeFile.lines), [patchRows, wholeFile.lines]);
@@ -75,7 +77,14 @@ export function FileDiff({
   };
   if (outline && rows.length === 0) return <OutlineEmpty />;
   return (
-    <div ref={growing}>
+    <div ref={growing} className="relative" style={{ paddingBottom: threadOverflow }}>
+      <InlineThreads
+        path={file.filename}
+        rows={rows}
+        lines={unified ? merged : columns.right}
+        nearest={outline}
+        onOverflow={setThreadOverflow}
+      />
       {unified ? (
         <DiffSide {...shared} lines={merged} labels {...editing} />
       ) : (

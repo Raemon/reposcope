@@ -135,6 +135,7 @@ export function PullRequestView({
               ref={diffPanes}
               owner={owner}
               repo={repo}
+              number={number}
               fileSet={fileSet}
               editablePull={editablePull(pull.pull, selection)}
               onCommitted={reloadInPlace}
