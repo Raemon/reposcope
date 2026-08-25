@@ -40,7 +40,7 @@ export function DiffPanes({
   const sections = useRef(new Map<string, HTMLElement>());
   const [toggled, setToggled] = useState<Record<string, boolean>>({});
   const toggleFile = useCallback((path: string) => {
-    setToggled((held) => ({ ...held, [path]: !(held[path] ?? !isImagePath(path)) }));
+    setToggled((held) => ({ ...held, [path]: !openFile(held, path) }));
   }, []);
 
   useImperativeHandle(ref, () => ({
@@ -78,7 +78,7 @@ export function DiffPanes({
                 baseRef={fileSet.baseRef}
                 headRef={fileSet.headRef}
                 selected={file.filename === selected}
-                open={toggled[file.filename] ?? !isImagePath(file.filename)}
+                open={openFile(toggled, file.filename)}
                 onToggle={() => toggleFile(file.filename)}
                 sectionRef={(node) => {
                   if (node) sections.current.set(file.filename, node);
@@ -91,6 +91,10 @@ export function DiffPanes({
       </ReviewThreadProvider>
     </EditTarget>
   );
+}
+
+function openFile(toggled: Record<string, boolean>, path: string): boolean {
+  return toggled[path] ?? !isImagePath(path);
 }
 
 function ImageStrip({
