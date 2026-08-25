@@ -6,6 +6,7 @@ export interface DiffLine {
   side: 'left' | 'right';
   cell: DiffCell | null;
   row: number;
+  touched: boolean;
 }
 
 interface PlacedRow {
@@ -41,5 +42,5 @@ function sideLines(run: PlacedRow[], side: 'left' | 'right'): DiffLine[] {
 }
 
 function lineOf(row: DiffRow, index: number, side: 'left' | 'right'): DiffLine {
-  return { kind: row.kind, label: row.label, side, cell: row[side], row: index };
+  return { kind: row.kind, label: row.label, side, cell: row[side], row: index, touched: row.touched === true };
 }

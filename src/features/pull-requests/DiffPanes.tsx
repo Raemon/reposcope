@@ -2,7 +2,8 @@
 
 import { useImperativeHandle, useRef, type Ref } from 'react';
 import { DiffFileSection } from './DiffFileSection';
-import { DiffLayoutToggle } from './DiffLayoutToggle';
+import { DiffToolbar } from './DiffToolbar';
+import { useFileFolds } from './fileFolds';
 import { EditTarget } from './editTarget';
 import { ImageThumbnailStrip } from './ImageThumbnailStrip';
 import { imageFilesOf } from './imageFiles';
@@ -33,6 +34,7 @@ export function DiffPanes({
   onCommitted?: () => void | Promise<void>;
   ref?: Ref<DiffPanesHandle>;
 }) {
+  const folds = useFileFolds(fileSet ? `${fileSet.baseRef}:${fileSet.headRef}` : '');
   const scroller = useRef<HTMLDivElement | null>(null);
   const sections = useRef(new Map<string, HTMLElement>());
 
@@ -52,7 +54,7 @@ export function DiffPanes({
     <EditTarget value={editablePull && { pull: editablePull, headRef: fileSet.headRef, onCommitted }}>
       <ReviewThreadProvider owner={owner} repo={repo} number={number}>
         <div className="flex min-h-0 flex-1 flex-col">
-          <DiffLayoutToggle />
+          <DiffToolbar folds={folds} />
           <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
             <ImageStrip
               key={`${fileSet.baseRef}:${fileSet.headRef}`}
@@ -69,6 +71,8 @@ export function DiffPanes({
                 file={file}
                 baseRef={fileSet.baseRef}
                 headRef={fileSet.headRef}
+                expanded={folds.expanded(file.filename)}
+                onToggle={() => folds.toggle(file.filename)}
                 sectionRef={(node) => {
                   if (node) sections.current.set(file.filename, node);
                   else sections.current.delete(file.filename);

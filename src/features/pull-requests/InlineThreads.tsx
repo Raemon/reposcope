@@ -14,15 +14,17 @@ export function InlineThreads({
   path,
   rows,
   lines,
+  nearest,
   onOverflow,
 }: {
   path: string;
   rows: DiffRow[];
   lines: DiffLine[];
+  nearest: boolean;
   onOverflow: (pixels: number) => void;
 }) {
   const threads = useFileThreads(path);
-  const anchors = useMemo(() => anchorThreads(threads, rows, lines), [threads, rows, lines]);
+  const anchors = useMemo(() => anchorThreads(threads, rows, lines, nearest), [threads, rows, lines, nearest]);
   const [heights, setHeights] = useState<Record<number, number>>({});
   const measure = useCallback((rootId: number, height: number) => {
     setHeights((held) => (held[rootId] === height ? held : { ...held, [rootId]: height }));
