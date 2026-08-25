@@ -12,6 +12,10 @@ export function rowState(selected: boolean, highlighted: boolean): RowState {
   return highlighted ? 'highlighted' : 'plain';
 }
 
+export function rowShowsAccent(state: RowState): boolean {
+  return state === 'selected' || state === 'both';
+}
+
 export function rowStateClass(state: RowState): string {
   return ROW_STATE_CLASS[state];
 }

@@ -2,9 +2,10 @@
 
 import { ChangeCounts } from './ChangeCounts';
 import { useColumnNav } from './columnNav';
+import { fileKindColor, splitExtension } from './fileKind';
 import { baseName, groupByFolder } from './fileTree';
 import type { ChangedFile } from './pullRequests';
-import { rowStateClass } from '@/features/surface-ui/rowState';
+import { rowShowsAccent, rowStateClass } from '@/features/surface-ui/rowState';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 
 const ROW = 'flex w-full items-baseline gap-1.5 py-[1px] pr-1.5 text-left text-[11px] leading-4';
@@ -34,13 +35,26 @@ export function ChangedFileTree({
                 title={file.filename}
                 className={`${ROW} ${group.folder ? 'pl-4' : 'pl-1.5'} ${rowStateClass(row.state)}`}
               >
-                <span className="min-w-0 flex-1 truncate">{baseName(file.filename)}</span>
+                <span className="min-w-0 flex-1 truncate">
+                  <FileName path={file.filename} tinted={!rowShowsAccent(row.state)} />
+                </span>
                 <ChangeCounts additions={file.additions} deletions={file.deletions} />
               </SelectableRow>
             );
           })}
         </div>
       ))}
+    </>
+  );
+}
+
+function FileName({ path, tinted }: { path: string; tinted: boolean }) {
+  const [stem, extension] = splitExtension(baseName(path));
+  const color = tinted ? fileKindColor(path) : undefined;
+  return (
+    <>
+      {stem}
+      <span style={color ? { color } : undefined}>{extension}</span>
     </>
   );
 }
