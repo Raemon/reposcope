@@ -2,7 +2,8 @@
 
 import { ChangedFileTree } from './ChangedFileTree';
 import type { PreviewToken } from './ColumnPreview';
-import type { ChangedFileSet } from './pullRequests';
+import { sortByFolder } from './fileTree';
+import type { ChangedFile, ChangedFileSet } from './pullRequests';
 
 export function PullFilesColumn({
   fileSet,
@@ -25,8 +26,12 @@ export function PullFilesColumn({
   return <ChangedFileTree files={fileSet.files} selected={path} onSelect={onSelect} />;
 }
 
+export function orderedFiles(fileSet: ChangedFileSet | null): ChangedFile[] {
+  return sortByFolder(fileSet?.files ?? []);
+}
+
 export function fileTokens(fileSet: ChangedFileSet | null, selected: string | null): PreviewToken[] {
-  return (fileSet?.files ?? []).map((file) => {
+  return orderedFiles(fileSet).map((file) => {
     const name = file.filename.split('/').pop() ?? file.filename;
     return {
       key: file.filename,

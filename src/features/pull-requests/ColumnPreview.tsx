@@ -1,6 +1,8 @@
 'use client';
 
-const MAX_TOKENS = 60;
+import { useColumnNav, type ColumnRow } from './columnNav';
+import type { ColumnId } from './navColumn';
+import type { RowState } from '@/features/surface-ui/rowState';
 
 export interface PreviewToken {
   key: string;
@@ -9,21 +11,36 @@ export interface PreviewToken {
   accent?: boolean;
 }
 
-export function ColumnPreview({ tokens }: { tokens: PreviewToken[] }) {
+const CHIP_TONE: Record<RowState, string> = {
+  plain: 'bg-btn text-ink-dim',
+  highlighted: 'bg-btn-hover text-ink outline outline-1 outline-ink',
+  selected: 'bg-btn-active text-accent',
+  both: 'bg-btn-both text-accent outline outline-1 outline-ink',
+};
+
+const CHIP = 'shrink-0 rounded-[3px] px-[3px] py-[2px] font-mono text-[9px] leading-none tracking-tight normal-case';
+
+export function ColumnPreview({ tokens, column }: { tokens: PreviewToken[]; column: ColumnId }) {
+  const nav = useColumnNav(column);
   if (tokens.length === 0) return null;
   return (
-    <span className="flex min-h-0 flex-1 flex-col items-center gap-[3px] overflow-hidden [mask-image:linear-gradient(to_bottom,black_calc(100%-20px),transparent)]">
-      {tokens.slice(0, MAX_TOKENS).map((token) => (
-        <span
-          key={token.key}
-          title={token.title}
-          className={`shrink-0 rounded-[3px] px-[3px] py-[2px] font-mono text-[9px] leading-none tracking-tight normal-case ${
-            token.accent ? 'bg-btn-active text-accent' : 'bg-btn-hover text-ink-dim'
-          }`}
-        >
-          {token.label}
-        </span>
+    <span className="flex min-h-0 flex-1 flex-col items-center gap-[3px] overflow-y-auto [mask-image:linear-gradient(to_bottom,black_calc(100%-20px),transparent)]">
+      {tokens.map((token) => (
+        <PreviewChip key={token.key} token={token} row={nav.row(token.key, token.accent ?? false)} />
       ))}
+    </span>
+  );
+}
+
+function PreviewChip({ token, row }: { token: PreviewToken; row: ColumnRow }) {
+  return (
+    <span
+      title={token.title}
+      data-nav-cursor={row.props.cursor || undefined}
+      onPointerEnter={row.props.onPointerEnter}
+      className={`${CHIP} ${CHIP_TONE[row.state]}`}
+    >
+      {token.label}
     </span>
   );
 }

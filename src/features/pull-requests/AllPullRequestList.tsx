@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import { useColumnNav } from './columnNav';
 import { useStandingPulls } from './mergeStore';
 import { prefetchPull } from './prefetchPull';
 import { allPullsRoute, pullRoute } from './pullPaths';
@@ -9,6 +10,7 @@ import type { CrossRepoPull } from './pullRequests';
 import { useAllPullRequests } from './useAllPullRequests';
 import { timeAgo } from '@/features/repo-insights/ui/timeAgo';
 import { useGithubToken } from '@/features/sources/sourceStore';
+import { rowStateClass } from '@/features/surface-ui/rowState';
 import { SelectableLink } from '@/features/surface-ui/SelectableLink';
 
 const NOTE = 'px-2 py-1 text-[11px] leading-4';
@@ -22,6 +24,7 @@ export function AllPullRequestList() {
   const { scanning, repoCount, found, error } = useAllPullRequests();
   const pathname = usePathname();
   const standingPulls = useStandingPulls(found?.pulls);
+  const { cursor } = useColumnNav('pulls');
   const [showingOlder, setShowingOlder] = useState(false);
 
   if (!found) {
@@ -33,9 +36,10 @@ export function AllPullRequestList() {
     );
   }
 
-  const visible = standingPulls.filter(
-    (pull) => showingOlder || updatedWithinLastWeek(pull) || pathname === pullRoute(pull.owner, pull.repo, pull.number),
-  );
+  const visible = standingPulls.filter((pull) => {
+    const route = pullRoute(pull.owner, pull.repo, pull.number);
+    return showingOlder || updatedWithinLastWeek(pull) || pathname === route || cursor === route;
+  });
   const olderCount = standingPulls.length - visible.length;
 
   return (
@@ -66,17 +70,20 @@ export function AllPullRequestList() {
 
 function PullRow({ pull, pathname }: { pull: CrossRepoPull; pathname: string }) {
   const token = useGithubToken();
-  const href = allPullsRoute(pull.owner, pull.repo, pull.number);
-  const active = pathname === pullRoute(pull.owner, pull.repo, pull.number);
+  const route = pullRoute(pull.owner, pull.repo, pull.number);
+  const active = pathname === route;
+  const row = useColumnNav('pulls').row(route, active);
   return (
     <SelectableLink
-      href={href}
+      {...row.props}
+      href={allPullsRoute(pull.owner, pull.repo, pull.number)}
       title={`${pull.owner}/${pull.repo} #${pull.number} — ${pull.title}`}
       current={active}
-      onPointerEnter={() => prefetchPull(pull.owner, pull.repo, pull.number, token)}
-      className={`flex items-baseline gap-1.5 px-2 py-[1px] text-[11px] leading-4 ${
-        active ? 'bg-btn-active text-accent' : 'text-ink hover:bg-btn-hover'
-      }`}
+      onPointerEnter={() => {
+        row.props.onPointerEnter();
+        prefetchPull(pull.owner, pull.repo, pull.number, token);
+      }}
+      className={`flex items-baseline gap-1.5 px-2 py-[1px] text-[11px] leading-4 ${rowStateClass(row.state)}`}
     >
       <span className="max-w-[9rem] shrink-0 truncate text-[9px] text-ink-dim">{pull.repo}</span>
       <span className="shrink-0 text-[9px] text-ink-dim">#{pull.number}</span>

@@ -1,11 +1,14 @@
 'use client';
 
+import { usePathname, useRouter } from 'next/navigation';
+import type { ReactNode } from 'react';
 import { AllPullRequestList } from './AllPullRequestList';
 import { ColumnPreview, type PreviewToken } from './ColumnPreview';
+import { useRegisterColumn } from './columnNav';
 import { PullRequestList } from './PullRequestMenu';
 import { ResizableColumn, type ColumnSize } from './ResizableColumn';
 import { useStandingPulls, useStandingRepoPulls } from './mergeStore';
-import { repoPullsPath } from './pullPaths';
+import { allPullsRoute, pullRoute, repoPullsPath } from './pullPaths';
 import type { PullRequestSummary } from './pullRequests';
 import { useAllPullRequests } from './useAllPullRequests';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
@@ -16,60 +19,90 @@ const ICON = '⇅';
 export interface PullColumn {
   owner: string;
   repo: string;
-  number: number;
   size: ColumnSize;
   onSize: (next: ColumnSize) => void;
 }
 
-export function RepoPullsColumn({ owner, repo, number, size, onSize }: PullColumn) {
+interface PullTarget {
+  route: string;
+  href: string;
+  label: string;
+  title: string;
+}
+
+export function RepoPullsColumn({ owner, repo, size, onSize }: PullColumn) {
   const ready = useStoreReady();
   const token = useGithubToken();
   const { data: pulls } = useCachedJson<PullRequestSummary[]>(repoPullsPath(owner, repo), token, ready);
   const standingPulls = useStandingRepoPulls(owner, repo, pulls);
   return (
-    <ResizableColumn
-      icon={ICON}
-      title="pull requests"
-      preview={<ColumnPreview tokens={standingPulls.map((pull) => pullToken(pull, `${owner}/${repo}`, pull.number === number))} />}
-      size={size}
-      onSize={onSize}
-    >
+    <PullsColumn targets={standingPulls.map((pull) => pullTarget(owner, repo, pull, false))} size={size} onSize={onSize}>
       <PullRequestList repo={{ owner, name: repo }} />
-    </ResizableColumn>
+    </PullsColumn>
   );
 }
 
-export function AllPullsColumn({ owner, repo, number, size, onSize }: PullColumn) {
+export function AllPullsColumn({ size, onSize }: Pick<PullColumn, 'size' | 'onSize'>) {
   const { found } = useAllPullRequests();
   const standingPulls = useStandingPulls(found?.pulls);
   return (
+    <PullsColumn targets={standingPulls.map((pull) => pullTarget(pull.owner, pull.repo, pull, true))} size={size} onSize={onSize}>
+      <AllPullRequestList />
+    </PullsColumn>
+  );
+}
+
+function PullsColumn({
+  targets,
+  size,
+  onSize,
+  children,
+}: {
+  targets: PullTarget[];
+  size: ColumnSize;
+  onSize: (next: ColumnSize) => void;
+  children: ReactNode;
+}) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const selected = targets.some((target) => target.route === pathname) ? pathname : null;
+  useRegisterColumn('pulls', {
+    items: targets.map((target) => target.route),
+    selected,
+    open: size.open,
+    collapsible: true,
+    setOpen: (open) => onSize({ ...size, open }),
+    onActivate: (route) => visitTarget(router, targets, route),
+  });
+  return (
     <ResizableColumn
+      navId="pulls"
       icon={ICON}
       title="pull requests"
-      preview={
-        <ColumnPreview
-          tokens={standingPulls.map((pull) =>
-            pullToken(
-              pull,
-              `${pull.owner}/${pull.repo}`,
-              pull.number === number && pull.owner === owner && pull.repo === repo,
-            ),
-          )}
-        />
-      }
+      preview={<ColumnPreview column="pulls" tokens={targets.map((target) => pullToken(target, target.route === selected))} />}
       size={size}
       onSize={onSize}
     >
-      <AllPullRequestList />
+      {children}
     </ResizableColumn>
   );
 }
 
-function pullToken(pull: PullRequestSummary, slug: string, accent: boolean): PreviewToken {
+function pullTarget(owner: string, repo: string, pull: PullRequestSummary, acrossRepos: boolean): PullTarget {
+  const route = pullRoute(owner, repo, pull.number);
   return {
-    key: `${slug}#${pull.number}`,
+    route,
+    href: acrossRepos ? allPullsRoute(owner, repo, pull.number) : route,
     label: String(pull.number).slice(-2),
-    title: `${slug} #${pull.number} · ${pull.title}`,
-    accent,
+    title: `${owner}/${repo} #${pull.number} · ${pull.title}`,
   };
+}
+
+function pullToken(target: PullTarget, accent: boolean): PreviewToken {
+  return { key: target.route, label: target.label, title: target.title, accent };
+}
+
+function visitTarget(router: { push: (href: string) => void }, targets: PullTarget[], route: string) {
+  const target = targets.find((held) => held.route === route);
+  if (target) router.push(target.href);
 }
