@@ -17,6 +17,10 @@ function updatedWithinLastWeek(pull: CrossRepoPull): boolean {
   return Date.now() - Date.parse(pull.updatedAt) < WEEK_MS;
 }
 
+function widestRepoName(pulls: CrossRepoPull[]): number {
+  return pulls.reduce((widest, pull) => Math.max(widest, pull.repo.length), 0);
+}
+
 export function AllPullRequestList() {
   const { scanning, repoCount, found, error } = useAllPullRequests();
   const pathname = usePathname();
@@ -38,6 +42,7 @@ export function AllPullRequestList() {
     return showingOlder || updatedWithinLastWeek(pull) || pathname === route || cursor === route;
   });
   const olderCount = standingPulls.length - visible.length;
+  const repoColumnCh = widestRepoName(visible);
 
   return (
     <nav className="min-h-0 flex-1 overflow-auto py-[1px]">
@@ -45,7 +50,12 @@ export function AllPullRequestList() {
       {scanning && !error && <p className={`${NOTE} text-ink-dim`}>Reading more repositories…</p>}
       {standingPulls.length === 0 && <p className={`${NOTE} text-ink-dim`}>No open pull requests.</p>}
       {visible.map((pull) => (
-        <PullRow key={`${pull.owner}/${pull.repo}#${pull.number}`} pull={pull} pathname={pathname} />
+        <PullRow
+          key={`${pull.owner}/${pull.repo}#${pull.number}`}
+          pull={pull}
+          pathname={pathname}
+          repoColumnCh={repoColumnCh}
+        />
       ))}
       {olderCount > 0 && (
         <button
@@ -65,7 +75,15 @@ export function AllPullRequestList() {
   );
 }
 
-function PullRow({ pull, pathname }: { pull: CrossRepoPull; pathname: string }) {
+function PullRow({
+  pull,
+  pathname,
+  repoColumnCh,
+}: {
+  pull: CrossRepoPull;
+  pathname: string;
+  repoColumnCh: number;
+}) {
   return (
     <PullListRow
       target={{ owner: pull.owner, repo: pull.repo, number: pull.number }}
@@ -73,7 +91,9 @@ function PullRow({ pull, pathname }: { pull: CrossRepoPull; pathname: string }) 
       title={`${pull.owner}/${pull.repo} #${pull.number} — ${pull.title}`}
       current={pathname === pullRoute(pull.owner, pull.repo, pull.number)}
     >
-      <span className="max-w-[9rem] shrink-0 truncate text-[9px] text-ink-dim">{pull.repo}</span>
+      <span className="shrink-0 truncate text-[9px] text-ink-dim" style={{ width: `${repoColumnCh}ch` }}>
+        {pull.repo}
+      </span>
       <span className="shrink-0 text-[9px] text-ink-dim">#{pull.number}</span>
       <span className="min-w-0 flex-1 truncate">{pull.title}</span>
       {pull.draft && <span className="shrink-0 rounded bg-btn px-1 text-[9px]">draft</span>}
