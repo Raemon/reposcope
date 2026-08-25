@@ -3,7 +3,7 @@
 import { pullCommentsPath } from './pullPaths';
 import { renderMarkdown } from '@/features/markdown/renderMarkdown';
 import type { PullComment } from './pullRequests';
-import { timeAgo } from '@/features/repo-insights/ui/timeAgo';
+import { timeAgo } from '@/features/surface-ui/timeAgo';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 import { HoverCardHtml } from '@/features/surface-ui/HoverCard';
 import { useCachedJson } from '@/features/sources/useCachedJson';

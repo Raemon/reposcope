@@ -38,13 +38,6 @@
   --color-add-bg: var(--add-bg);
   --color-add-emph: var(--add-emph);
   --color-add-ink: var(--add-ink);
-
-  --color-meter-1: var(--meter-1);
-  --color-meter-2: var(--meter-2);
-  --color-meter-3: var(--meter-3);
-  --color-meter-4: var(--meter-4);
-  --color-meter-5: var(--meter-5);
-  --color-meter-6: var(--meter-6);
 }
 
 @utility shadow-card {
@@ -87,12 +80,6 @@
   --add-emph: #b9e3c0;
   --add-ink: #14591f;
 
-  --meter-1: #3d2200;
-  --meter-2: #6b3c00;
-  --meter-3: #98600a;
-  --meter-4: #b58538;
-  --meter-5: #c9a463;
-  --meter-6: #d9be8c;
 
   --shadow-card: 0 0 0 1px rgba(10, 14, 20, 0.12), 0 8px 28px rgba(10, 14, 20, 0.24);
   color-scheme: light;
@@ -135,12 +122,6 @@
     --add-emph: #2f5636;
     --add-ink: #8ee29a;
 
-    --meter-1: #ffcf7a;
-    --meter-2: #f0b055;
-    --meter-3: #d1913c;
-    --meter-4: #ad742e;
-    --meter-5: #8a5a26;
-    --meter-6: #6a4520;
 
     --shadow-card: 0 0 0 1px rgba(248, 244, 236, 0.14), 0 12px 34px rgba(0, 0, 0, 0.8);
     color-scheme: dark;
@@ -209,12 +190,6 @@
   --add-emph: #2f5636;
   --add-ink: #8ee29a;
 
-  --meter-1: #ffcf7a;
-  --meter-2: #f0b055;
-  --meter-3: #d1913c;
-  --meter-4: #ad742e;
-  --meter-5: #8a5a26;
-  --meter-6: #6a4520;
 
   --shadow-card: 0 0 0 1px rgba(248, 244, 236, 0.14), 0 12px 34px rgba(0, 0, 0, 0.8);
   color-scheme: dark;

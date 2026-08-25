@@ -1,7 +1,7 @@
 'use client';
 
 import { useCurrentPull } from './currentPullStore';
-import { timeAgo } from '@/features/repo-insights/ui/timeAgo';
+import { timeAgo } from '@/features/surface-ui/timeAgo';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
 
 export function CurrentPullTitle({ repo, number }: { repo: RepoRef; number: number }) {
@@ -32,5 +32,14 @@ function Dot() {
     <span aria-hidden className="text-ink-dim/30">
       ·
     </span>
+  );
+}
+
+export function CurrentBranchTitle({ branch }: { branch: string }) {
+  return (
+    <div className="flex min-w-0 flex-1 items-baseline gap-2 text-[13px] leading-5">
+      <span aria-hidden className="shrink-0 text-accent">⑂</span>
+      <span className="min-w-0 truncate font-mono text-[13px] leading-6 text-ink">{branch}</span>
+    </div>
   );
 }

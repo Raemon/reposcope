@@ -1,3 +1,5 @@
+import { alignedChangeRows } from './alignDiffRows';
+
 export interface DiffCell {
   line: number;
   text: string;
@@ -19,9 +21,7 @@ export function splitDiff(patch: string): DiffRow[] {
   let newLine = 0;
 
   const flush = () => {
-    for (let index = 0; index < Math.max(removed.length, added.length); index += 1) {
-      rows.push({ kind: 'change', label: '', left: removed[index] ?? null, right: added[index] ?? null });
-    }
+    rows.push(...alignedChangeRows(removed, added));
     removed = [];
     added = [];
   };

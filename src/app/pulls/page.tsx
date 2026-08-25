@@ -1,4 +1,4 @@
-import { AllPullsSurface } from '@/features/pull-requests/AllPullsSurface';
+import { AllPullsSurface } from '@/features/pull-requests/PullsSurface';
 
 export default function AllPullsPage() {
   return <AllPullsSurface />;
