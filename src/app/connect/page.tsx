@@ -3,7 +3,9 @@
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { parseGithubAccess } from '@/features/github-auth/githubAccess';
-import { addSource, writeGithubToken } from '@/features/sources/sourceStore';
+import { grantFromParams } from '@/features/github-auth/grantParams';
+import { sessionFromGrant } from '@/features/sources/githubSession';
+import { addSource, writeGithubSession } from '@/features/sources/sourceStore';
 
 export default function ConnectPage() {
   const router = useRouter();
@@ -11,7 +13,7 @@ export default function ConnectPage() {
     const granted = new URLSearchParams(window.location.hash.replace(/^#/, ''));
     const token = granted.get('token');
     if (token) {
-      writeGithubToken(token, parseGithubAccess(granted.get('access')));
+      writeGithubSession(sessionFromGrant(grantFromParams(granted, token), parseGithubAccess(granted.get('access'))));
       addSource({ kind: 'viewer' });
     }
     window.history.replaceState(null, '', '/connect');

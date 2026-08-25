@@ -58,7 +58,8 @@ function keptAttributes(rawAttributes: string, allowed: string[], bases: UrlBase
     const name = rawName?.toLowerCase() ?? '';
     if (!allowed.includes(name)) continue;
     const value = attributeValue(name, quoted ?? single ?? bare ?? '', bases);
-    if (value !== null) kept.push(` ${name}="${value}"`);
+    const outputName = name === 'title' ? 'data-hovercard' : name;
+    if (value !== null) kept.push(` ${outputName}="${value}"`);
   }
   return kept.join('');
 }

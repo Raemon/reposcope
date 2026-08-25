@@ -7,7 +7,6 @@ import { SELECTABLE_TEXT, useSelectableClick } from './selectableClick';
 export function SelectableLink({
   href,
   className,
-  title,
   current,
   cursor,
   ref,
@@ -16,7 +15,6 @@ export function SelectableLink({
 }: {
   href: string;
   className: string;
-  title?: string;
   current?: boolean;
   cursor?: boolean;
   ref?: Ref<HTMLAnchorElement>;
@@ -29,7 +27,6 @@ export function SelectableLink({
       ref={ref}
       href={href}
       {...linkClick}
-      title={title}
       onPointerEnter={onPointerEnter}
       data-nav-cursor={cursor || undefined}
       aria-current={current ? 'page' : undefined}

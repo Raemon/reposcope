@@ -6,7 +6,6 @@ import { SELECTABLE_TEXT, useSelectableClick } from './selectableClick';
 export function SelectableRow({
   onActivate,
   className,
-  title,
   label,
   expanded,
   current,
@@ -17,7 +16,6 @@ export function SelectableRow({
 }: {
   onActivate: () => void;
   className: string;
-  title?: string;
   label?: string;
   expanded?: boolean;
   current?: boolean;
@@ -32,7 +30,6 @@ export function SelectableRow({
       ref={ref}
       type="button"
       {...rowClick}
-      title={title}
       onPointerEnter={onPointerEnter}
       data-nav-cursor={cursor || undefined}
       aria-label={label}

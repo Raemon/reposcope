@@ -1,44 +1,19 @@
 'use client';
 
-import { useSyncExternalStore } from 'react';
+import { localPref, usePref } from './localPref';
 
 export type DiffLayout = 'split' | 'unified';
 
-const LAYOUT_KEY = 'reposcope.diffLayout';
-const listeners = new Set<() => void>();
+const layoutPref = localPref<DiffLayout>('reposcope.diffLayout', 'split', decodeLayout);
 
 export function setDiffLayout(layout: DiffLayout): void {
-  writeItem(LAYOUT_KEY, layout);
-  for (const listener of listeners) listener();
+  layoutPref.set(layout);
 }
 
 export function useDiffLayout(): DiffLayout {
-  return useSyncExternalStore(subscribe, readLayout, () => 'split');
+  return usePref(layoutPref);
 }
 
-function readLayout(): DiffLayout {
-  return readItem(LAYOUT_KEY) === 'unified' ? 'unified' : 'split';
-}
-
-function subscribe(listener: () => void): () => void {
-  listeners.add(listener);
-  window.addEventListener('storage', listener);
-  return () => {
-    listeners.delete(listener);
-    window.removeEventListener('storage', listener);
-  };
-}
-
-function readItem(key: string): string | null {
-  try {
-    return window.localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
-function writeItem(key: string, value: string): void {
-  try {
-    window.localStorage.setItem(key, value);
-  } catch {}
+function decodeLayout(stored: unknown): DiffLayout | undefined {
+  return stored === 'split' || stored === 'unified' ? stored : undefined;
 }

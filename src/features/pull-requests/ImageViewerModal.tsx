@@ -7,6 +7,7 @@ import { baseName } from './fileTree';
 import type { ChangedFile } from './pullRequests';
 import type { ImageGallery } from './imageView';
 import { holdClick, useFocusOnIndex, useViewerKeys, wrapImageIndex } from './viewerKeys';
+import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 
 const SHIFT = 'shrink-0 px-2 py-8 text-[18px] leading-none text-ink-dim hover:bg-btn-hover hover:text-ink';
 
@@ -94,9 +95,9 @@ function ViewerCaption({ file, index, count, onClose }: { file: ChangedFile; ind
 
 function CaptionName({ path }: { path: string }) {
   return (
-    <span title={path} className="min-w-0 flex-1 truncate text-ink">
-      {baseName(path)}
-    </span>
+    <HoverCardTrigger label={path} className="min-w-0 flex-1" focusable={false} tooltipStyle>
+      <span className="truncate text-ink">{baseName(path)}</span>
+    </HoverCardTrigger>
   );
 }
 

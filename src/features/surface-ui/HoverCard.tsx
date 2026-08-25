@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type FocusEvent, type MouseEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 const GAP = 10;
@@ -15,10 +15,16 @@ export type TipPlacement = 'side' | 'below';
 
 const CARD_WIDTHS = { default: 'max-w-[min(34rem,calc(100vw-1rem))]', wide: 'max-w-[min(56rem,calc(100vw-1rem))]' };
 export type TipWidth = keyof typeof CARD_WIDTHS;
+const POPPER_BASE = 'fixed z-50 w-max overflow-hidden';
+const CARD_POPPER = 'min-w-64 rounded-md bg-tip shadow-card';
+const TOOLTIP_POPPER = 'bg-black/85 text-white pointer-events-none';
+const CARD_LABEL = 'truncate border-b border-btn-edge px-3 py-2 font-mono text-[11px] text-accent';
+const TOOLTIP_LABEL = 'truncate px-2 py-1 font-mono text-[10px] text-white';
 
 const OFFSCREEN: TipPosition = { left: -9999, top: -9999 };
 const HOVER_INTENT_MS = 500;
 const HOVER_GRACE_MS = 220;
+const HOVERCARD_ATTRIBUTE = 'data-hovercard';
 
 export function HoverCardTrigger({
   label,
@@ -29,15 +35,17 @@ export function HoverCardTrigger({
   interactive = true,
   width = 'default',
   focusable = true,
+  tooltipStyle = false,
 }: {
   label: string;
-  card: ReactNode;
+  card?: ReactNode;
   children: ReactNode;
   className?: string;
   placement?: TipPlacement;
   interactive?: boolean;
   width?: TipWidth;
   focusable?: boolean;
+  tooltipStyle?: boolean;
 }) {
   const id = useId();
   const [anchor, setAnchor] = useState<DOMRect | null>(null);
@@ -94,8 +102,14 @@ export function HoverCardTrigger({
       aria-describedby={anchor ? id : undefined}
       onMouseEnter={(event) => show(event.currentTarget.getBoundingClientRect())}
       onMouseLeave={scheduleHide}
-      onFocus={(event) => show(event.currentTarget.getBoundingClientRect())}
-      onBlur={scheduleHide}
+      onFocus={(event) => {
+        if (event.target instanceof HTMLElement) event.target.setAttribute('aria-describedby', id);
+        show(event.currentTarget.getBoundingClientRect());
+      }}
+      onBlur={(event) => {
+        if (event.target instanceof HTMLElement) event.target.removeAttribute('aria-describedby');
+        scheduleHide();
+      }}
     >
       {children}
       {anchor ? (
@@ -106,6 +120,7 @@ export function HoverCardTrigger({
           anchor={anchor}
           placement={placement}
           width={width}
+          tooltipStyle={tooltipStyle}
           reachable={reachable && interactive}
           onEnter={clearTimers}
           onLeave={scheduleHide}
@@ -117,6 +132,54 @@ export function HoverCardTrigger({
   );
 }
 
+export function HoverCardHtml({ html, className, tooltipStyle = false }: { html: string; className: string; tooltipStyle?: boolean }) {
+  const id = useId();
+  const popper = useRef<HTMLDivElement>(null);
+  const active = useRef<HTMLElement>(null);
+  const [tip, setTip] = useState<{ label: string; anchor: DOMRect } | null>(null);
+  const hide = useCallback(() => {
+    active.current?.removeAttribute('aria-describedby');
+    active.current = null;
+    setTip(null);
+  }, []);
+  const show = (container: HTMLElement, target: EventTarget | null) => {
+    const trigger = target instanceof Element ? target.closest<HTMLElement>(`[${HOVERCARD_ATTRIBUTE}]`) : null;
+    if (!trigger || !container.contains(trigger)) return hide();
+    active.current?.removeAttribute('aria-describedby');
+    trigger.setAttribute('aria-describedby', id);
+    active.current = trigger;
+    setTip({ label: trigger.getAttribute(HOVERCARD_ATTRIBUTE) ?? '', anchor: trigger.getBoundingClientRect() });
+  };
+  const leaveFocus = (event: FocusEvent<HTMLDivElement>) => {
+    if (!(event.relatedTarget instanceof Node) || !event.currentTarget.contains(event.relatedTarget)) hide();
+  };
+  useEffect(() => {
+    const hideOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') hide();
+    };
+    window.addEventListener('scroll', hide, true);
+    window.addEventListener('resize', hide);
+    window.addEventListener('keydown', hideOnEscape);
+    return () => {
+      window.removeEventListener('scroll', hide, true);
+      window.removeEventListener('resize', hide);
+      window.removeEventListener('keydown', hideOnEscape);
+      active.current?.removeAttribute('aria-describedby');
+    };
+  }, [hide]);
+  return (
+    <div
+      onMouseOver={(event: MouseEvent<HTMLDivElement>) => show(event.currentTarget, event.target)}
+      onMouseLeave={hide}
+      onFocus={(event) => show(event.currentTarget, event.target)}
+      onBlur={leaveFocus}
+    >
+      <div className={className} dangerouslySetInnerHTML={{ __html: html }} />
+      {tip ? <HoverCardPopper ref={popper} id={id} label={tip.label} anchor={tip.anchor} placement="side" width="default" tooltipStyle={tooltipStyle} reachable={false} onEnter={hide} onLeave={hide} /> : null}
+    </div>
+  );
+}
+
 function HoverCardPopper({
   ref,
   id,
@@ -124,6 +187,7 @@ function HoverCardPopper({
   anchor,
   placement,
   width,
+  tooltipStyle,
   reachable,
   onEnter,
   onLeave,
@@ -135,10 +199,11 @@ function HoverCardPopper({
   anchor: DOMRect;
   placement: TipPlacement;
   width: TipWidth;
+  tooltipStyle: boolean;
   reachable: boolean;
   onEnter: () => void;
   onLeave: () => void;
-  children: ReactNode;
+  children?: ReactNode;
 }) {
   const [position, setPosition] = useState<TipPosition>(OFFSCREEN);
 
@@ -154,10 +219,10 @@ function HoverCardPopper({
       style={position}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
-      className={`fixed z-50 w-max min-w-64 ${CARD_WIDTHS[width]} overflow-hidden rounded-md bg-tip shadow-card ${reachable ? '' : 'pointer-events-none'}`}
+      className={`${POPPER_BASE} ${CARD_WIDTHS[width]} ${tooltipStyle ? TOOLTIP_POPPER : `${CARD_POPPER} ${reachable ? '' : 'pointer-events-none'}`}`}
     >
-      <div className="truncate border-b border-btn-edge px-3 py-2 font-mono text-[11px] text-accent">{label}</div>
-      <div className="max-h-[65vh] overflow-y-auto px-3 py-2">{children}</div>
+      <div className={tooltipStyle ? TOOLTIP_LABEL : CARD_LABEL}>{label}</div>
+      {children !== undefined ? <div className="max-h-[65vh] overflow-y-auto px-3 py-2">{children}</div> : null}
     </div>,
     document.body,
   );
