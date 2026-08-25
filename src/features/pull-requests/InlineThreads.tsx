@@ -10,8 +10,9 @@ import { ThreadCard } from './ThreadCard';
 
 const CARD_GAP = 4;
 const EXPAND_BAR = 15;
-// Smallest useful clamped card: comment header plus the expand bar.
-const MIN_SLOT = 37;
+// Keep in sync with the rendered height of a ThreadCard header row.
+const CARD_HEADER = 22;
+const MIN_SLOT = CARD_HEADER + EXPAND_BAR;
 
 export function InlineThreads({
   path,
@@ -41,26 +42,32 @@ export function InlineThreads({
   if (cards.length === 0) return null;
   return (
     <div className="relative w-[40%] shrink-0">
-      {cards.map(({ thread, top, slot }) => (
-        <FloatingCard
-          key={thread.rootId}
-          top={top}
-          clampTo={(heights[thread.rootId] ?? 0) > slot ? slot : null}
-          expanded={expanded[thread.rootId] ?? false}
-          onToggle={() => setExpanded((held) => ({ ...held, [thread.rootId]: !held[thread.rootId] }))}
-          onHeight={(height) => measure(thread.rootId, height)}
+      {cards.map((card) => (
+        <PlacedCard
+          key={card.thread.rootId}
+          top={card.top}
+          clampTo={clampFor(card, heights)}
+          expanded={expanded[card.thread.rootId] ?? false}
+          onToggle={() => setExpanded((held) => ({ ...held, [card.thread.rootId]: !held[card.thread.rootId] }))}
+          onHeight={(height) => measure(card.thread.rootId, height)}
         >
-          <ThreadCard thread={thread} />
-        </FloatingCard>
+          <ThreadCard thread={card.thread} />
+        </PlacedCard>
       ))}
     </div>
   );
 }
 
+function clampFor(card: PlacedThread, heights: Record<number, number>): number | null {
+  const natural = heights[card.thread.rootId] ?? ROW_HEIGHT;
+  return natural > card.slot ? card.slot : null;
+}
+
 function shownHeight(card: PlacedThread, heights: Record<number, number>, expanded: Record<number, boolean>): number {
   const natural = heights[card.thread.rootId] ?? ROW_HEIGHT;
-  if (natural <= card.slot) return natural;
-  return expanded[card.thread.rootId] ? natural + EXPAND_BAR : card.slot;
+  const clampTo = clampFor(card, heights);
+  if (clampTo === null) return natural;
+  return expanded[card.thread.rootId] ? natural + EXPAND_BAR : clampTo;
 }
 
 function overflowBelow(
@@ -73,7 +80,7 @@ function overflowBelow(
   return Math.max(0, Math.max(0, ...bottoms) - diffHeight);
 }
 
-function FloatingCard({
+function PlacedCard({
   top,
   clampTo,
   expanded,
@@ -101,8 +108,9 @@ function FloatingCard({
   }, []);
 
   const clipped = clampTo !== null && !expanded;
+  const overlaid = clampTo !== null && expanded;
   return (
-    <div style={{ top }} className={`absolute inset-x-0 max-w-[500px] transition-[top] duration-150 ${expanded ? 'z-10' : ''}`}>
+    <div style={{ top }} className={`absolute inset-x-0 max-w-[500px] transition-[top] duration-150 ${overlaid ? 'z-10' : ''}`}>
       <div className={clipped ? 'overflow-hidden' : undefined} style={clipped ? { maxHeight: clampTo - EXPAND_BAR } : undefined}>
         <div ref={node}>{children}</div>
       </div>
@@ -110,7 +118,8 @@ function FloatingCard({
         <button
           type="button"
           onClick={onToggle}
-          className="block h-[15px] w-full rounded-b border border-t-0 border-panel-edge bg-panel px-1.5 text-left text-[9px] italic leading-[13px] text-ink-dim hover:text-ink"
+          style={{ height: EXPAND_BAR }}
+          className="block w-full rounded-b border border-t-0 border-panel-edge bg-panel px-1.5 text-left text-[9px] italic leading-[13px] text-ink-dim hover:text-ink"
         >
           {expanded ? 'Collapse' : 'Expand'}
         </button>

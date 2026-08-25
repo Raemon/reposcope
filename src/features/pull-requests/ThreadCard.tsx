@@ -12,8 +12,6 @@ import { RelativeTime } from '@/features/surface-ui/RelativeTime';
 import { useGithubToken } from '@/features/sources/sourceStore';
 import { apiPost, apiPostJson } from '@/features/sources/apiClient';
 
-type BodyMode = 'hidden' | 'full';
-
 const ACTION = 'rounded px-1 leading-4 text-ink-dim hover:bg-btn-hover hover:text-ink disabled:opacity-40';
 
 export function ThreadCard({ thread }: { thread: ReviewThread }) {
@@ -33,7 +31,7 @@ export function ThreadCard({ thread }: { thread: ReviewThread }) {
           key={comment.id}
           comment={comment}
           note={index === 0 ? threadNote(thread, open) : ''}
-          body={open ? 'full' : 'hidden'}
+          showBody={open}
           repo={target}
           onToggle={() => setToggled(!open)}
         />
@@ -72,13 +70,13 @@ function threadNote(thread: ReviewThread, open: boolean): string {
 function ThreadComment({
   comment,
   note,
-  body,
+  showBody,
   repo,
   onToggle,
 }: {
   comment: ReviewComment;
   note: string;
-  body: BodyMode;
+  showBody: boolean;
   repo: ReviewThreadTarget;
   onToggle: () => void;
 }) {
@@ -92,7 +90,7 @@ function ThreadComment({
         <span className="min-w-0 flex-1 truncate">{note}</span>
         <RelativeTime iso={comment.createdAt} className="shrink-0" />
       </header>
-      {body !== 'hidden' && (
+      {showBody && (
         <HoverCardHtml
           className="markdown-body break-words pr-6 text-[11px] leading-4 text-ink"
           html={renderMarkdown(comment.body, repo)}

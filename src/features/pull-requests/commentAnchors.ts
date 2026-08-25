@@ -30,7 +30,7 @@ export function placeThreads(anchors: AnchoredThread[], heights: Record<number, 
   const tops = stackedTops(anchors, heights, gap, minSlot);
   return anchors.map(({ thread }, index) => {
     const top = tops[index] ?? 0;
-    const nextTop = index + 1 < tops.length ? tops[index + 1] ?? 0 : Infinity;
+    const nextTop = tops[index + 1] ?? Infinity;
     return { thread, top, slot: nextTop - gap - top };
   });
 }
