@@ -173,6 +173,7 @@ function sendReply(
   body: string,
   token: string | null,
 ): Promise<unknown> {
+  if (target.number === null) return Promise.reject(new Error('Replies need a pull request'));
   return apiPostJson(reviewReplyPath(target.owner, target.repo, target.number, thread.rootId), token, { body });
 }
 

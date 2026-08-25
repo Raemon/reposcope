@@ -58,7 +58,7 @@ export function ColumnNavProvider({ children }: { children: ReactNode }) {
 
   const apply = useCallback(
     (action: NavAction) => {
-      if (action.kind === 'column') return setFocused((held) => stepColumn(held, action.delta));
+      if (action.kind === 'column') return setFocused((held) => stepToLiveColumn(columns.current, held, action.delta));
       const column = columns.current.get(focused);
       if (!column) return;
       if (action.kind === 'cursor') return moveCursor(column, action.delta);
@@ -123,6 +123,14 @@ export function useRegisterColumn(id: ColumnId, column: NavColumn, active = true
     nav.register(id, column);
     return () => nav.register(id, null);
   });
+}
+
+function stepToLiveColumn(columns: Map<ColumnId, NavColumn>, from: ColumnId, delta: number): ColumnId {
+  for (let at = stepColumn(from, delta); at !== from; at = stepColumn(at, delta)) {
+    if (columns.has(at)) return at;
+    if (stepColumn(at, delta) === at) break;
+  }
+  return from;
 }
 
 function activateColumn(column: NavColumn, cursor: string | null) {

@@ -34,3 +34,12 @@ function Dot() {
     </span>
   );
 }
+
+export function CurrentBranchTitle({ branch }: { branch: string }) {
+  return (
+    <div className="flex min-w-0 flex-1 items-baseline gap-2 text-[13px] leading-5">
+      <span aria-hidden className="shrink-0 text-accent">⑂</span>
+      <span className="min-w-0 truncate font-mono text-[13px] leading-6 text-ink">{branch}</span>
+    </div>
+  );
+}

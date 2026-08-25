@@ -5,11 +5,11 @@ import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { CodebaseList } from './CodebaseList';
 import { HeaderMenu } from './HeaderMenu';
-import { pullBeingRead, repoBeingRead, repoRoute } from './repoPaths';
+import { branchBeingRead, pullBeingRead, repoBeingRead, repoRoute } from './repoPaths';
 import { sidebarGroups } from './sidebarGroups';
 import { useSourceResults } from './useSourceResults';
 import { ScopeMark } from '@/features/brand/ScopeMark';
-import { CurrentPullTitle } from '@/features/pull-requests/CurrentPullTitle';
+import { CurrentBranchTitle, CurrentPullTitle } from '@/features/pull-requests/CurrentPullTitle';
 import { MergePullButton } from '@/features/pull-requests/MergePullButton';
 import { PullRequestMenu } from '@/features/pull-requests/PullRequestMenu';
 import { type RepoRef } from '@/features/sources/parseRepoLink';
@@ -25,14 +25,14 @@ export function CodebaseHeader() {
   const pathname = usePathname();
   const reading = repoBeingRead(pathname);
   const pullNumber = pullBeingRead(pathname);
+  const branch = branchBeingRead(pathname);
   return (
     <header className="flex items-center gap-2 border-b border-panel-edge bg-panel px-2 py-5">
       <Link href="/" aria-label="reposcope home" className="shrink-0">
         <ScopeMark size={20} title="reposcope home" />
       </Link>
       <CodebaseMenu reading={reading} />
-      {reading &&
-        (pullNumber === null ? <PullRequestMenu repo={reading} /> : <CurrentPullTitle repo={reading} number={pullNumber} />)}
+      {reading && <HeaderSubject repo={reading} pullNumber={pullNumber} branch={branch} />}
       <div className="ml-auto flex shrink-0 items-center gap-2">
         <GithubSignedOutNotice />
         {reading && pullNumber !== null && <MergePullButton repo={reading} number={pullNumber} />}
@@ -40,6 +40,12 @@ export function CodebaseHeader() {
       </div>
     </header>
   );
+}
+
+function HeaderSubject({ repo, pullNumber, branch }: { repo: RepoRef; pullNumber: number | null; branch: string | null }) {
+  if (pullNumber !== null) return <CurrentPullTitle repo={repo} number={pullNumber} />;
+  if (branch !== null) return <CurrentBranchTitle branch={branch} />;
+  return <PullRequestMenu repo={repo} />;
 }
 
 function CodebaseMenu({ reading }: { reading: RepoRef | null }) {

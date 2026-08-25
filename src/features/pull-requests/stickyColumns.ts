@@ -7,6 +7,7 @@ import { clampWidth, type ColumnSize } from './ResizableColumn';
 const DEFAULTS: Record<string, ColumnSize> = {
   pulls: { width: 300, open: false },
   'all-pulls': { width: 380, open: true },
+  branches: { width: 300, open: false },
   discussion: { width: 320, open: false },
   commits: { width: 260, open: true },
   files: { width: 280, open: true },
