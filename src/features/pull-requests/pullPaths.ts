@@ -16,6 +16,22 @@ export function pullCommentsPath(owner: string, repo: string, number: number): s
   return `/api/github/pull-comments?${repoParams(owner, repo)}&number=${number}`;
 }
 
+export function pullThreadsPath(owner: string, repo: string, number: number): string {
+  return `/api/github/pull-threads?${repoParams(owner, repo)}&number=${number}`;
+}
+
+export function reviewReplyPath(owner: string, repo: string, number: number, rootId: number): string {
+  return `/api/github/review-reply?${repoParams(owner, repo)}&number=${number}&comment=${rootId}`;
+}
+
+export function reviewResolvePath(threadId: string, resolved: boolean): string {
+  return `/api/github/review-resolve?thread=${encodeURIComponent(threadId)}&resolved=${resolved}`;
+}
+
+export function reviewReactionPath(nodeId: string, reacted: boolean): string {
+  return `/api/github/review-reaction?comment=${encodeURIComponent(nodeId)}&reacted=${reacted}`;
+}
+
 export function repoPullsPath(owner: string, repo: string): string {
   return `/api/github/pulls?${repoParams(owner, repo)}`;
 }
