@@ -38,13 +38,16 @@ export async function apiPostJson<T>(path: string, token: string | null, body: u
 
 async function send<T>(path: string, token: string | null, call: Call): Promise<T> {
   const response = await fetch(path, authorized(call, await freshGithubToken(token)));
-  if (!tokenRejected(response)) return readJson<T>(response);
+  return readJson<T>(tokenRejected(response) ? await retryRenewed(path, call, response) : response);
+}
+
+async function retryRenewed(path: string, call: Call, rejected: Response): Promise<Response> {
   const renewed = await renewGithubToken();
   if (renewed === null) {
     signOutGithub(SIGN_IN_EXPIRED);
-    return readJson<T>(response);
+    return rejected;
   }
-  return readJson<T>(await fetch(path, authorized(call, renewed)));
+  return fetch(path, authorized(call, renewed));
 }
 
 function authorized(call: Call, token: string | null): RequestInit {
