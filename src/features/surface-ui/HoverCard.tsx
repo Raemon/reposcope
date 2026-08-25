@@ -95,8 +95,14 @@ export function HoverCardTrigger({
       aria-describedby={anchor ? id : undefined}
       onMouseEnter={(event) => show(event.currentTarget.getBoundingClientRect())}
       onMouseLeave={scheduleHide}
-      onFocus={(event) => show(event.currentTarget.getBoundingClientRect())}
-      onBlur={scheduleHide}
+      onFocus={(event) => {
+        if (event.target instanceof HTMLElement) event.target.setAttribute('aria-describedby', id);
+        show(event.currentTarget.getBoundingClientRect());
+      }}
+      onBlur={(event) => {
+        if (event.target instanceof HTMLElement) event.target.removeAttribute('aria-describedby');
+        scheduleHide();
+      }}
     >
       {children}
       {anchor ? (
@@ -121,22 +127,36 @@ export function HoverCardTrigger({
 export function HoverCardHtml({ html, className }: { html: string; className: string }) {
   const id = useId();
   const popper = useRef<HTMLDivElement>(null);
+  const active = useRef<HTMLElement>(null);
   const [tip, setTip] = useState<{ label: string; anchor: DOMRect } | null>(null);
-  const hide = useCallback(() => setTip(null), []);
+  const hide = useCallback(() => {
+    active.current?.removeAttribute('aria-describedby');
+    active.current = null;
+    setTip(null);
+  }, []);
   const show = (container: HTMLElement, target: EventTarget | null) => {
     const trigger = target instanceof Element ? target.closest<HTMLElement>(`[${HOVERCARD_ATTRIBUTE}]`) : null;
-    if (!trigger || !container.contains(trigger)) return;
+    if (!trigger || !container.contains(trigger)) return hide();
+    active.current?.removeAttribute('aria-describedby');
+    trigger.setAttribute('aria-describedby', id);
+    active.current = trigger;
     setTip({ label: trigger.getAttribute(HOVERCARD_ATTRIBUTE) ?? '', anchor: trigger.getBoundingClientRect() });
   };
   const leaveFocus = (event: FocusEvent<HTMLDivElement>) => {
     if (!(event.relatedTarget instanceof Node) || !event.currentTarget.contains(event.relatedTarget)) hide();
   };
   useEffect(() => {
+    const hideOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') hide();
+    };
     window.addEventListener('scroll', hide, true);
     window.addEventListener('resize', hide);
+    window.addEventListener('keydown', hideOnEscape);
     return () => {
       window.removeEventListener('scroll', hide, true);
       window.removeEventListener('resize', hide);
+      window.removeEventListener('keydown', hideOnEscape);
+      active.current?.removeAttribute('aria-describedby');
     };
   }, [hide]);
   return (
@@ -173,7 +193,7 @@ function HoverCardPopper({
   reachable: boolean;
   onEnter: () => void;
   onLeave: () => void;
-  children: ReactNode;
+  children?: ReactNode;
 }) {
   const [position, setPosition] = useState<TipPosition>(OFFSCREEN);
 

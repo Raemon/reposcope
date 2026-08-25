@@ -51,7 +51,7 @@ export function PullListRow({
 function ClosePullIcon({ target, token, shown }: { target: PullTarget; token: string | null; shown: boolean }) {
   const router = useRouter();
   return (
-    <HoverCardTrigger label={`Close #${target.number}`} className={`shrink-0 focus-visible:opacity-100 group-hover:opacity-100 ${shown ? '' : 'opacity-0'}`} focusable={false}>
+    <HoverCardTrigger label={`Close #${target.number}`} className={`shrink-0 focus-within:opacity-100 group-hover:opacity-100 ${shown ? '' : 'opacity-0'}`} focusable={false}>
       <button
         type="button"
         aria-label={`Close pull request #${target.number}`}

@@ -129,13 +129,14 @@ function ThreadActions({
   return (
     <div className="absolute bottom-0 right-0 flex items-center gap-0.5 rounded-tl border-l border-t border-panel-edge/60 bg-panel px-1 text-[10px] opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
       <HoverCardTrigger label="Reply" focusable={false}>
-        <button type="button" onClick={onReply} disabled={busy} className={ACTION}>
+        <button type="button" aria-label="Reply" onClick={onReply} disabled={busy} className={ACTION}>
           ↩
         </button>
       </HoverCardTrigger>
       <HoverCardTrigger label={first?.viewerReacted ? 'Remove 👍' : 'React 👍'} focusable={false}>
         <button
           type="button"
+          aria-label={first?.viewerReacted ? 'Remove thumbs up reaction' : 'Add thumbs up reaction'}
           onClick={onReact}
           disabled={busy}
           className={`${ACTION} ${first?.viewerReacted ? 'text-accent' : ''}`}
@@ -147,6 +148,7 @@ function ThreadActions({
         <HoverCardTrigger label={thread.resolved ? 'Unresolve' : 'Resolve'} focusable={false}>
           <button
             type="button"
+            aria-label={thread.resolved ? 'Unresolve thread' : 'Resolve thread'}
             onClick={onResolve}
             disabled={busy}
             className={ACTION}
@@ -156,7 +158,7 @@ function ThreadActions({
         </HoverCardTrigger>
       )}
       <HoverCardTrigger label="Open on GitHub" focusable={false}>
-        <a href={first?.url} target="_blank" rel="noopener noreferrer" className={ACTION}>
+        <a href={first?.url} target="_blank" rel="noopener noreferrer" aria-label="Open on GitHub" className={ACTION}>
           ↗
         </a>
       </HoverCardTrigger>
