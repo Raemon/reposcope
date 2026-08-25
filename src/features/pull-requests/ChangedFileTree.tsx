@@ -2,6 +2,7 @@
 
 import { ChangeCounts } from './ChangeCounts';
 import { useColumnNav } from './columnNav';
+import { fileKindColor } from './fileKind';
 import { baseName, groupByFolder } from './fileTree';
 import type { ChangedFile } from './pullRequests';
 import { rowStateClass } from '@/features/surface-ui/rowState';
@@ -34,6 +35,7 @@ export function ChangedFileTree({
                 title={file.filename}
                 className={`${ROW} ${group.folder ? 'pl-4' : 'pl-1.5'} ${rowStateClass(row.state)}`}
               >
+                <KindMarker path={file.filename} />
                 <span className="min-w-0 flex-1 truncate">{baseName(file.filename)}</span>
                 <ChangeCounts additions={file.additions} deletions={file.deletions} />
               </SelectableRow>
@@ -42,6 +44,14 @@ export function ChangedFileTree({
         </div>
       ))}
     </>
+  );
+}
+
+function KindMarker({ path }: { path: string }) {
+  return (
+    <span aria-hidden className="shrink-0 text-[8px] leading-4" style={{ color: fileKindColor(path) }}>
+      ●
+    </span>
   );
 }
 
