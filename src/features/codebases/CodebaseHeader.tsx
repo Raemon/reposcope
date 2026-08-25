@@ -25,9 +25,9 @@ export function CodebaseHeader() {
   const reading = repoBeingRead(pathname);
   const pullNumber = pullBeingRead(pathname);
   return (
-    <header className="flex items-center gap-2.5 border-b border-panel-edge bg-panel px-2.5 py-0.5">
+    <header className="flex h-7 items-center gap-2 border-b border-panel-edge bg-panel px-2">
       <Link href="/" aria-label="reposcope home" className="shrink-0">
-        <ScopeMark size={44} title="reposcope home" />
+        <ScopeMark size={20} title="reposcope home" />
       </Link>
       <CodebaseMenu reading={reading} />
       {reading &&
@@ -52,7 +52,7 @@ function CodebaseMenu({ reading }: { reading: RepoRef | null }) {
 
   return (
     <HeaderMenu
-      label={readingAllPulls ? 'All pull requests' : reading ? `${reading.owner}/${reading.name}` : 'Codebases'}
+      label={readingAllPulls ? 'All pull requests' : reading ? <RepoLabel reading={reading} /> : 'Codebases'}
       width="w-80"
     >
       {() => (
@@ -98,6 +98,15 @@ function CodebaseMenu({ reading }: { reading: RepoRef | null }) {
         </>
       )}
     </HeaderMenu>
+  );
+}
+
+function RepoLabel({ reading }: { reading: RepoRef }) {
+  return (
+    <>
+      <span className="text-ink-dim/70">{reading.owner}/</span>
+      {reading.name}
+    </>
   );
 }
 
