@@ -76,6 +76,8 @@ export function HoverCardTrigger({
     timers.current.hide = setTimeout(hide, HOVER_GRACE_MS);
   }, [hide]);
 
+  const leave = card && interactive ? scheduleHide : hide;
+
   useEffect(() => {
     const hideOnScroll = (event: Event) => {
       if (popper.current?.contains(event.target as Node)) return;
@@ -101,14 +103,14 @@ export function HoverCardTrigger({
       className={`inline-flex outline-none focus-visible:ring-2 focus-visible:ring-accent ${className}`}
       aria-describedby={anchor ? id : undefined}
       onMouseEnter={(event) => show(event.currentTarget.getBoundingClientRect())}
-      onMouseLeave={scheduleHide}
+      onMouseLeave={leave}
       onFocus={(event) => {
         if (event.target instanceof HTMLElement) event.target.setAttribute('aria-describedby', id);
         show(event.currentTarget.getBoundingClientRect());
       }}
       onBlur={(event) => {
         if (event.target instanceof HTMLElement) event.target.removeAttribute('aria-describedby');
-        scheduleHide();
+        leave();
       }}
     >
       {children}
@@ -123,7 +125,7 @@ export function HoverCardTrigger({
           tooltipStyle={tooltipStyle}
           reachable={reachable && interactive}
           onEnter={clearTimers}
-          onLeave={scheduleHide}
+          onLeave={leave}
         >
           {card}
         </HoverCardPopper>

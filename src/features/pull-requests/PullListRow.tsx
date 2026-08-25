@@ -15,13 +15,11 @@ import { SelectableLink } from '@/features/surface-ui/SelectableLink';
 export function PullListRow({
   target,
   href,
-  title,
   current,
   children,
 }: {
   target: PullTarget;
   href: string;
-  title: string;
   current: boolean;
   children: ReactNode;
 }) {
@@ -33,16 +31,14 @@ export function PullListRow({
       onPointerEnter={row.props.onPointerEnter}
       className={`group flex items-baseline ${rowStateClass(row.state)}`}
     >
-      <HoverCardTrigger label={title} className="min-w-0 flex-1" focusable={false} tooltipStyle>
-        <SelectableLink
-          href={href}
-          current={current}
-          onPointerEnter={() => prefetchPull(target.owner, target.repo, target.number, token)}
-          className="flex min-w-0 flex-1 items-baseline gap-1.5 px-2 py-[1px] text-[11px] leading-4"
-        >
-          {children}
-        </SelectableLink>
-      </HoverCardTrigger>
+      <SelectableLink
+        href={href}
+        current={current}
+        onPointerEnter={() => prefetchPull(target.owner, target.repo, target.number, token)}
+        className="flex min-w-0 flex-1 items-baseline gap-1.5 px-2 py-[1px] text-[11px] leading-4"
+      >
+        {children}
+      </SelectableLink>
       <ClosePullIcon target={target} token={token} shown={current} />
     </div>
   );
