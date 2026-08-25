@@ -7,6 +7,7 @@ import {
   type GithubChangedFile,
   type GithubCommit,
 } from './pullRequests';
+import { mapWithWorkers } from './workerPool';
 
 export interface BranchPull {
   number: number;
@@ -20,12 +21,6 @@ export interface BranchSummary {
   updatedAt: string;
   pull: BranchPull | null;
   mergedAndUnchanged: boolean;
-}
-
-export interface BranchChanges extends ChangeSummary {
-  branch: string;
-  baseRef: string;
-  headRef: string;
 }
 
 interface GithubBranch {
@@ -55,75 +50,66 @@ interface GithubCompare {
 const API = 'https://api.github.com';
 const BRANCH_LIMIT = 100;
 const BRANCH_DATE_WORKERS = 8;
+const COMMIT_LIMIT = 100;
 
 export async function listBranches(owner: string, name: string): Promise<BranchSummary[]> {
-  const [all, repo, pulls] = await Promise.all([
-    githubJson<GithubBranch[]>(`${API}/repos/${owner}/${name}/branches?per_page=${BRANCH_LIMIT}`),
-    githubJson<{ default_branch: string }>(`${API}/repos/${owner}/${name}`),
-    recentPulls(owner, name),
-  ]);
-  const branches = all.filter((branch) => branch.name !== repo.default_branch);
+  const [branches, pulls] = await Promise.all([nonDefaultBranches(owner, name), recentPulls(owner, name)]);
   const dates = await branchDates(owner, name, branches);
   return branches
     .map((branch) => summarizeBranch(branch, pulls.get(branch.name) ?? null, dates.get(branch.commit.sha) ?? ''))
     .sort(byUnsettledThenRecent);
 }
 
-export async function describeBranch(owner: string, name: string, branch: string, fresh = false): Promise<BranchChanges> {
-  const { base, compare } = await compareWithDefault(owner, name, branch, fresh);
+async function nonDefaultBranches(owner: string, name: string): Promise<GithubBranch[]> {
+  const [all, repo] = await Promise.all([
+    githubJson<GithubBranch[]>(`${API}/repos/${owner}/${name}/branches?per_page=${BRANCH_LIMIT}`),
+    githubJson<{ default_branch: string }>(`${API}/repos/${owner}/${name}`),
+  ]);
+  return all.filter((branch) => branch.name !== repo.default_branch);
+}
+
+export async function describeBranch(owner: string, name: string, branch: string, fresh = false): Promise<ChangeSummary> {
+  const compare = await compareWithDefault(owner, name, branch, fresh);
   const files = compare.files ?? [];
   return {
-    branch,
-    baseRef: base,
-    headRef: branch,
     additions: totalOf(files, (file) => file.additions),
     deletions: totalOf(files, (file) => file.deletions),
-    commits: await summarizeCommits(owner, name, compare.commits),
+    commits: await summarizeCommits(owner, name, compare.commits.slice(0, COMMIT_LIMIT)),
   };
 }
 
 export async function listBranchFiles(owner: string, name: string, branch: string, fresh = false): Promise<ChangedFileSet> {
-  const { compare } = await compareWithDefault(owner, name, branch, fresh);
+  const compare = await compareWithDefault(owner, name, branch, fresh);
   return {
     baseRef: compare.merge_base_commit.sha,
-    headRef: headShaOf(compare),
+    headRef: branch,
     files: (compare.files ?? []).map(changedFile),
   };
 }
 
-async function compareWithDefault(owner: string, name: string, branch: string, fresh: boolean) {
+async function compareWithDefault(owner: string, name: string, branch: string, fresh: boolean): Promise<GithubCompare> {
   const repo = await githubJson<{ default_branch: string }>(`${API}/repos/${owner}/${name}`, fresh);
   const range = `${encodeURIComponent(repo.default_branch)}...${encodeURIComponent(branch)}`;
-  return {
-    base: repo.default_branch,
-    compare: await githubJson<GithubCompare>(`${API}/repos/${owner}/${name}/compare/${range}`, fresh),
-  };
-}
-
-function headShaOf(compare: GithubCompare): string {
-  return compare.commits[compare.commits.length - 1]?.sha ?? compare.merge_base_commit.sha;
+  return githubJson<GithubCompare>(`${API}/repos/${owner}/${name}/compare/${range}`, fresh);
 }
 
 async function recentPulls(owner: string, name: string): Promise<Map<string, GithubRefPull>> {
   const pulls = await githubJson<GithubRefPull[]>(
     `${API}/repos/${owner}/${name}/pulls?state=all&sort=updated&direction=desc&per_page=${BRANCH_LIMIT}`,
   );
+  const here = `${owner}/${name}`.toLowerCase();
   const byRef = new Map<string, GithubRefPull>();
   for (const pull of pulls) {
-    if (pull.head.repo?.full_name === `${owner}/${name}` && !byRef.has(pull.head.ref)) byRef.set(pull.head.ref, pull);
+    if (pull.head.repo?.full_name.toLowerCase() === here && !byRef.has(pull.head.ref)) byRef.set(pull.head.ref, pull);
   }
   return byRef;
 }
 
 // /branches omits dates; /git/commits/<sha> caches immutably, so one fetch per new head
 async function branchDates(owner: string, name: string, branches: GithubBranch[]): Promise<Map<string, string>> {
-  const queue = branches.map((branch) => branch.commit.sha);
-  const dates = new Map<string, string>();
-  const read = async () => {
-    for (let sha = queue.shift(); sha; sha = queue.shift()) dates.set(sha, await commitDate(owner, name, sha));
-  };
-  await Promise.all(Array.from({ length: Math.min(BRANCH_DATE_WORKERS, queue.length) }, read));
-  return dates;
+  const shas = branches.map((branch) => branch.commit.sha);
+  const dates = await mapWithWorkers(shas, BRANCH_DATE_WORKERS, (sha) => commitDate(owner, name, sha));
+  return new Map(shas.map((sha, at) => [sha, dates[at] ?? '']));
 }
 
 async function commitDate(owner: string, name: string, sha: string): Promise<string> {

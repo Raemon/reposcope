@@ -2,18 +2,21 @@
 
 import { RepoPullsColumn } from './PullListColumn';
 import { ReviewWorkspace } from './ReviewWorkspace';
-import type { BranchChanges } from './branches';
+import type { ChangeSummary } from './pullRequests';
 import { branchFilesPath, branchPath } from './pullPaths';
 import { useStickyColumn } from './stickyColumns';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 import { useCachedJson } from '@/features/sources/useCachedJson';
+import { usePollWhileVisible } from '@/features/sources/usePollWhileVisible';
 
 export function BranchView({ owner, repo, branch }: { owner: string; repo: string; branch: string }) {
   const ready = useStoreReady();
   const token = useGithubToken();
   const [listSize, setListSize] = useStickyColumn('pulls');
-  const branchState = useCachedJson<BranchChanges>(branchPath(owner, repo, branch), token, ready);
+  const branchState = useCachedJson<ChangeSummary>(branchPath(owner, repo, branch), token, ready);
   const change = branchState.data;
+
+  usePollWhileVisible(branchState.reload, ready);
 
   if (!change) {
     if (branchState.error) return <p className="px-2 py-1 text-[11px] text-error-ink">{branchState.error}</p>;

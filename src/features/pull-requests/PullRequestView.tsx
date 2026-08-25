@@ -10,6 +10,7 @@ import type { PullRequestCommits, PullRequestSummary } from './pullRequests';
 import { useStickyColumn } from './stickyColumns';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 import { useCachedJson } from '@/features/sources/useCachedJson';
+import { usePollWhileVisible } from '@/features/sources/usePollWhileVisible';
 
 export function PullRequestView({
   owner,
@@ -27,6 +28,8 @@ export function PullRequestView({
   const [listSize, setListSize] = useStickyColumn(acrossRepos ? 'all-pulls' : 'pulls');
   const pullState = useCachedJson<PullRequestCommits>(pullPath(owner, repo, number), token, ready);
   const pull = pullState.data;
+
+  usePollWhileVisible(pullState.reload, ready);
 
   useEffect(() => () => setCurrentPull(null), []);
   useEffect(() => {

@@ -27,6 +27,12 @@ export function useStickyColumn(name: string, defaultOpen?: boolean): [ColumnSiz
   return [size, remember];
 }
 
+export function useStickyOpen(name: string): [boolean, (open: boolean) => void] {
+  const [size, setSize] = useStickyColumn(name);
+  const setOpen = useCallback((open: boolean) => setSize((held) => ({ ...held, open })), [setSize]);
+  return [size.open, setOpen];
+}
+
 function defaultSize(name: string, defaultOpen?: boolean): ColumnSize {
   const held = DEFAULTS[name] ?? { width: 300, open: true };
   return defaultOpen === undefined ? held : { ...held, open: defaultOpen };

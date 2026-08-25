@@ -53,7 +53,7 @@ export function ReviewWorkspace({
   const fileSet = fileState.data;
   const fileError = fileState.error;
 
-  usePollWhileVisible(() => Promise.all([reloadChange(), fileState.reload()]), ready);
+  usePollWhileVisible(fileState.reload, ready);
 
   useEffect(() => {
     setSelection(WHOLE_CHANGE);
@@ -95,13 +95,11 @@ export function ReviewWorkspace({
 
   async function reloadInPlace() {
     const asked = fileRoute;
+    setNotice(null);
     try {
-      setNotice(null);
       await Promise.all([reloadChange(), fileState.reload()]);
-      if (asked !== showing.current) return;
     } catch (issue: unknown) {
-      if (asked !== showing.current) return;
-      setNotice(reloadFailure(issue));
+      if (asked === showing.current) setNotice(reloadFailure(issue));
     }
   }
 

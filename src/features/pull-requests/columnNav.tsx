@@ -60,7 +60,7 @@ export function ColumnNavProvider({ children }: { children: ReactNode }) {
     (action: NavAction) => {
       if (action.kind === 'column') return setFocused((held) => stepToLiveColumn(columns.current, held, action.delta));
       const column = columns.current.get(focused);
-      if (!column) return;
+      if (!column) return setFocused(stepToLiveColumn(columns.current, focused, 1));
       if (action.kind === 'cursor') return moveCursor(column, action.delta);
       if (action.kind === 'escape') return setCursor(focused, column.selected);
       activateColumn(column, cursors[focused] ?? null);

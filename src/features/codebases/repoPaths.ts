@@ -11,7 +11,12 @@ export function pullBeingRead(pathname: string): number | null {
 
 export function branchBeingRead(pathname: string): string | null {
   const match = pathname.match(/^\/[^/]+\/[^/]+\/branch\/(.+)$/);
-  return match?.[1] ? match[1].split('/').map(decodeURIComponent).join('/') : null;
+  if (!match?.[1]) return null;
+  try {
+    return match[1].split('/').map(decodeURIComponent).join('/');
+  } catch {
+    return match[1];
+  }
 }
 
 export function repoBeingRead(pathname: string): RepoRef | null {

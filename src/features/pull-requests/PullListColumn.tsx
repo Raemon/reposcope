@@ -12,7 +12,7 @@ import { useStandingPulls, useStandingRepoPulls } from './pullActionStore';
 import { branchRoute, allPullsRoute, pullRoute, repoPullsPath } from './pullPaths';
 import type { PullRequestSummary } from './pullRequests';
 import type { BranchSummary } from './branches';
-import { useStickyColumn } from './stickyColumns';
+import { useStickyOpen } from './stickyColumns';
 import { useAllPullRequests } from './useAllPullRequests';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 import { useCachedJson } from '@/features/sources/useCachedJson';
@@ -38,25 +38,16 @@ export function RepoPullsColumn({ owner, repo, size, onSize }: PullColumn) {
   const token = useGithubToken();
   const { data: pulls } = useCachedJson<PullRequestSummary[]>(repoPullsPath(owner, repo), token, ready);
   const standingPulls = useStandingRepoPulls(owner, repo, pulls);
-  const [branchesOpen, setBranchesOpen] = useStickyColumn('branches');
-  const listingBranches = size.open && branchesOpen.open;
+  const [branchesOpen, setBranchesOpen] = useStickyOpen('branches');
+  const listingBranches = size.open && branchesOpen;
   const branches = useBranches(owner, repo, listingBranches);
   return (
     <PullsColumn
-      targets={[
-        ...standingPulls.map((pull) => pullTarget(owner, repo, pull, false)),
-        ...(listingBranches ? branches.map((branch) => branchTarget(owner, repo, branch)) : []),
-      ]}
+      targets={repoTargets(owner, repo, standingPulls, listingBranches ? branches : [])}
       size={size}
       onSize={onSize}
       footer={
-        <BranchesSection
-          owner={owner}
-          repo={repo}
-          branches={branches}
-          expanded={branchesOpen.open}
-          onExpanded={(open) => setBranchesOpen({ ...branchesOpen, open })}
-        />
+        <BranchesSection owner={owner} repo={repo} branches={branches} expanded={branchesOpen} onExpanded={setBranchesOpen} />
       }
     >
       <PullRequestList repo={{ owner, name: repo }} />
@@ -123,9 +114,17 @@ function pullTarget(owner: string, repo: string, pull: PullRequestSummary, acros
   };
 }
 
+function repoTargets(owner: string, repo: string, pulls: PullRequestSummary[], branches: BranchSummary[]): PullNavTarget[] {
+  return [
+    ...pulls.map((pull) => pullTarget(owner, repo, pull, false)),
+    ...branches.map((branch) => branchTarget(owner, repo, branch)),
+  ];
+}
+
 function branchTarget(owner: string, repo: string, branch: BranchSummary): PullNavTarget {
   const route = branchRoute(owner, repo, branch.name);
-  return { route, href: route, label: branch.name.slice(0, 2), title: `${owner}/${repo} · ${branch.name}` };
+  const leaf = branch.name.split('/').pop() ?? branch.name;
+  return { route, href: route, label: leaf.slice(0, 2), title: `${owner}/${repo} · ${branch.name}` };
 }
 
 function pullToken(target: PullNavTarget, accent: boolean): PreviewToken {

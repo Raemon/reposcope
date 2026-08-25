@@ -8,6 +8,7 @@ import {
 } from '@/features/codebases/githubRequest';
 import { requireGithubUser } from '@/features/github-auth/requireGithubUser';
 import { imageTypeOf } from './imageFiles';
+import { mapWithWorkers } from './workerPool';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
 
 export interface PullRequestSummary {
@@ -432,14 +433,8 @@ function summarizeCommit(commit: GithubCommit): CommitSummary {
 
 export async function summarizeCommits(owner: string, name: string, commits: GithubCommit[]): Promise<CommitSummary[]> {
   const summaries = commits.map(summarizeCommit);
-  const queue = summaries.map((summary, index) => ({ summary, index }));
-  const count = async () => {
-    for (let job = queue.shift(); job; job = queue.shift()) {
-      summaries[job.index] = { ...job.summary, ...(await commitTotals(owner, name, job.summary.sha)) };
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(COMMIT_STAT_WORKERS, queue.length) }, count));
-  return summaries;
+  const totals = await mapWithWorkers(summaries, COMMIT_STAT_WORKERS, (held) => commitTotals(owner, name, held.sha));
+  return summaries.map((summary, at) => ({ ...summary, ...totals[at] }));
 }
 
 interface CommitTotals {

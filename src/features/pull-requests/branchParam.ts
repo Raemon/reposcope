@@ -1,1 +1,1 @@
-export const BRANCH_NAME_PATTERN = /^(?!.*\.\.)[A-Za-z0-9._\-/]{1,255}$/;
+export const BRANCH_NAME_PATTERN = /^(?!-)(?!.*\.\.)[^\s~^:?*[\\\x00-\x1f\x7f]{1,255}$/;
