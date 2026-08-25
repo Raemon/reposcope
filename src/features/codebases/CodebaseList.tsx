@@ -7,6 +7,7 @@ import type { SidebarGroup } from './sidebarGroups';
 import { removeSource } from '@/features/sources/sourceStore';
 import type { CodebaseSource } from '@/features/sources/sourceTypes';
 import { FilterField } from '@/features/surface-ui/FilterField';
+import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { SelectableLink } from '@/features/surface-ui/SelectableLink';
 
 export function CodebaseList({ groups }: { groups: SidebarGroup[] }) {
@@ -53,21 +54,22 @@ export function CodebaseList({ groups }: { groups: SidebarGroup[] }) {
                   key={href}
                   className={`flex items-baseline gap-1.5 pr-2 ${activeLink ? 'bg-btn-active' : 'hover:bg-btn-hover'}`}
                 >
-                  <SelectableLink
-                    ref={activeLink ? active : undefined}
-                    href={href}
-                    title={repo.description}
-                    current={activeLink}
-                    className={`flex min-w-0 flex-1 items-baseline justify-between gap-2 py-[3px] pl-3 text-[11px] leading-4 ${
-                      activeLink ? 'text-accent' : 'text-ink'
-                    }`}
-                  >
-                    <span className="truncate">{repo.name}</span>
-                    <span className="shrink-0 text-[9px] text-ink-dim">
-                      {repo.private && <span className="mr-1 rounded bg-btn px-1">private</span>}
-                      {repo.language}
-                    </span>
-                  </SelectableLink>
+                  <HoverCardTrigger label={repo.description} className="min-w-0 flex-1" focusable={false} tooltipStyle>
+                    <SelectableLink
+                      ref={activeLink ? active : undefined}
+                      href={href}
+                      current={activeLink}
+                      className={`flex min-w-0 flex-1 items-baseline justify-between gap-2 py-[3px] pl-3 text-[11px] leading-4 ${
+                        activeLink ? 'text-accent' : 'text-ink'
+                      }`}
+                    >
+                      <span className="truncate">{repo.name}</span>
+                      <span className="shrink-0 text-[9px] text-ink-dim">
+                        {repo.private && <span className="mr-1 rounded bg-btn px-1">private</span>}
+                        {repo.language}
+                      </span>
+                    </SelectableLink>
+                  </HoverCardTrigger>
                   {repo.source && <RemoveControl source={repo.source} label={`Remove ${repo.owner}/${repo.name}`} />}
                 </div>
               );
@@ -81,15 +83,16 @@ export function CodebaseList({ groups }: { groups: SidebarGroup[] }) {
 
 function RemoveControl({ source, label }: { source: CodebaseSource; label: string }) {
   return (
-    <button
-      type="button"
-      title={label}
-      aria-label={label}
-      onClick={() => removeSource(source)}
-      className="ml-auto shrink-0 px-1 text-[11px] leading-none text-ink-dim hover:text-error-ink"
-    >
-      ×
-    </button>
+    <HoverCardTrigger label={label} className="ml-auto shrink-0" focusable={false} tooltipStyle>
+      <button
+        type="button"
+        aria-label={label}
+        onClick={() => removeSource(source)}
+        className="px-1 text-[11px] leading-none text-ink-dim hover:text-error-ink"
+      >
+        ×
+      </button>
+    </HoverCardTrigger>
   );
 }
 
