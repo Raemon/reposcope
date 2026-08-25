@@ -12,7 +12,7 @@ import { RelativeTime } from '@/features/surface-ui/RelativeTime';
 import { useGithubToken } from '@/features/sources/sourceStore';
 import { apiPost, apiPostJson } from '@/features/sources/apiClient';
 
-type BodyMode = 'hidden' | 'clamped' | 'full';
+type BodyMode = 'hidden' | 'full';
 
 const ACTION = 'rounded px-1 leading-4 text-ink-dim hover:bg-btn-hover hover:text-ink disabled:opacity-40';
 
@@ -33,7 +33,7 @@ export function ThreadCard({ thread }: { thread: ReviewThread }) {
           key={comment.id}
           comment={comment}
           note={index === 0 ? threadNote(thread, open) : ''}
-          body={bodyMode(open, toggled)}
+          body={open ? 'full' : 'hidden'}
           repo={target}
           onToggle={() => setToggled(!open)}
         />
@@ -60,11 +60,6 @@ export function ThreadCard({ thread }: { thread: ReviewThread }) {
       )}
     </article>
   );
-}
-
-function bodyMode(open: boolean, expanded: boolean | null): BodyMode {
-  if (!open) return 'hidden';
-  return expanded ? 'full' : 'clamped';
 }
 
 function threadNote(thread: ReviewThread, open: boolean): string {
@@ -99,7 +94,7 @@ function ThreadComment({
       </header>
       {body !== 'hidden' && (
         <HoverCardHtml
-          className={`markdown-body break-words pr-6 text-[11px] leading-4 text-ink ${body === 'clamped' ? 'max-h-40 overflow-y-auto' : ''}`}
+          className="markdown-body break-words pr-6 text-[11px] leading-4 text-ink"
           html={renderMarkdown(comment.body, repo)}
           tooltipStyle
         />

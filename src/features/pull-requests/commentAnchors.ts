@@ -8,6 +8,12 @@ export interface AnchoredThread {
   anchorTop: number;
 }
 
+export interface PlacedThread {
+  thread: ReviewThread;
+  top: number;
+  slot: number;
+}
+
 export function anchorThreads(
   threads: ReviewThread[],
   rows: DiffRow[],
@@ -20,11 +26,20 @@ export function anchorThreads(
     .sort((a, b) => a.anchorTop - b.anchorTop);
 }
 
-export function stackedTops(anchors: AnchoredThread[], heights: Record<number, number>, gap: number): number[] {
+export function placeThreads(anchors: AnchoredThread[], heights: Record<number, number>, gap: number, minSlot: number): PlacedThread[] {
+  const tops = stackedTops(anchors, heights, gap, minSlot);
+  return anchors.map(({ thread }, index) => {
+    const top = tops[index] ?? 0;
+    const nextTop = index + 1 < tops.length ? tops[index + 1] ?? 0 : Infinity;
+    return { thread, top, slot: nextTop - gap - top };
+  });
+}
+
+function stackedTops(anchors: AnchoredThread[], heights: Record<number, number>, gap: number, minSlot: number): number[] {
   let floor = 0;
   return anchors.map(({ thread, anchorTop }) => {
     const top = Math.max(anchorTop, floor);
-    floor = top + (heights[thread.rootId] ?? ROW_HEIGHT) + gap;
+    floor = top + Math.min(heights[thread.rootId] ?? ROW_HEIGHT, minSlot) + gap;
     return top;
   });
 }
