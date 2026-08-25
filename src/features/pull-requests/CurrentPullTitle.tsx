@@ -11,7 +11,7 @@ export function CurrentPullTitle({ repo, number }: { repo: RepoRef; number: numb
       <span className="shrink-0 text-accent">#{number}</span>
       {pull && (
         <>
-          <span className="min-w-0 truncate text-ink">{pull.pull.title}</span>
+          <span className="min-w-0 truncate font-serif text-[17px] leading-6 tracking-[0.005em] text-ink">{pull.pull.title}</span>
           <div className="flex shrink-0 items-baseline gap-1.5 pl-3 text-[10px] text-ink-dim/60">
             <span className="text-ink-dim">{pull.pull.author}</span>
             <Dot />
