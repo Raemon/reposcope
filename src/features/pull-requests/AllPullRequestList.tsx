@@ -3,14 +3,12 @@
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { useColumnNav } from './columnNav';
-import { PullListRow } from './PullListRow';
+import { LIST_NOTE as NOTE, PullListRow, PullRowFields, ROW_META } from './PullListRow';
 import { useStandingPulls } from './pullActionStore';
 import { allPullsRoute, pullRoute } from './pullPaths';
 import type { CrossRepoPull } from './pullRequests';
 import { useAllPullRequests } from './useAllPullRequests';
-import { timeAgo } from '@/features/surface-ui/timeAgo';
 
-const NOTE = 'px-2 py-1 text-[11px] leading-4';
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 function updatedWithinLastWeek(pull: CrossRepoPull): boolean {
@@ -90,15 +88,10 @@ function PullRow({
       href={allPullsRoute(pull.owner, pull.repo, pull.number)}
       current={pathname === pullRoute(pull.owner, pull.repo, pull.number)}
     >
-      <span className="shrink-0 truncate font-mono text-[9px] text-ink-dim" style={{ width: `${repoColumnCh}ch` }}>
+      <span className={`${ROW_META} truncate`} style={{ width: `${repoColumnCh}ch` }}>
         {pull.repo}
       </span>
-      <span className="shrink-0 font-mono text-[9px] text-ink-dim">#{pull.number}</span>
-      <span className="min-w-0 flex-1 break-words">{pull.title}</span>
-      {pull.draft && <span className="shrink-0 rounded bg-btn px-1 text-[9px]">draft</span>}
-      <span className="shrink-0 font-mono text-[9px] text-ink-dim">
-        {pull.author} · {timeAgo(pull.updatedAt)}
-      </span>
+      <PullRowFields pull={pull} />
     </PullListRow>
   );
 }

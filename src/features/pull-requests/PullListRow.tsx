@@ -11,6 +11,31 @@ import { useGithubToken } from '@/features/sources/sourceStore';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { rowStateClass } from '@/features/surface-ui/rowState';
 import { SelectableLink } from '@/features/surface-ui/SelectableLink';
+import { timeAgo } from '@/features/surface-ui/timeAgo';
+
+interface PullRowSummary {
+  number: number;
+  title: string;
+  draft: boolean;
+  author: string;
+  updatedAt: string;
+}
+
+export const ROW_META = 'shrink-0 font-mono text-[9px] text-ink-dim';
+export const LIST_NOTE = 'px-2 py-1 text-[11px] leading-4';
+
+export function PullRowFields({ pull }: { pull: PullRowSummary }) {
+  return (
+    <>
+      <span className={ROW_META}>#{pull.number}</span>
+      <span className="min-w-0 flex-1 break-words">{pull.title}</span>
+      {pull.draft && <span className="shrink-0 rounded bg-btn px-1 font-mono text-[9px]">draft</span>}
+      <span className={ROW_META}>
+        {pull.author} · {timeAgo(pull.updatedAt)}
+      </span>
+    </>
+  );
+}
 
 export function PullListRow({
   target,

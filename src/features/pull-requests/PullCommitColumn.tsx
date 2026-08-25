@@ -1,17 +1,18 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ChangeCounts } from './ChangeCounts';
 import type { PreviewToken } from './ColumnPreview';
 import { useColumnNav, type ColumnRow } from './columnNav';
+import { ROW_META } from './PullListRow';
 import type { PullRequestCommits } from './pullRequests';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { RelativeTime } from '@/features/surface-ui/RelativeTime';
 import { rowStateClass } from '@/features/surface-ui/rowState';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 
-const ROW = 'flex w-full items-center gap-1.5 py-[2px] pr-1.5 text-left font-serif text-[12px] leading-[1.15]';
-const META = 'shrink-0 font-mono text-[9px]';
+const ROW = 'flex w-full items-center gap-1.5 px-1.5 py-[2px] text-left font-serif text-[12px] leading-[1.15]';
+const HASH = 'ml-1.5 w-[3ch] shrink-0 font-mono text-[9px]';
 const HASH_CHARS = 3;
 const COPIED_MS = 1200;
 export const WHOLE_PULL = 'all';
@@ -29,16 +30,21 @@ export function PullCommitColumn({
   const rowFor = (item: string) => nav.row(item, item === selection);
   return (
     <>
-      <CommitRow row={rowFor(WHOLE_PULL)} onActivate={() => onSelect(WHOLE_PULL)}>
+      <CommitRow row={rowFor(WHOLE_PULL)} onActivate={() => onSelect(WHOLE_PULL)} leading={<span aria-hidden className={HASH} />}>
         <span className="min-w-0 flex-1">all changes</span>
         <ChangeCounts additions={pull.additions} deletions={pull.deletions} />
       </CommitRow>
       {pull.commits.map((commit) => (
-        <CommitRow key={commit.sha} row={rowFor(commit.sha)} onActivate={() => onSelect(commit.sha)} sha={commit.sha}>
+        <CommitRow
+          key={commit.sha}
+          row={rowFor(commit.sha)}
+          onActivate={() => onSelect(commit.sha)}
+          leading={<CopyHash sha={commit.sha} />}
+        >
           <span className="min-w-0 flex-1 break-words">{commit.message}</span>
-          <span className={`${META} text-ink-dim`}>{commit.fileCount}f</span>
+          <span className={ROW_META}>{commit.fileCount}f</span>
           <ChangeCounts additions={commit.additions} deletions={commit.deletions} />
-          <RelativeTime iso={commit.date} className={`${META} text-ink-dim`} />
+          <RelativeTime iso={commit.date} className={ROW_META} />
         </CommitRow>
       ))}
     </>
@@ -48,17 +54,21 @@ export function PullCommitColumn({
 function CommitRow({
   row,
   onActivate,
-  sha,
+  leading,
   children,
 }: {
   row: ColumnRow;
   onActivate: () => void;
-  sha?: string;
+  leading: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <div className={`flex items-center ${rowStateClass(row.state)}`}>
-      {sha ? <CopyHash sha={sha} /> : <span className={`${META} pl-1.5`}>{' '.repeat(HASH_CHARS)}</span>}
+    <div
+      data-nav-cursor={row.props.cursor || undefined}
+      onPointerEnter={row.props.onPointerEnter}
+      className={`flex items-center ${rowStateClass(row.state)}`}
+    >
+      {leading}
       <SelectableRow {...row.props} onActivate={onActivate} className={ROW}>
         {children}
       </SelectableRow>
@@ -66,20 +76,30 @@ function CommitRow({
   );
 }
 
-function CopyHash({ sha }: { sha: string }) {
+function useCopiedFlag(): [boolean, () => void] {
   const [copied, setCopied] = useState(false);
-  const copy = () => {
-    void navigator.clipboard.writeText(sha);
-    setCopied(true);
-    setTimeout(() => setCopied(false), COPIED_MS);
-  };
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(timer.current), []);
+  return [
+    copied,
+    () => {
+      setCopied(true);
+      clearTimeout(timer.current);
+      timer.current = setTimeout(() => setCopied(false), COPIED_MS);
+    },
+  ];
+}
+
+function CopyHash({ sha }: { sha: string }) {
+  const [copied, markCopied] = useCopiedFlag();
+  const copy = () => void navigator.clipboard?.writeText(sha).then(markCopied, () => {});
   return (
     <HoverCardTrigger label={copied ? `copied ${sha}` : `copy ${sha}`} className="shrink-0" focusable={false} tooltipStyle>
       <button
         type="button"
         aria-label={`Copy commit hash ${sha}`}
         onClick={copy}
-        className={`${META} pl-1.5 hover:text-accent ${copied ? 'text-accent' : 'text-ink-dim/50'}`}
+        className={`${HASH} text-left hover:text-accent ${copied ? 'text-accent' : 'text-ink-dim/50'}`}
       >
         {sha.slice(0, HASH_CHARS)}
       </button>
