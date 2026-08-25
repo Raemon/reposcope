@@ -1,6 +1,7 @@
 'use client';
 
 import { pullCommentsPath } from './pullPaths';
+import { renderMarkdown } from '@/features/markdown/renderMarkdown';
 import type { PullComment } from './pullRequests';
 import { timeAgo } from '@/features/repo-insights/ui/timeAgo';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
@@ -29,7 +30,13 @@ export function PullDiscussion({
 
   return (
     <div className="flex flex-col">
-      <DiscussionEntry author={author} note="description" body={body?.trim() ? body : 'No description.'} />
+      <DiscussionEntry
+        owner={owner}
+        repo={repo}
+        author={author}
+        note="description"
+        body={body?.trim() ? body : 'No description.'}
+      />
       {comments === null ? (
         <p className={`px-1.5 py-1 text-[11px] leading-4 ${error ? 'text-error-ink' : 'text-ink-dim'}`}>
           {error ?? 'Loading comments…'}
@@ -40,6 +47,8 @@ export function PullDiscussion({
         comments.map((comment) => (
           <DiscussionEntry
             key={comment.id}
+            owner={owner}
+            repo={repo}
             author={comment.author}
             note={timeAgo(comment.createdAt)}
             path={comment.path}
@@ -52,11 +61,15 @@ export function PullDiscussion({
 }
 
 function DiscussionEntry({
+  owner,
+  repo,
   author,
   note,
   path,
   body,
 }: {
+  owner: string;
+  repo: string;
   author: string;
   note: string;
   path?: string | null;
@@ -69,7 +82,10 @@ function DiscussionEntry({
         <span className="shrink-0">{note}</span>
         {path && <span className="min-w-0 flex-1 truncate">{path}</span>}
       </header>
-      <p className="whitespace-pre-wrap break-words text-[11px] leading-4 text-ink">{body}</p>
+      <div
+        className="markdown-body break-words text-[11px] leading-4 text-ink"
+        dangerouslySetInnerHTML={{ __html: renderMarkdown(body, { owner, repo }) }}
+      />
     </article>
   );
 }
