@@ -6,6 +6,7 @@ import { DiffLayoutToggle } from './DiffLayoutToggle';
 import { EditTarget } from './editTarget';
 import { ImageThumbnailStrip } from './ImageThumbnailStrip';
 import { imageFilesOf } from './imageFiles';
+import { ReviewThreadProvider } from './reviewThreadStore';
 import { sortByFolder } from './fileTree';
 import type { ChangedFile, ChangedFileSet, PullRequestSummary } from './pullRequests';
 
@@ -18,6 +19,7 @@ export interface DiffPanesHandle {
 export function DiffPanes({
   owner,
   repo,
+  number,
   fileSet,
   editablePull = null,
   onCommitted,
@@ -25,6 +27,7 @@ export function DiffPanes({
 }: {
   owner: string;
   repo: string;
+  number: number;
   fileSet: ChangedFileSet | null;
   editablePull?: PullRequestSummary | null;
   onCommitted?: () => void | Promise<void>;
@@ -47,32 +50,34 @@ export function DiffPanes({
   const orderedFiles = sortByFolder(fileSet.files);
   return (
     <EditTarget value={editablePull && { pull: editablePull, headRef: fileSet.headRef, onCommitted }}>
-      <div className="flex min-h-0 flex-1 flex-col">
-        <DiffLayoutToggle />
-        <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
-          <ImageStrip
-            key={`${fileSet.baseRef}:${fileSet.headRef}`}
-            owner={owner}
-            repo={repo}
-            fileSet={fileSet}
-            files={imageFilesOf(orderedFiles)}
-          />
-          {orderedFiles.map((file) => (
-            <DiffFileSection
-              key={file.filename}
+      <ReviewThreadProvider owner={owner} repo={repo} number={number}>
+        <div className="flex min-h-0 flex-1 flex-col">
+          <DiffLayoutToggle />
+          <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
+            <ImageStrip
+              key={`${fileSet.baseRef}:${fileSet.headRef}`}
               owner={owner}
               repo={repo}
-              file={file}
-              baseRef={fileSet.baseRef}
-              headRef={fileSet.headRef}
-              sectionRef={(node) => {
-                if (node) sections.current.set(file.filename, node);
-                else sections.current.delete(file.filename);
-              }}
+              fileSet={fileSet}
+              files={imageFilesOf(orderedFiles)}
             />
-          ))}
+            {orderedFiles.map((file) => (
+              <DiffFileSection
+                key={file.filename}
+                owner={owner}
+                repo={repo}
+                file={file}
+                baseRef={fileSet.baseRef}
+                headRef={fileSet.headRef}
+                sectionRef={(node) => {
+                  if (node) sections.current.set(file.filename, node);
+                  else sections.current.delete(file.filename);
+                }}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      </ReviewThreadProvider>
     </EditTarget>
   );
 }

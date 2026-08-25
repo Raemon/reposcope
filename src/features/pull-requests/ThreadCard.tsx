@@ -1,0 +1,177 @@
+'use client';
+
+import { useState } from 'react';
+import { reviewReactionPath, reviewReplyPath, reviewResolvePath } from './pullPaths';
+import type { ReviewComment, ReviewThread } from './reviewThreads';
+import { useReviewTarget, type ReviewThreadTarget } from './reviewThreadStore';
+import { ThreadReplyBox } from './ThreadReplyBox';
+import { useThreadAction } from './useThreadAction';
+import { renderMarkdown } from '@/features/markdown/renderMarkdown';
+import { RelativeTime } from '@/features/surface-ui/RelativeTime';
+import { useGithubToken } from '@/features/sources/sourceStore';
+import { apiPost, apiPostJson } from '@/features/sources/apiClient';
+
+type BodyMode = 'hidden' | 'clamped' | 'full';
+
+const ACTION = 'rounded px-1 leading-4 text-ink-dim hover:bg-btn-hover hover:text-ink disabled:opacity-40';
+
+export function ThreadCard({ thread }: { thread: ReviewThread }) {
+  const target = useReviewTarget();
+  const token = useGithubToken();
+  const action = useThreadAction(target.reload);
+  const [replying, setReplying] = useState(false);
+  const [toggled, setToggled] = useState<boolean | null>(null);
+  const open = toggled ?? !thread.resolved;
+  const shown = open ? thread.comments : thread.comments.slice(0, 1);
+  return (
+    <article
+      className={`group relative rounded border border-panel-edge bg-panel shadow-card ${thread.resolved ? 'opacity-70 hover:opacity-100' : ''}`}
+    >
+      {shown.map((comment, index) => (
+        <ThreadComment
+          key={comment.id}
+          comment={comment}
+          note={index === 0 ? threadNote(thread, open) : ''}
+          body={bodyMode(open, toggled)}
+          repo={target}
+          onToggle={() => setToggled(!open)}
+        />
+      ))}
+      {replying && (
+        <ThreadReplyBox
+          busy={action.busy}
+          onCancel={() => setReplying(false)}
+          onSend={(body) => {
+            setReplying(false);
+            action.run(() => sendReply(target, thread, body, token));
+          }}
+        />
+      )}
+      {action.failure && <p className="px-1.5 pb-0.5 text-[9px] leading-3 text-error-ink">{action.failure}</p>}
+      {!replying && (
+        <ThreadActions
+          thread={thread}
+          busy={action.busy}
+          onReply={() => setReplying(true)}
+          onReact={() => action.run(() => sendReaction(thread.comments[0], token))}
+          onResolve={thread.threadId === null ? null : () => action.run(() => sendResolve(thread, token))}
+        />
+      )}
+    </article>
+  );
+}
+
+function bodyMode(open: boolean, expanded: boolean | null): BodyMode {
+  if (!open) return 'hidden';
+  return expanded ? 'full' : 'clamped';
+}
+
+function threadNote(thread: ReviewThread, open: boolean): string {
+  const hidden = open ? 0 : thread.comments.length - 1;
+  return [thread.resolved ? 'resolved' : '', thread.outdated ? 'outdated' : '', hidden ? `+${hidden}` : '']
+    .filter(Boolean)
+    .join(' · ');
+}
+
+function ThreadComment({
+  comment,
+  note,
+  body,
+  repo,
+  onToggle,
+}: {
+  comment: ReviewComment;
+  note: string;
+  body: BodyMode;
+  repo: ReviewThreadTarget;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="border-t border-panel-edge/40 px-1.5 py-[2px] first:border-t-0">
+      <header className="flex items-center gap-1 text-[9px] leading-4 text-ink-dim">
+        <Portrait comment={comment} />
+        <button type="button" onClick={onToggle} className="min-w-0 shrink truncate text-left text-ink">
+          {comment.author}
+        </button>
+        <span className="min-w-0 flex-1 truncate">{note}</span>
+        <RelativeTime iso={comment.createdAt} className="shrink-0" />
+      </header>
+      {body !== 'hidden' && (
+        <div
+          className={`markdown-body break-words pr-6 text-[11px] leading-4 text-ink ${body === 'clamped' ? 'max-h-40 overflow-y-auto' : ''}`}
+          dangerouslySetInnerHTML={{ __html: renderMarkdown(comment.body, repo) }}
+        />
+      )}
+    </div>
+  );
+}
+
+function Portrait({ comment }: { comment: ReviewComment }) {
+  if (!comment.avatarUrl) return <span className="h-3 w-3 shrink-0 rounded-full bg-btn" />;
+  return <img src={comment.avatarUrl} alt="" width={12} height={12} className="h-3 w-3 shrink-0 rounded-full" />;
+}
+
+function ThreadActions({
+  thread,
+  busy,
+  onReply,
+  onReact,
+  onResolve,
+}: {
+  thread: ReviewThread;
+  busy: boolean;
+  onReply: () => void;
+  onReact: () => void;
+  onResolve: (() => void) | null;
+}) {
+  const first = thread.comments[0];
+  return (
+    <div className="absolute bottom-0 right-0 flex items-center gap-0.5 rounded-tl border-l border-t border-panel-edge/60 bg-panel px-1 text-[10px] opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+      <button type="button" title="Reply" onClick={onReply} disabled={busy} className={ACTION}>
+        ↩
+      </button>
+      <button
+        type="button"
+        title={first?.viewerReacted ? 'Remove 👍' : 'React 👍'}
+        onClick={onReact}
+        disabled={busy}
+        className={`${ACTION} ${first?.viewerReacted ? 'text-accent' : ''}`}
+      >
+        👍{first?.thumbsUp || ''}
+      </button>
+      {onResolve && (
+        <button
+          type="button"
+          title={thread.resolved ? 'Unresolve' : 'Resolve'}
+          onClick={onResolve}
+          disabled={busy}
+          className={ACTION}
+        >
+          {thread.resolved ? '↺' : '✓'}
+        </button>
+      )}
+      <a href={first?.url} target="_blank" rel="noopener noreferrer" title="Open on GitHub" className={ACTION}>
+        ↗
+      </a>
+    </div>
+  );
+}
+
+function sendReply(
+  target: ReviewThreadTarget,
+  thread: ReviewThread,
+  body: string,
+  token: string | null,
+): Promise<unknown> {
+  return apiPostJson(reviewReplyPath(target.owner, target.repo, target.number, thread.rootId), token, { body });
+}
+
+function sendResolve(thread: ReviewThread, token: string | null): Promise<unknown> {
+  if (thread.threadId === null) return Promise.reject(new Error('Thread cannot be resolved'));
+  return apiPost(reviewResolvePath(thread.threadId, !thread.resolved), token);
+}
+
+function sendReaction(comment: ReviewComment | undefined, token: string | null): Promise<unknown> {
+  if (!comment) return Promise.reject(new Error('Nothing to react to'));
+  return apiPost(reviewReactionPath(comment.nodeId, !comment.viewerReacted), token);
+}
