@@ -3,14 +3,12 @@
 import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { closePull } from './closePull';
-import { useColumnNav } from './columnNav';
+import { NavListRow } from './NavListRow';
 import type { PullTarget } from './pullActionStore';
 import { prefetchPull } from './prefetchPull';
 import { pullRoute } from './pullPaths';
 import { useGithubToken } from '@/features/sources/sourceStore';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
-import { rowStateClass } from '@/features/surface-ui/rowState';
-import { SelectableLink } from '@/features/surface-ui/SelectableLink';
 import { timeAgo } from '@/features/surface-ui/timeAgo';
 
 interface PullRowSummary {
@@ -49,23 +47,17 @@ export function PullListRow({
   children: ReactNode;
 }) {
   const token = useGithubToken();
-  const row = useColumnNav('pulls').row(pullRoute(target.owner, target.repo, target.number), current);
   return (
-    <div
-      data-nav-cursor={row.props.cursor || undefined}
-      onPointerEnter={row.props.onPointerEnter}
-      className={`group flex items-center ${rowStateClass(row.state)}`}
+    <NavListRow
+      route={pullRoute(target.owner, target.repo, target.number)}
+      href={href}
+      current={current}
+      serif
+      onPointerEnter={() => prefetchPull(target.owner, target.repo, target.number, token)}
+      trailing={<ClosePullIcon target={target} token={token} shown={current} />}
     >
-      <SelectableLink
-        href={href}
-        current={current}
-        onPointerEnter={() => prefetchPull(target.owner, target.repo, target.number, token)}
-        className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-[2px] font-serif text-[12px] leading-[1.15]"
-      >
-        {children}
-      </SelectableLink>
-      <ClosePullIcon target={target} token={token} shown={current} />
-    </div>
+      {children}
+    </NavListRow>
   );
 }
 

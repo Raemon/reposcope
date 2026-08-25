@@ -10,7 +10,7 @@ import { usePollWhileVisible } from '@/features/sources/usePollWhileVisible';
 export interface ReviewThreadTarget {
   owner: string;
   repo: string;
-  number: number;
+  number: number | null;
   threads: ReviewThread[];
   reload: () => Promise<unknown>;
 }
@@ -25,12 +25,12 @@ export function ReviewThreadProvider({
 }: {
   owner: string;
   repo: string;
-  number: number;
+  number: number | null;
   children: ReactNode;
 }) {
   const ready = useStoreReady();
   const token = useGithubToken();
-  const { data, reload } = useCachedJson<ReviewThread[]>(pullThreadsPath(owner, repo, number), token, ready);
+  const { data, reload } = useCachedJson<ReviewThread[]>(number === null ? null : pullThreadsPath(owner, repo, number), token, ready);
   const latestReload = useRef(reload);
   latestReload.current = reload;
 

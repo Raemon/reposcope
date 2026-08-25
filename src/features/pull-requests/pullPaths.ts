@@ -32,6 +32,18 @@ export function reviewReactionPath(nodeId: string, reacted: boolean): string {
   return `/api/github/review-reaction?comment=${encodeURIComponent(nodeId)}&reacted=${reacted}`;
 }
 
+export function repoBranchesPath(owner: string, repo: string): string {
+  return `/api/github/branches?${repoParams(owner, repo)}`;
+}
+
+export function branchPath(owner: string, repo: string, branch: string): string {
+  return `/api/github/branch?${repoParams(owner, repo)}&branch=${encodeURIComponent(branch)}`;
+}
+
+export function branchFilesPath(owner: string, repo: string, branch: string): string {
+  return `/api/github/branch-files?${repoParams(owner, repo)}&branch=${encodeURIComponent(branch)}`;
+}
+
 export function repoPullsPath(owner: string, repo: string): string {
   return `/api/github/pulls?${repoParams(owner, repo)}`;
 }
@@ -46,6 +58,10 @@ export function closePullPath(owner: string, repo: string, number: number): stri
 
 export function pullRoute(owner: string, repo: string, number: number): string {
   return `${repoRoute(owner, repo)}/pull/${number}`;
+}
+
+export function branchRoute(owner: string, repo: string, branch: string): string {
+  return `${repoRoute(owner, repo)}/branch/${branch.split('/').map(encodeURIComponent).join('/')}`;
 }
 
 export function allPullsRoute(owner: string, repo: string, number: number): string {

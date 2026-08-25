@@ -7,6 +7,7 @@ import { clampWidth, type ColumnSize } from './ResizableColumn';
 const DEFAULTS: Record<string, ColumnSize> = {
   pulls: { width: 300, open: false },
   'all-pulls': { width: 380, open: true },
+  branches: { width: 300, open: false },
   discussion: { width: 320, open: false },
   commits: { width: 260, open: true },
   files: { width: 280, open: true },
@@ -24,6 +25,12 @@ export function useStickyColumn(name: string, defaultOpen?: boolean): [ColumnSiz
   const size = usePref(columnsPref)[name] ?? defaultSize(name, defaultOpen);
   const remember = useCallback<Dispatch<SetStateAction<ColumnSize>>>((next) => setStickyColumn(name, next, defaultOpen), [name, defaultOpen]);
   return [size, remember];
+}
+
+export function useStickyOpen(name: string): [boolean, (open: boolean) => void] {
+  const [size, setSize] = useStickyColumn(name);
+  const setOpen = useCallback((open: boolean) => setSize((held) => ({ ...held, open })), [setSize]);
+  return [size.open, setOpen];
 }
 
 function defaultSize(name: string, defaultOpen?: boolean): ColumnSize {
