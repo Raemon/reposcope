@@ -2,6 +2,7 @@
 
 import { useColumnNav, type ColumnRow } from './columnNav';
 import type { ColumnId } from './navColumn';
+import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import type { RowState } from '@/features/surface-ui/rowState';
 
 export interface PreviewToken {
@@ -34,13 +35,14 @@ export function ColumnPreview({ tokens, column }: { tokens: PreviewToken[]; colu
 
 function PreviewChip({ token, row }: { token: PreviewToken; row: ColumnRow }) {
   return (
-    <span
-      title={token.title}
-      data-nav-cursor={row.props.cursor || undefined}
-      onPointerEnter={row.props.onPointerEnter}
-      className={`${CHIP} ${CHIP_TONE[row.state]}`}
-    >
-      {token.label}
-    </span>
+    <HoverCardTrigger label={token.title} focusable={false}>
+      <span
+        data-nav-cursor={row.props.cursor || undefined}
+        onPointerEnter={row.props.onPointerEnter}
+        className={`${CHIP} ${CHIP_TONE[row.state]}`}
+      >
+        {token.label}
+      </span>
+    </HoverCardTrigger>
   );
 }

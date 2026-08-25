@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type FocusEvent, type MouseEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
 const GAP = 10;
@@ -19,6 +19,7 @@ export type TipWidth = keyof typeof CARD_WIDTHS;
 const OFFSCREEN: TipPosition = { left: -9999, top: -9999 };
 const HOVER_INTENT_MS = 500;
 const HOVER_GRACE_MS = 220;
+const HOVERCARD_ATTRIBUTE = 'data-hovercard';
 
 export function HoverCardTrigger({
   label,
@@ -31,7 +32,7 @@ export function HoverCardTrigger({
   focusable = true,
 }: {
   label: string;
-  card: ReactNode;
+  card?: ReactNode;
   children: ReactNode;
   className?: string;
   placement?: TipPlacement;
@@ -117,6 +118,40 @@ export function HoverCardTrigger({
   );
 }
 
+export function HoverCardHtml({ html, className }: { html: string; className: string }) {
+  const id = useId();
+  const popper = useRef<HTMLDivElement>(null);
+  const [tip, setTip] = useState<{ label: string; anchor: DOMRect } | null>(null);
+  const hide = useCallback(() => setTip(null), []);
+  const show = (container: HTMLElement, target: EventTarget | null) => {
+    const trigger = target instanceof Element ? target.closest<HTMLElement>(`[${HOVERCARD_ATTRIBUTE}]`) : null;
+    if (!trigger || !container.contains(trigger)) return;
+    setTip({ label: trigger.getAttribute(HOVERCARD_ATTRIBUTE) ?? '', anchor: trigger.getBoundingClientRect() });
+  };
+  const leaveFocus = (event: FocusEvent<HTMLDivElement>) => {
+    if (!(event.relatedTarget instanceof Node) || !event.currentTarget.contains(event.relatedTarget)) hide();
+  };
+  useEffect(() => {
+    window.addEventListener('scroll', hide, true);
+    window.addEventListener('resize', hide);
+    return () => {
+      window.removeEventListener('scroll', hide, true);
+      window.removeEventListener('resize', hide);
+    };
+  }, [hide]);
+  return (
+    <div
+      onMouseOver={(event: MouseEvent<HTMLDivElement>) => show(event.currentTarget, event.target)}
+      onMouseLeave={hide}
+      onFocus={(event) => show(event.currentTarget, event.target)}
+      onBlur={leaveFocus}
+    >
+      <div className={className} dangerouslySetInnerHTML={{ __html: html }} />
+      {tip ? <HoverCardPopper ref={popper} id={id} label={tip.label} anchor={tip.anchor} placement="side" width="default" reachable={false} onEnter={hide} onLeave={hide} /> : null}
+    </div>
+  );
+}
+
 function HoverCardPopper({
   ref,
   id,
@@ -157,7 +192,7 @@ function HoverCardPopper({
       className={`fixed z-50 w-max min-w-64 ${CARD_WIDTHS[width]} overflow-hidden rounded-md bg-tip shadow-card ${reachable ? '' : 'pointer-events-none'}`}
     >
       <div className="truncate border-b border-btn-edge px-3 py-2 font-mono text-[11px] text-accent">{label}</div>
-      <div className="max-h-[65vh] overflow-y-auto px-3 py-2">{children}</div>
+      {children !== undefined ? <div className="max-h-[65vh] overflow-y-auto px-3 py-2">{children}</div> : null}
     </div>,
     document.body,
   );

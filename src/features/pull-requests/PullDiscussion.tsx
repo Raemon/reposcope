@@ -5,6 +5,7 @@ import { renderMarkdown } from '@/features/markdown/renderMarkdown';
 import type { PullComment } from './pullRequests';
 import { timeAgo } from '@/features/repo-insights/ui/timeAgo';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
+import { HoverCardHtml } from '@/features/surface-ui/HoverCard';
 import { useCachedJson } from '@/features/sources/useCachedJson';
 import { usePollWhileVisible } from '@/features/sources/usePollWhileVisible';
 
@@ -82,9 +83,9 @@ function DiscussionEntry({
         <span className="shrink-0">{note}</span>
         {path && <span className="min-w-0 flex-1 truncate">{path}</span>}
       </header>
-      <div
+      <HoverCardHtml
         className="markdown-body break-words text-[11px] leading-4 text-ink"
-        dangerouslySetInnerHTML={{ __html: renderMarkdown(body, { owner, repo }) }}
+        html={renderMarkdown(body, { owner, repo })}
       />
     </article>
   );

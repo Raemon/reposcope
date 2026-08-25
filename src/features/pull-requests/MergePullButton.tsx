@@ -6,6 +6,7 @@ import { mergePull } from './mergePull';
 import { latestPullFailure, pullActionFor, usePullActions } from './pullActionStore';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
 import { useGithubToken } from '@/features/sources/sourceStore';
+import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 
 export function MergePullButton({ repo, number }: { repo: RepoRef; number: number }) {
   const token = useGithubToken();
@@ -20,6 +21,13 @@ export function MergePullButton({ repo, number }: { repo: RepoRef; number: numbe
   const closed = pull !== null && pull.pull.state !== 'open';
   const conflicted = pull?.conflicted ?? false;
   const done = (action?.kind === 'merge' && action.state === 'done') || (pull?.pull.merged ?? false);
+  const mergeLabel = closed
+    ? `Pull request is ${pull?.pull.state}`
+    : conflicted
+      ? `#${number} has conflicts with its base branch`
+      : pull?.pull.draft
+        ? `Mark #${number} ready for review and merge`
+        : `Merge #${number}`;
 
   if (done) {
     return <span className="shrink-0 px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-ink-dim">merged</span>;
@@ -28,35 +36,25 @@ export function MergePullButton({ repo, number }: { repo: RepoRef; number: numbe
   return (
     <div className="flex shrink-0 items-center gap-2">
       {failure !== null && (
-        <span
-          title={`${failure.owner}/${failure.repo}#${failure.number}: ${failure.message}`}
-          className="max-w-56 truncate text-[10px] text-error-ink"
-        >
-          #{failure.number} {failure.message}
-        </span>
+        <HoverCardTrigger label={`${failure.owner}/${failure.repo}#${failure.number}: ${failure.message}`} className="max-w-56" focusable={false}>
+          <span className="truncate text-[10px] text-error-ink">#{failure.number} {failure.message}</span>
+        </HoverCardTrigger>
       )}
       {elsewhere !== null && (
         <span className="shrink-0 text-[10px] text-ink-dim">
           {elsewhere.kind === 'close' ? 'closing' : 'merging'} #{elsewhere.number}…
         </span>
       )}
-      <button
-        type="button"
-        onClick={() => mergePull({ owner: repo.owner, repo: repo.name, number }, token, (href) => router.push(href))}
-        disabled={merging || pull === null || closed || conflicted}
-        title={
-          closed
-            ? `Pull request is ${pull?.pull.state}`
-            : conflicted
-              ? `#${number} has conflicts with its base branch`
-              : pull?.pull.draft
-                ? `Mark #${number} ready for review and merge`
-                : `Merge #${number}`
-        }
-        className="shrink-0 rounded bg-btn px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-ink-dim hover:bg-btn-hover hover:text-ink disabled:opacity-40 disabled:hover:bg-btn disabled:hover:text-ink-dim"
-      >
-        {merging ? 'Merging…' : conflicted ? 'Merge Conflicts' : 'Merge'}
-      </button>
+      <HoverCardTrigger label={mergeLabel} focusable={false}>
+        <button
+          type="button"
+          onClick={() => mergePull({ owner: repo.owner, repo: repo.name, number }, token, (href) => router.push(href))}
+          disabled={merging || pull === null || closed || conflicted}
+          className="shrink-0 rounded bg-btn px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-ink-dim hover:bg-btn-hover hover:text-ink disabled:opacity-40 disabled:hover:bg-btn disabled:hover:text-ink-dim"
+        >
+          {merging ? 'Merging…' : conflicted ? 'Merge Conflicts' : 'Merge'}
+        </button>
+      </HoverCardTrigger>
     </div>
   );
 }
