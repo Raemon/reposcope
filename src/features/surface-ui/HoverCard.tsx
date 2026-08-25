@@ -15,6 +15,11 @@ export type TipPlacement = 'side' | 'below';
 
 const CARD_WIDTHS = { default: 'max-w-[min(34rem,calc(100vw-1rem))]', wide: 'max-w-[min(56rem,calc(100vw-1rem))]' };
 export type TipWidth = keyof typeof CARD_WIDTHS;
+const POPPER_BASE = 'fixed z-50 w-max overflow-hidden';
+const CARD_POPPER = 'min-w-64 rounded-md bg-tip shadow-card';
+const TOOLTIP_POPPER = 'bg-black/85 text-white pointer-events-none';
+const CARD_LABEL = 'truncate border-b border-btn-edge px-3 py-2 font-mono text-[11px] text-accent';
+const TOOLTIP_LABEL = 'truncate px-2 py-1 font-mono text-[10px] text-white';
 
 const OFFSCREEN: TipPosition = { left: -9999, top: -9999 };
 const HOVER_INTENT_MS = 500;
@@ -214,9 +219,9 @@ function HoverCardPopper({
       style={position}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
-      className={tooltipStyle ? `fixed z-50 w-max ${CARD_WIDTHS[width]} overflow-hidden bg-black/85 text-white pointer-events-none` : `fixed z-50 w-max min-w-64 ${CARD_WIDTHS[width]} overflow-hidden rounded-md bg-tip shadow-card ${reachable ? '' : 'pointer-events-none'}`}
+      className={`${POPPER_BASE} ${CARD_WIDTHS[width]} ${tooltipStyle ? TOOLTIP_POPPER : `${CARD_POPPER} ${reachable ? '' : 'pointer-events-none'}`}`}
     >
-      <div className={tooltipStyle ? 'truncate px-2 py-1 font-mono text-[10px] text-white' : 'truncate border-b border-btn-edge px-3 py-2 font-mono text-[11px] text-accent'}>{label}</div>
+      <div className={tooltipStyle ? TOOLTIP_LABEL : CARD_LABEL}>{label}</div>
       {children !== undefined ? <div className="max-h-[65vh] overflow-y-auto px-3 py-2">{children}</div> : null}
     </div>,
     document.body,
