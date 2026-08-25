@@ -25,9 +25,9 @@ export function CodebaseHeader() {
   const reading = repoBeingRead(pathname);
   const pullNumber = pullBeingRead(pathname);
   return (
-    <header className="flex items-center gap-3 border-b border-panel-edge bg-panel px-3 py-1.5">
+    <header className="flex items-center gap-2.5 border-b border-panel-edge bg-panel px-2.5 py-0.5">
       <Link href="/" aria-label="reposcope home" className="shrink-0">
-        <ScopeMark size={64} title="reposcope home" />
+        <ScopeMark size={44} title="reposcope home" />
       </Link>
       <CodebaseMenu reading={reading} />
       {reading &&
