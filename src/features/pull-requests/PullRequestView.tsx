@@ -35,13 +35,9 @@ export function PullRequestView({
   const [notice, setNotice] = useState<string | null>(null);
   const [selection, setSelection] = useState<string>(WHOLE_PULL);
   const [path, setPath] = useState<string | null>(null);
-  const [listSize, setListSize] = useStickyColumn(acrossRepos ? 'all-pulls' : 'pulls', {
-    width: acrossRepos ? 380 : 300,
-    open: acrossRepos,
-  });
-  const [discussionSize, setDiscussionSize] = useStickyColumn('discussion', { width: 320, open: false });
-  const [commitSize, setCommitSize] = useStickyColumn('commits', { width: 260, open: true });
-  const [fileSize, setFileSize] = useStickyColumn('files', { width: 280, open: true });
+  const [listSize, setListSize] = useStickyColumn(acrossRepos ? 'all-pulls' : 'pulls');
+  const [discussionSize, setDiscussionSize] = useStickyColumn('discussion');
+  const [fileSize, setFileSize] = useStickyColumn('files');
   const diffPanes = useRef<DiffPanesHandle>(null);
   const pullRoute = pullPath(owner, repo, number);
   const fileRoute = selection === WHOLE_PULL ? pullFilesPath(owner, repo, number) : commitFilesPath(owner, repo, selection);
@@ -53,6 +49,7 @@ export function PullRequestView({
   const error = pullState.error;
   const fileSet = fileState.data;
   const fileError = fileState.error;
+  const [commitSize, setCommitSize] = useStickyColumn('commits', pull ? pull.commits.length > 1 : undefined);
 
   usePollWhileVisible(() => Promise.all([pullState.reload(), fileState.reload()]), ready);
 
@@ -65,8 +62,7 @@ export function PullRequestView({
 
   useEffect(() => {
     setCurrentPull(pull && { owner, repo, pull });
-    if (pull) setCommitSize((size) => ({ ...size, open: pull.commits.length > 1 }));
-  }, [pull, owner, repo, setCommitSize]);
+  }, [pull, owner, repo]);
 
   useEffect(() => {
     if (!fileSet) return;
