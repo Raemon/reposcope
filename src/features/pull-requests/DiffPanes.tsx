@@ -1,13 +1,14 @@
 'use client';
 
-import { useCallback, useImperativeHandle, useRef, useState, type Ref } from 'react';
+import { useImperativeHandle, useRef, type Ref } from 'react';
 import { DiffFileSection } from './DiffFileSection';
-import { DiffLayoutToggle } from './DiffLayoutToggle';
+import { DiffToolbar } from './DiffToolbar';
+import { useFileFolds } from './fileFolds';
 import { EditTarget } from './editTarget';
 import { ImageThumbnailStrip } from './ImageThumbnailStrip';
-import { imageFilesOf, isImagePath } from './imageFiles';
-import { orderedFiles as filesInOrder } from './PullFilesColumn';
+import { imageFilesOf } from './imageFiles';
 import { ReviewThreadProvider } from './reviewThreadStore';
+import { orderedFiles as filesInOrder } from './PullFilesColumn';
 import type { ChangedFile, ChangedFileSet, PullRequestSummary } from './pullRequests';
 
 const SCROLL_MS = 100;
@@ -36,12 +37,9 @@ export function DiffPanes({
   onCommitted?: () => void | Promise<void>;
   ref?: Ref<DiffPanesHandle>;
 }) {
+  const folds = useFileFolds(fileSet ? `${fileSet.baseRef}:${fileSet.headRef}` : '');
   const scroller = useRef<HTMLDivElement | null>(null);
   const sections = useRef(new Map<string, HTMLElement>());
-  const [toggled, setToggled] = useState<Record<string, boolean>>({});
-  const toggleFile = useCallback((path: string) => {
-    setToggled((held) => ({ ...held, [path]: !(held[path] ?? !isImagePath(path)) }));
-  }, []);
 
   useImperativeHandle(ref, () => ({
     scrollToFile(path: string) {
@@ -50,7 +48,7 @@ export function DiffPanes({
       if (!container || !section) return;
       animateScrollTop(container, scrollerOffset(container, section));
     },
-    toggleFile,
+    toggleFile: folds.toggle,
   }));
 
   if (!fileSet) return <p className="flex-1 px-2 py-1 text-[11px] text-ink-dim">Loading…</p>;
@@ -60,7 +58,7 @@ export function DiffPanes({
     <EditTarget value={editablePull && { pull: editablePull, headRef: fileSet.headRef, onCommitted }}>
       <ReviewThreadProvider owner={owner} repo={repo} number={number}>
         <div className="flex min-h-0 flex-1 flex-col">
-          <DiffLayoutToggle />
+          <DiffToolbar folds={folds} />
           <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
             <ImageStrip
               key={`${fileSet.baseRef}:${fileSet.headRef}`}
@@ -78,8 +76,8 @@ export function DiffPanes({
                 baseRef={fileSet.baseRef}
                 headRef={fileSet.headRef}
                 selected={file.filename === selected}
-                open={toggled[file.filename] ?? !isImagePath(file.filename)}
-                onToggle={() => toggleFile(file.filename)}
+                expanded={folds.expanded(file.filename)}
+                onToggle={() => folds.toggle(file.filename)}
                 sectionRef={(node) => {
                   if (node) sections.current.set(file.filename, node);
                   else sections.current.delete(file.filename);

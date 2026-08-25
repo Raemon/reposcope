@@ -8,6 +8,7 @@ export interface DiffRow {
   label: string;
   left: DiffCell | null;
   right: DiffCell | null;
+  touched?: boolean;
 }
 
 export function splitDiff(patch: string): DiffRow[] {

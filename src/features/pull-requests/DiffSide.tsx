@@ -12,6 +12,7 @@ import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 
 const ROW = 'flex h-[15px] items-center gap-1 leading-[15px]';
 const GUTTER = 'w-[38px] shrink-0 select-none pr-1 text-right text-[9px] text-ink-dim';
+const TOUCHED_MARK = 'bg-add-bg/60 shadow-[inset_2px_0_0_var(--add-emph)]';
 const EDIT_BTN =
   'sticky right-0 shrink-0 rounded bg-procgen px-1 uppercase tracking-[0.14em] hover:bg-btn-hover hover:text-ink';
 
@@ -135,7 +136,7 @@ function DiffLineView({
   const openable = Boolean(editable && side === 'right');
   return (
     <div
-      className={`${ROW} ${lineTone(side, changed)} ${openable ? 'cursor-text' : ''}`}
+      className={`${ROW} ${lineTone(side, changed, line.touched)} ${openable ? 'cursor-text' : ''}`}
       onClick={openable && onEdit ? (event) => event.detail >= 3 && onEdit() : undefined}
     >
       <span className={GUTTER}>{cell.line}</span>
@@ -154,9 +155,9 @@ function DiffLineView({
   );
 }
 
-function lineTone(side: 'left' | 'right', changed: boolean): string {
-  if (!changed) return '';
-  return side === 'left' ? 'bg-del-bg text-del-ink' : 'bg-add-bg text-add-ink';
+function lineTone(side: 'left' | 'right', changed: boolean, touched: boolean): string {
+  if (changed) return side === 'left' ? 'bg-del-bg text-del-ink' : 'bg-add-bg text-add-ink';
+  return touched ? TOUCHED_MARK : '';
 }
 
 function emphasisTone(side: 'left' | 'right'): string {
