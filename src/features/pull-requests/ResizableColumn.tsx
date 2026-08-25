@@ -172,6 +172,6 @@ function headerTone(row: ColumnRow, focused: boolean): string {
   return focused ? 'bg-btn' : 'bg-panel';
 }
 
-function clampWidth(width: number): number {
+export function clampWidth(width: number): number {
   return Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, width));
 }
