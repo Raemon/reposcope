@@ -12,5 +12,5 @@ Standard commands live in `CLAUDE.md` and `package.json` (dev on port 2111,
   set `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` only if testing the OAuth
   connect flow.
 - GitHub responses are cached to disk (`REPOSCOPE_CACHE_DIR`, defaulting to a
-  temp dir). First load of a large repo can take tens of seconds while it
-  fetches and parses; later loads hit the cache.
+  temp dir) and revalidated with ETags, so repeated loads of the same pull
+  request are cheap.

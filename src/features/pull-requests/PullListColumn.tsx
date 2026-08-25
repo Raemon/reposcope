@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import { AllPullRequestList } from './AllPullRequestList';
 import { ColumnPreview, type PreviewToken } from './ColumnPreview';
 import { useRegisterColumn } from './columnNav';
-import { PullRequestList } from './PullRequestMenu';
+import { PullRequestList } from './PullRequestList';
 import { ResizableColumn, type ColumnSize } from './ResizableColumn';
 import { useStandingPulls, useStandingRepoPulls } from './pullActionStore';
 import { allPullsRoute, pullRoute, repoPullsPath } from './pullPaths';
