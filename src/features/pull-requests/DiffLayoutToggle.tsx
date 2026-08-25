@@ -14,7 +14,7 @@ export function DiffLayoutToggle() {
   return (
     <div className="flex items-center gap-1">
       {CHOICES.map(({ layout, icon, label }) => (
-        <HoverCardTrigger key={layout} label={`Show diffs in a ${label} view`} focusable={false}>
+        <HoverCardTrigger key={layout} label={`Show diffs in a ${label} view`} focusable={false} tooltipStyle>
           <button
             type="button"
             onClick={() => setDiffLayout(layout)}

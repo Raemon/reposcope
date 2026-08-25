@@ -30,6 +30,7 @@ export function HoverCardTrigger({
   interactive = true,
   width = 'default',
   focusable = true,
+  tooltipStyle = false,
 }: {
   label: string;
   card?: ReactNode;
@@ -39,6 +40,7 @@ export function HoverCardTrigger({
   interactive?: boolean;
   width?: TipWidth;
   focusable?: boolean;
+  tooltipStyle?: boolean;
 }) {
   const id = useId();
   const [anchor, setAnchor] = useState<DOMRect | null>(null);
@@ -113,6 +115,7 @@ export function HoverCardTrigger({
           anchor={anchor}
           placement={placement}
           width={width}
+          tooltipStyle={tooltipStyle}
           reachable={reachable && interactive}
           onEnter={clearTimers}
           onLeave={scheduleHide}
@@ -124,7 +127,7 @@ export function HoverCardTrigger({
   );
 }
 
-export function HoverCardHtml({ html, className }: { html: string; className: string }) {
+export function HoverCardHtml({ html, className, tooltipStyle = false }: { html: string; className: string; tooltipStyle?: boolean }) {
   const id = useId();
   const popper = useRef<HTMLDivElement>(null);
   const active = useRef<HTMLElement>(null);
@@ -167,7 +170,7 @@ export function HoverCardHtml({ html, className }: { html: string; className: st
       onBlur={leaveFocus}
     >
       <div className={className} dangerouslySetInnerHTML={{ __html: html }} />
-      {tip ? <HoverCardPopper ref={popper} id={id} label={tip.label} anchor={tip.anchor} placement="side" width="default" reachable={false} onEnter={hide} onLeave={hide} /> : null}
+      {tip ? <HoverCardPopper ref={popper} id={id} label={tip.label} anchor={tip.anchor} placement="side" width="default" tooltipStyle={tooltipStyle} reachable={false} onEnter={hide} onLeave={hide} /> : null}
     </div>
   );
 }
@@ -179,6 +182,7 @@ function HoverCardPopper({
   anchor,
   placement,
   width,
+  tooltipStyle,
   reachable,
   onEnter,
   onLeave,
@@ -190,6 +194,7 @@ function HoverCardPopper({
   anchor: DOMRect;
   placement: TipPlacement;
   width: TipWidth;
+  tooltipStyle: boolean;
   reachable: boolean;
   onEnter: () => void;
   onLeave: () => void;
@@ -209,9 +214,9 @@ function HoverCardPopper({
       style={position}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
-      className={`fixed z-50 w-max min-w-64 ${CARD_WIDTHS[width]} overflow-hidden rounded-md bg-tip shadow-card ${reachable ? '' : 'pointer-events-none'}`}
+      className={tooltipStyle ? `fixed z-50 w-max ${CARD_WIDTHS[width]} overflow-hidden bg-black/85 text-white pointer-events-none` : `fixed z-50 w-max min-w-64 ${CARD_WIDTHS[width]} overflow-hidden rounded-md bg-tip shadow-card ${reachable ? '' : 'pointer-events-none'}`}
     >
-      <div className="truncate border-b border-btn-edge px-3 py-2 font-mono text-[11px] text-accent">{label}</div>
+      <div className={tooltipStyle ? 'truncate px-2 py-1 font-mono text-[10px] text-white' : 'truncate border-b border-btn-edge px-3 py-2 font-mono text-[11px] text-accent'}>{label}</div>
       {children !== undefined ? <div className="max-h-[65vh] overflow-y-auto px-3 py-2">{children}</div> : null}
     </div>,
     document.body,

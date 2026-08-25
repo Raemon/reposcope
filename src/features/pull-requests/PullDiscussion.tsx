@@ -86,6 +86,7 @@ function DiscussionEntry({
       <HoverCardHtml
         className="markdown-body break-words text-[11px] leading-4 text-ink"
         html={renderMarkdown(body, { owner, repo })}
+        tooltipStyle
       />
     </article>
   );

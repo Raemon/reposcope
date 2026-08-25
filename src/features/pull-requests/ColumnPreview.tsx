@@ -35,7 +35,7 @@ export function ColumnPreview({ tokens, column }: { tokens: PreviewToken[]; colu
 
 function PreviewChip({ token, row }: { token: PreviewToken; row: ColumnRow }) {
   return (
-    <HoverCardTrigger label={token.title} focusable={false}>
+    <HoverCardTrigger label={token.title} focusable={false} tooltipStyle>
       <span
         data-nav-cursor={row.props.cursor || undefined}
         onPointerEnter={row.props.onPointerEnter}

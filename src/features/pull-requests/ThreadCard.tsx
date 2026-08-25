@@ -101,6 +101,7 @@ function ThreadComment({
         <HoverCardHtml
           className={`markdown-body break-words pr-6 text-[11px] leading-4 text-ink ${body === 'clamped' ? 'max-h-40 overflow-y-auto' : ''}`}
           html={renderMarkdown(comment.body, repo)}
+          tooltipStyle
         />
       )}
     </div>
@@ -128,12 +129,12 @@ function ThreadActions({
   const first = thread.comments[0];
   return (
     <div className="absolute bottom-0 right-0 flex items-center gap-0.5 rounded-tl border-l border-t border-panel-edge/60 bg-panel px-1 text-[10px] opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
-      <HoverCardTrigger label="Reply" focusable={false}>
+      <HoverCardTrigger label="Reply" focusable={false} tooltipStyle>
         <button type="button" aria-label="Reply" onClick={onReply} disabled={busy} className={ACTION}>
           ↩
         </button>
       </HoverCardTrigger>
-      <HoverCardTrigger label={first?.viewerReacted ? 'Remove 👍' : 'React 👍'} focusable={false}>
+      <HoverCardTrigger label={first?.viewerReacted ? 'Remove 👍' : 'React 👍'} focusable={false} tooltipStyle>
         <button
           type="button"
           aria-label={first?.viewerReacted ? 'Remove thumbs up reaction' : 'Add thumbs up reaction'}
@@ -145,7 +146,7 @@ function ThreadActions({
         </button>
       </HoverCardTrigger>
       {onResolve && (
-        <HoverCardTrigger label={thread.resolved ? 'Unresolve' : 'Resolve'} focusable={false}>
+        <HoverCardTrigger label={thread.resolved ? 'Unresolve' : 'Resolve'} focusable={false} tooltipStyle>
           <button
             type="button"
             aria-label={thread.resolved ? 'Unresolve thread' : 'Resolve thread'}
@@ -157,7 +158,7 @@ function ThreadActions({
           </button>
         </HoverCardTrigger>
       )}
-      <HoverCardTrigger label="Open on GitHub" focusable={false}>
+      <HoverCardTrigger label="Open on GitHub" focusable={false} tooltipStyle>
         <a href={first?.url} target="_blank" rel="noopener noreferrer" aria-label="Open on GitHub" className={ACTION}>
           ↗
         </a>

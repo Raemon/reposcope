@@ -67,7 +67,7 @@ function ImagePane({
         ) : !blob.value.dataUrl ? (
           <PaneNote text={`too large to preview (${byteLabel(blob.value.byteSize)})`} />
         ) : (
-          <HoverCardTrigger label="Open image in a new tab" focusable={false}>
+          <HoverCardTrigger label="Open image in a new tab" focusable={false} tooltipStyle>
             <button
               type="button"
               onClick={() => blob.value?.dataUrl && openImageTab(blob.value.dataUrl)}

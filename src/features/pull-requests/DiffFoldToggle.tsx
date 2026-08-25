@@ -13,7 +13,7 @@ export function DiffFoldToggle({ folds }: { folds: FileFolds }) {
   return (
     <div className="flex items-center gap-1">
       {CHOICES.map(({ expanded, icon, label, title }) => (
-        <HoverCardTrigger key={label} label={title} focusable={false}>
+        <HoverCardTrigger key={label} label={title} focusable={false} tooltipStyle>
           <button
             type="button"
             onClick={() => folds.setAll(expanded)}

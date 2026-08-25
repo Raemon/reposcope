@@ -167,7 +167,7 @@ function emphasisTone(side: 'left' | 'right'): string {
 
 function HunkLine({ label, expand, onEdit }: { label: string; expand: HunkControl; onEdit?: () => void }) {
   const edit = onEdit ? (
-    <HoverCardTrigger label="Edit this hunk and commit the change" focusable={false}>
+    <HoverCardTrigger label="Edit this hunk and commit the change" focusable={false} tooltipStyle>
       <button type="button" onClick={onEdit} className={EDIT_BTN}>
         edit
       </button>

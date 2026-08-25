@@ -25,7 +25,7 @@ export function ApiTypeRow({ entry, returnedBy }: { entry: ApiTypeEntry; returne
 
 export function ApiTypeKindMark({ entry }: { entry: ApiTypeEntry }) {
   return (
-    <HoverCardTrigger label={entry.kind}>
+    <HoverCardTrigger label={entry.kind} tooltipStyle>
       <span className={`text-[9px] tracking-[0.08em] ${entry.reachedByApi ? 'text-accent opacity-70' : 'text-ink opacity-30'}`}>
         {KIND_MARK[entry.kind]}
       </span>

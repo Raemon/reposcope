@@ -7,7 +7,7 @@ export function ThemeToggle() {
   const theme = useTheme();
   const next = theme === 'dark' ? 'light' : 'dark';
   return (
-    <HoverCardTrigger label={`Switch to ${next} mode`} className="shrink-0" focusable={false}>
+    <HoverCardTrigger label={`Switch to ${next} mode`} className="shrink-0" focusable={false} tooltipStyle>
       <button
         type="button"
         onClick={() => setTheme(next)}

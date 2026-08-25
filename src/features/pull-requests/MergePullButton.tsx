@@ -36,7 +36,7 @@ export function MergePullButton({ repo, number }: { repo: RepoRef; number: numbe
   return (
     <div className="flex shrink-0 items-center gap-2">
       {failure !== null && (
-        <HoverCardTrigger label={`${failure.owner}/${failure.repo}#${failure.number}: ${failure.message}`} className="max-w-56" focusable={false}>
+        <HoverCardTrigger label={`${failure.owner}/${failure.repo}#${failure.number}: ${failure.message}`} className="max-w-56" focusable={false} tooltipStyle>
           <span className="truncate text-[10px] text-error-ink">#{failure.number} {failure.message}</span>
         </HoverCardTrigger>
       )}
@@ -45,7 +45,7 @@ export function MergePullButton({ repo, number }: { repo: RepoRef; number: numbe
           {elsewhere.kind === 'close' ? 'closing' : 'merging'} #{elsewhere.number}…
         </span>
       )}
-      <HoverCardTrigger label={mergeLabel} focusable={false}>
+      <HoverCardTrigger label={mergeLabel} focusable={false} tooltipStyle>
         <button
           type="button"
           onClick={() => mergePull({ owner: repo.owner, repo: repo.name, number }, token, (href) => router.push(href))}

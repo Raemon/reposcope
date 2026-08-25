@@ -54,7 +54,7 @@ export function CodebaseList({ groups }: { groups: SidebarGroup[] }) {
                   key={href}
                   className={`flex items-baseline gap-1.5 pr-2 ${activeLink ? 'bg-btn-active' : 'hover:bg-btn-hover'}`}
                 >
-                  <HoverCardTrigger label={repo.description} className="min-w-0 flex-1" focusable={false}>
+                  <HoverCardTrigger label={repo.description} className="min-w-0 flex-1" focusable={false} tooltipStyle>
                     <SelectableLink
                       ref={activeLink ? active : undefined}
                       href={href}
@@ -83,7 +83,7 @@ export function CodebaseList({ groups }: { groups: SidebarGroup[] }) {
 
 function RemoveControl({ source, label }: { source: CodebaseSource; label: string }) {
   return (
-    <HoverCardTrigger label={label} className="ml-auto shrink-0" focusable={false}>
+    <HoverCardTrigger label={label} className="ml-auto shrink-0" focusable={false} tooltipStyle>
       <button
         type="button"
         aria-label={label}

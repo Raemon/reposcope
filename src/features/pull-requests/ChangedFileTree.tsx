@@ -28,7 +28,7 @@ export function ChangedFileTree({
           {group.files.map((file) => {
             const row = nav.row(file.filename, file.filename === selected);
             return (
-              <HoverCardTrigger key={file.filename} label={file.filename} className="flex w-full" focusable={false}>
+              <HoverCardTrigger key={file.filename} label={file.filename} className="flex w-full" focusable={false} tooltipStyle>
                 <SelectableRow
                   {...row.props}
                   onActivate={() => onSelect(file.filename)}
@@ -49,7 +49,7 @@ export function ChangedFileTree({
 function FolderLabel({ folder }: { folder: string }) {
   if (!folder) return null;
   return (
-    <HoverCardTrigger label={folder} className="flex min-w-0 w-full" focusable={false}>
+    <HoverCardTrigger label={folder} className="flex min-w-0 w-full" focusable={false} tooltipStyle>
       <p dir="rtl" className="truncate px-1.5 py-[1px] text-left text-[10px] leading-4 text-ink-dim opacity-50">
         {folder}
       </p>
