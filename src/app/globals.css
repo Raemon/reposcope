@@ -2,6 +2,7 @@
 
 @theme {
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-serif: 'Iowan Old Style', Palatino, 'Palatino Linotype', 'Book Antiqua', Georgia, serif;
 
   --color-bg: var(--bg);
   --color-panel: var(--panel);
