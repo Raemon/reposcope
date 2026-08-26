@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { CentralTabBar, useShowsColumn } from './centralLayout';
 import { ColumnPreview } from './ColumnPreview';
 import { DiffPanes, type DiffPanesHandle } from './DiffPanes';
 import { PullCommitColumn, WHOLE_CHANGE, commitItems, commitTokens } from './PullCommitColumn';
@@ -71,27 +72,47 @@ export function ReviewWorkspace({
   }, []);
   const fileItems = useMemo(() => orderedFiles(fileSet).map((file) => file.filename), [fileSet]);
 
-  useRegisterColumn('discussion', { ...collapsibleColumn(discussionSize, setDiscussionSize), items: [], selected: null }, discussion !== null);
-  useRegisterColumn('commits', {
-    ...collapsibleColumn(commitSize, setCommitSize),
-    items: commitItems(change),
-    selected: selection,
-    onSelect: setSelection,
-  });
-  useRegisterColumn('files', {
-    ...collapsibleColumn(fileSize, setFileSize),
-    items: fileItems,
-    selected: path,
-    onSelect: revealFile,
-  });
-  useRegisterColumn('diff', {
-    items: fileItems,
-    selected: path,
-    open: true,
-    collapsible: false,
-    onSelect: revealFile,
-    onActivate: (filename) => diffPanes.current?.toggleFile(filename),
-  });
+  const showsDiff = useShowsColumn('diff');
+  const showsDiscussion = useShowsColumn('discussion');
+  const showsCommits = useShowsColumn('commits');
+  const showsFiles = useShowsColumn('files');
+  useRegisterColumn(
+    'discussion',
+    { ...collapsibleColumn(discussionSize, setDiscussionSize), items: [], selected: null },
+    discussion !== null && showsDiscussion,
+  );
+  useRegisterColumn(
+    'commits',
+    {
+      ...collapsibleColumn(commitSize, setCommitSize),
+      items: commitItems(change),
+      selected: selection,
+      onSelect: setSelection,
+    },
+    showsCommits,
+  );
+  useRegisterColumn(
+    'files',
+    {
+      ...collapsibleColumn(fileSize, setFileSize),
+      items: fileItems,
+      selected: path,
+      onSelect: revealFile,
+    },
+    showsFiles,
+  );
+  useRegisterColumn(
+    'diff',
+    {
+      items: fileItems,
+      selected: path,
+      open: true,
+      collapsible: false,
+      onSelect: revealFile,
+      onActivate: (filename) => diffPanes.current?.toggleFile(filename),
+    },
+    showsDiff,
+  );
 
   async function reloadInPlace() {
     const asked = fileRoute;
@@ -105,6 +126,7 @@ export function ReviewWorkspace({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
+      <CentralTabBar />
       <div className="flex min-h-0 flex-1">
         {listColumn}
         {discussion !== null && (
@@ -132,7 +154,7 @@ export function ReviewWorkspace({
         >
           <PullFilesColumn fileSet={fileSet} fileError={fileError} path={path} onSelect={revealFile} />
         </ResizableColumn>
-        {fileSet === null && fileError !== null ? (
+        {!showsDiff ? null : fileSet === null && fileError !== null ? (
           <p className="flex-1 px-2 py-1 text-[11px] text-error-ink">{fileError}</p>
         ) : (
           <div className="flex min-w-0 flex-1 flex-col">

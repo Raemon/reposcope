@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import { PANE_WIDTH, usePaneMode } from './centralLayout';
 import { useColumnNav, type ColumnRow } from './columnNav';
 import { COLUMN_HEADER, type ColumnId } from './navColumn';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
@@ -176,6 +177,17 @@ export function ResizableColumn({
 }) {
   const nav = useColumnNav(navId);
   const startDrag = useDragWidth(size, onSize);
+  const pane = usePaneMode(navId);
+  if (pane === 'hidden') return null;
+  if (pane === 'pane')
+    return (
+      <section onPointerDown={nav.focus} onPointerLeave={nav.clearHover} className="flex min-h-0 min-w-0 flex-1 flex-col bg-panel">
+        <div ref={nav.bodyRef} className="min-h-0 flex-1 overflow-auto">
+          <div className={PANE_WIDTH}>{children}</div>
+        </div>
+        {footer}
+      </section>
+    );
   if (!size.open)
     return (
       <CollapsedColumn

@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
+import { useViewHref } from './centralLayout';
 import { closePull } from './closePull';
 import { NavListRow } from './NavListRow';
 import type { PullTarget } from './pullActionStore';
@@ -59,10 +60,11 @@ export function PullListRow({
   children: ReactNode;
 }) {
   const token = useGithubToken();
+  const viewHref = useViewHref();
   return (
     <NavListRow
       route={pullRoute(target.owner, target.repo, target.number)}
-      href={href}
+      href={viewHref(href)}
       current={current}
       serif
       onPointerEnter={() => prefetchPull(target.owner, target.repo, target.number, token)}
