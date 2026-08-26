@@ -3,13 +3,16 @@
 import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { AllPullRequestList } from './AllPullRequestList';
+import { BranchesSection, useBranches } from './BranchesSection';
 import { ColumnPreview, type PreviewToken } from './ColumnPreview';
 import { useRegisterColumn } from './columnNav';
 import { PullRequestList } from './PullRequestList';
 import { ResizableColumn, type ColumnSize } from './ResizableColumn';
 import { useStandingPulls, useStandingRepoPulls } from './pullActionStore';
-import { allPullsRoute, pullRoute, repoPullsPath } from './pullPaths';
+import { branchRoute, allPullsRoute, pullRoute, repoPullsPath } from './pullPaths';
 import type { PullRequestSummary } from './pullRequests';
+import type { BranchSummary } from './branches';
+import { useStickyOpen } from './stickyColumns';
 import { useAllPullRequests } from './useAllPullRequests';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 import { useCachedJson } from '@/features/sources/useCachedJson';
@@ -35,8 +38,18 @@ export function RepoPullsColumn({ owner, repo, size, onSize }: PullColumn) {
   const token = useGithubToken();
   const { data: pulls } = useCachedJson<PullRequestSummary[]>(repoPullsPath(owner, repo), token, ready);
   const standingPulls = useStandingRepoPulls(owner, repo, pulls);
+  const [branchesOpen, setBranchesOpen] = useStickyOpen('branches');
+  const listingBranches = size.open && branchesOpen;
+  const branches = useBranches(owner, repo, listingBranches);
   return (
-    <PullsColumn targets={standingPulls.map((pull) => pullTarget(owner, repo, pull, false))} size={size} onSize={onSize}>
+    <PullsColumn
+      targets={repoTargets(owner, repo, standingPulls, listingBranches ? branches : [])}
+      size={size}
+      onSize={onSize}
+      footer={
+        <BranchesSection owner={owner} repo={repo} branches={branches} expanded={branchesOpen} onExpanded={setBranchesOpen} />
+      }
+    >
       <PullRequestList repo={{ owner, name: repo }} />
     </PullsColumn>
   );
@@ -56,11 +69,13 @@ function PullsColumn({
   targets,
   size,
   onSize,
+  footer,
   children,
 }: {
   targets: PullNavTarget[];
   size: ColumnSize;
   onSize: (next: ColumnSize) => void;
+  footer?: ReactNode;
   children: ReactNode;
 }) {
   const pathname = usePathname();
@@ -82,6 +97,7 @@ function PullsColumn({
       preview={<ColumnPreview column="pulls" tokens={targets.map((target) => pullToken(target, target.route === selected))} />}
       size={size}
       onSize={onSize}
+      footer={footer}
     >
       {children}
     </ResizableColumn>
@@ -96,6 +112,19 @@ function pullTarget(owner: string, repo: string, pull: PullRequestSummary, acros
     label: String(pull.number).slice(-2),
     title: `${owner}/${repo} #${pull.number} · ${pull.title}`,
   };
+}
+
+function repoTargets(owner: string, repo: string, pulls: PullRequestSummary[], branches: BranchSummary[]): PullNavTarget[] {
+  return [
+    ...pulls.map((pull) => pullTarget(owner, repo, pull, false)),
+    ...branches.map((branch) => branchTarget(owner, repo, branch)),
+  ];
+}
+
+function branchTarget(owner: string, repo: string, branch: BranchSummary): PullNavTarget {
+  const route = branchRoute(owner, repo, branch.name);
+  const leaf = branch.name.split('/').pop() ?? branch.name;
+  return { route, href: route, label: leaf.slice(0, 2), title: `${owner}/${repo} · ${branch.name}` };
 }
 
 function pullToken(target: PullNavTarget, accent: boolean): PreviewToken {

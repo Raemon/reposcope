@@ -5,7 +5,7 @@ import { ChangeCounts } from './ChangeCounts';
 import type { PreviewToken } from './ColumnPreview';
 import { useColumnNav, type ColumnRow } from './columnNav';
 import { ROW_META, stackedMetaClass } from './PullListRow';
-import type { CommitSummary, PullRequestCommits } from './pullRequests';
+import type { ChangeSummary, CommitSummary } from './pullRequests';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { RelativeTime } from '@/features/surface-ui/RelativeTime';
 import { rowStateClass } from '@/features/surface-ui/rowState';
@@ -16,14 +16,14 @@ const ROW = 'flex w-full items-center gap-1.5 px-1.5 py-1 text-left font-serif t
 const HASH = 'ml-1.5 w-[3ch] shrink-0 font-mono text-[9px]';
 const HASH_CHARS = 3;
 const COPIED_MS = 1200;
-export const WHOLE_PULL = 'all';
+export const WHOLE_CHANGE = 'all';
 
 export function PullCommitColumn({
-  pull,
+  change,
   selection,
   onSelect,
 }: {
-  pull: PullRequestCommits;
+  change: ChangeSummary;
   selection: string;
   onSelect: (selection: string) => void;
 }) {
@@ -31,11 +31,11 @@ export function PullCommitColumn({
   const rowFor = (item: string) => nav.row(item, item === selection);
   return (
     <>
-      <CommitRow row={rowFor(WHOLE_PULL)} onActivate={() => onSelect(WHOLE_PULL)} leading={<span aria-hidden className={HASH} />}>
+      <CommitRow row={rowFor(WHOLE_CHANGE)} onActivate={() => onSelect(WHOLE_CHANGE)} leading={<span aria-hidden className={HASH} />}>
         <span className="min-w-0 flex-1">all changes</span>
-        <ChangeCounts additions={pull.additions} deletions={pull.deletions} />
+        <ChangeCounts additions={change.additions} deletions={change.deletions} />
       </CommitRow>
-      {pull.commits.map((commit) => (
+      {change.commits.map((commit) => (
         <CommitEntry key={commit.sha} commit={commit} row={rowFor(commit.sha)} onActivate={() => onSelect(commit.sha)} />
       ))}
     </>
@@ -114,14 +114,14 @@ function CopyHash({ sha }: { sha: string }) {
   );
 }
 
-export function commitItems(pull: PullRequestCommits): string[] {
-  return [WHOLE_PULL, ...pull.commits.map((commit) => commit.sha)];
+export function commitItems(change: ChangeSummary): string[] {
+  return [WHOLE_CHANGE, ...change.commits.map((commit) => commit.sha)];
 }
 
-export function commitTokens(pull: PullRequestCommits, selection: string): PreviewToken[] {
+export function commitTokens(change: ChangeSummary, selection: string): PreviewToken[] {
   return [
-    { key: WHOLE_PULL, label: '∀', title: 'all changes', accent: selection === WHOLE_PULL },
-    ...pull.commits.map((commit) => ({
+    { key: WHOLE_CHANGE, label: '∀', title: 'all changes', accent: selection === WHOLE_CHANGE },
+    ...change.commits.map((commit) => ({
       key: commit.sha,
       label: commit.sha.slice(0, 2),
       title: `${commit.sha.slice(0, 7)} · ${commit.message}`,
