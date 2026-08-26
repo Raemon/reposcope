@@ -11,7 +11,8 @@ import { useGithubToken } from '@/features/sources/sourceStore';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { rowStateClass } from '@/features/surface-ui/rowState';
 import { SelectableLink } from '@/features/surface-ui/SelectableLink';
-import { timeAgo } from '@/features/surface-ui/timeAgo';
+import { RelativeTime } from '@/features/surface-ui/RelativeTime';
+import { useWrappedText } from '@/features/surface-ui/useWrappedText';
 
 interface PullRowSummary {
   number: number;
@@ -25,16 +26,24 @@ export const ROW_META = 'shrink-0 font-mono text-[9px] text-ink-dim';
 export const LIST_NOTE = 'px-2 py-1 text-[11px] leading-4';
 
 export function PullRowFields({ pull }: { pull: PullRowSummary }) {
+  const [title, wrapped] = useWrappedText<HTMLSpanElement>();
   return (
     <>
       <span className={ROW_META}>#{pull.number}</span>
-      <span className="min-w-0 flex-1 break-words">{pull.title}</span>
+      <span className="min-w-0 flex-1 break-words">
+        <span ref={title}>{pull.title}</span>
+      </span>
       {pull.draft && <span className="shrink-0 rounded bg-btn px-1 font-mono text-[9px]">draft</span>}
-      <span className={ROW_META}>
-        {pull.author} · {timeAgo(pull.updatedAt)}
+      <span className={stackedMetaClass(wrapped)}>
+        <span className={ROW_META}>{pull.author}{wrapped ? '' : ' ·'}</span>
+        <RelativeTime iso={pull.updatedAt} className={ROW_META} />
       </span>
     </>
   );
+}
+
+export function stackedMetaClass(wrapped: boolean): string {
+  return `flex shrink-0 gap-x-1.5 ${wrapped ? 'flex-col items-end' : 'items-center'}`;
 }
 
 export function PullListRow({
@@ -54,13 +63,13 @@ export function PullListRow({
     <div
       data-nav-cursor={row.props.cursor || undefined}
       onPointerEnter={row.props.onPointerEnter}
-      className={`group flex items-center ${rowStateClass(row.state)}`}
+      className={`group flex items-center border-b border-ink/15 ${rowStateClass(row.state)}`}
     >
       <SelectableLink
         href={href}
         current={current}
         onPointerEnter={() => prefetchPull(target.owner, target.repo, target.number, token)}
-        className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-[2px] font-serif text-[12px] leading-[1.15]"
+        className="flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1 font-serif text-[12px] leading-[1.15]"
       >
         {children}
       </SelectableLink>
