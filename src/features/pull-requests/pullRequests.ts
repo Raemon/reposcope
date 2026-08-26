@@ -213,7 +213,7 @@ export async function describePullRequest(
     githubJson<GithubCommit[]>(`${API}/repos/${owner}/${name}/pulls/${number}/commits?per_page=100`),
   ]);
   const [preview, summaries] = await Promise.all([
-    previewDeploymentUrl(owner, name, pull.head.sha),
+    previewDeploymentUrl(owner, name, pull.head.sha, fresh),
     summarizeCommits(owner, name, commits),
   ]);
   return {
