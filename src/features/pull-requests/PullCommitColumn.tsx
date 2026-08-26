@@ -1,10 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { ChangeCounts } from './ChangeCounts';
+import { ChangeCountCells } from './ChangeCounts';
 import type { PreviewToken } from './ColumnPreview';
 import { useColumnNav, type ColumnRow } from './columnNav';
-import { ROW_META, stackedMetaClass } from './PullListRow';
 import type { ChangeSummary, CommitSummary } from './pullRequests';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { RelativeTime } from '@/features/surface-ui/RelativeTime';
@@ -15,6 +14,7 @@ import { useWrappedText } from '@/features/surface-ui/useWrappedText';
 const ROW = 'flex w-full items-center gap-1.5 px-1.5 py-1 text-left font-serif text-[12px] leading-[1.15]';
 const HASH = 'ml-1.5 w-[3ch] shrink-0 font-mono text-[9px]';
 const HASH_CHARS = 3;
+const META = 'grid shrink-0 items-center justify-items-end gap-x-1.5 font-mono text-[9px] leading-4 text-ink-dim';
 const COPIED_MS = 1200;
 export const WHOLE_CHANGE = 'all';
 
@@ -33,7 +33,9 @@ export function PullCommitColumn({
     <>
       <CommitRow row={rowFor(WHOLE_CHANGE)} onActivate={() => onSelect(WHOLE_CHANGE)} leading={<span aria-hidden className={HASH} />}>
         <span className="min-w-0 flex-1">all changes</span>
-        <ChangeCounts additions={change.additions} deletions={change.deletions} />
+        <span className={metaClass(false)}>
+          <ChangeCountCells additions={change.additions} deletions={change.deletions} />
+        </span>
       </CommitRow>
       {change.commits.map((commit) => (
         <CommitEntry key={commit.sha} commit={commit} row={rowFor(commit.sha)} onActivate={() => onSelect(commit.sha)} />
@@ -49,13 +51,17 @@ function CommitEntry({ commit, row, onActivate }: { commit: CommitSummary; row: 
       <span className="min-w-0 flex-1 break-words">
         <span ref={message}>{commit.message}</span>
       </span>
-      <span className={stackedMetaClass(wrapped)}>
-        <span className={ROW_META}>{commit.fileCount}f</span>
-        <ChangeCounts additions={commit.additions} deletions={commit.deletions} />
-        <RelativeTime iso={commit.date} className={ROW_META} />
+      <span className={metaClass(wrapped)}>
+        <span>{commit.fileCount}f</span>
+        <ChangeCountCells additions={commit.additions} deletions={commit.deletions} />
+        <RelativeTime iso={commit.date} />
       </span>
     </CommitRow>
   );
+}
+
+function metaClass(stacked: boolean): string {
+  return `${META} ${stacked ? 'grid-cols-2' : 'grid-flow-col'}`;
 }
 
 function CommitRow({
