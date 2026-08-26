@@ -73,26 +73,28 @@ export function FileDiff({
     editor: canEdit && hunkEdit.edit ? hunkEditor(file.filename, hunkEdit) : null,
   };
   return (
-    <div ref={growing} className="relative" style={{ paddingBottom: threadOverflow }}>
+    <div ref={growing} className="flex" style={{ paddingBottom: threadOverflow }}>
+      <div className="min-w-0 flex-1">
+        {unified ? (
+          <DiffSide {...shared} lines={merged} labels {...editing} />
+        ) : (
+          <div className="flex">
+            <section className="relative flex shrink-0 flex-col border-r border-panel-edge" style={{ width: removedSize.width }}>
+              <DiffSide {...shared} lines={columns.left} labels spacer={canEdit ? spacerFor(hunkEdit.edit) : null} />
+              <DragHandle onPointerDown={startDrag} />
+            </section>
+            <section className="flex min-w-0 flex-1 flex-col">
+              <DiffSide {...shared} lines={columns.right} labels={false} {...editing} />
+            </section>
+          </div>
+        )}
+      </div>
       <InlineThreads
         path={file.filename}
         rows={rows}
         lines={unified ? merged : columns.right}
         onOverflow={setThreadOverflow}
       />
-      {unified ? (
-        <DiffSide {...shared} lines={merged} labels {...editing} />
-      ) : (
-        <div className="flex">
-          <section className="relative flex shrink-0 flex-col border-r border-panel-edge" style={{ width: removedSize.width }}>
-            <DiffSide {...shared} lines={columns.left} labels spacer={canEdit ? spacerFor(hunkEdit.edit) : null} />
-            <DragHandle onPointerDown={startDrag} />
-          </section>
-          <section className="flex min-w-0 flex-1 flex-col">
-            <DiffSide {...shared} lines={columns.right} labels={false} {...editing} />
-          </section>
-        </div>
-      )}
       {canEdit && hunkEdit.message !== null && hunkEdit.edit !== null && (
         <CommitEditModal
           path={file.filename}
