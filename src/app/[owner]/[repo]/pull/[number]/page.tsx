@@ -1,3 +1,4 @@
+import { CentralLayoutProvider } from '@/features/pull-requests/centralLayout';
 import { ColumnNavProvider } from '@/features/pull-requests/columnNav';
 import { PullRequestView } from '@/features/pull-requests/PullRequestView';
 
@@ -6,13 +7,15 @@ export default async function PullRequestPage({
   searchParams,
 }: {
   params: Promise<{ owner: string; repo: string; number: string }>;
-  searchParams: Promise<{ from?: string }>;
+  searchParams: Promise<{ from?: string; view?: string }>;
 }) {
   const { owner, repo, number } = await params;
-  const { from } = await searchParams;
+  const { from, view } = await searchParams;
   return (
     <ColumnNavProvider>
-      <PullRequestView owner={owner} repo={repo} number={Number(number)} acrossRepos={from === 'all'} />
+      <CentralLayoutProvider central={view === 'central'}>
+        <PullRequestView owner={owner} repo={repo} number={Number(number)} acrossRepos={from === 'all'} />
+      </CentralLayoutProvider>
     </ColumnNavProvider>
   );
 }

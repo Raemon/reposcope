@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { AllPullRequestList } from './AllPullRequestList';
 import { BranchesSection, useBranches } from './BranchesSection';
+import { useShowsColumn, useViewHref } from './centralLayout';
 import { ColumnPreview, type PreviewToken } from './ColumnPreview';
 import { useRegisterColumn } from './columnNav';
 import { PullRequestList } from './PullRequestList';
@@ -80,15 +81,20 @@ function PullsColumn({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const viewHref = useViewHref();
   const selected = targets.some((target) => target.route === pathname) ? pathname : null;
-  useRegisterColumn('pulls', {
-    items: targets.map((target) => target.route),
-    selected,
-    open: size.open,
-    collapsible: true,
-    setOpen: (open) => onSize({ ...size, open }),
-    onActivate: (route) => visitTarget(router, targets, route),
-  });
+  useRegisterColumn(
+    'pulls',
+    {
+      items: targets.map((target) => target.route),
+      selected,
+      open: size.open,
+      collapsible: true,
+      setOpen: (open) => onSize({ ...size, open }),
+      onActivate: (route) => visitTarget(router, targets, route, viewHref),
+    },
+    useShowsColumn('pulls'),
+  );
   return (
     <ResizableColumn
       navId="pulls"
@@ -131,7 +137,12 @@ function pullToken(target: PullNavTarget, accent: boolean): PreviewToken {
   return { key: target.route, label: target.label, title: target.title, accent };
 }
 
-function visitTarget(router: { push: (href: string) => void }, targets: PullNavTarget[], route: string) {
+function visitTarget(
+  router: { push: (href: string) => void },
+  targets: PullNavTarget[],
+  route: string,
+  viewHref: (href: string) => string,
+) {
   const target = targets.find((held) => held.route === route);
-  if (target) router.push(target.href);
+  if (target) router.push(viewHref(target.href));
 }
