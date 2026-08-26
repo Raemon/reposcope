@@ -1,18 +1,18 @@
-const COUNT = 'shrink-0 text-[9px] leading-4';
+type Counts = { additions: number; deletions: number };
 
-export function ChangeCounts({ additions, deletions }: { additions: number; deletions: number }) {
+export function ChangeCounts(counts: Counts) {
   return (
-    <span className={COUNT}>
-      <span className="text-add-ink">+{additions}</span> <span className="text-del-ink">−{deletions}</span>
+    <span className="flex shrink-0 gap-x-1 text-[9px] leading-4">
+      <ChangeCountCells {...counts} />
     </span>
   );
 }
 
-export function ChangeCountCells({ additions, deletions }: { additions: number; deletions: number }) {
+export function ChangeCountCells({ additions, deletions }: Counts) {
   return (
     <>
-      <span className={`${COUNT} text-add-ink`}>+{additions}</span>
-      <span className={`${COUNT} text-del-ink`}>−{deletions}</span>
+      <span className="text-add-ink">+{additions}</span>
+      <span className="text-del-ink">−{deletions}</span>
     </>
   );
 }
