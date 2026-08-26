@@ -9,6 +9,43 @@ import { prefetchPull } from './prefetchPull';
 import { pullRoute } from './pullPaths';
 import { useGithubToken } from '@/features/sources/sourceStore';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
+import { RelativeTime } from '@/features/surface-ui/RelativeTime';
+import { useWrappedText } from '@/features/surface-ui/useWrappedText';
+
+interface PullRowSummary {
+  number: number;
+  title: string;
+  draft: boolean;
+  author: string;
+  updatedAt: string;
+}
+
+export const ROW_META = 'shrink-0 font-mono text-[9px] text-ink-dim';
+export const LIST_NOTE = 'px-2 py-1 text-[11px] leading-4';
+
+export function PullRowFields({ pull }: { pull: PullRowSummary }) {
+  const [title, wrapped] = useWrappedText<HTMLSpanElement>();
+  return (
+    <>
+      <span className={ROW_META}>#{pull.number}</span>
+      <span className="min-w-0 flex-1 break-words">
+        <span ref={title}>{pull.title}</span>
+      </span>
+      {pull.draft && <span className="shrink-0 rounded bg-btn px-1 font-mono text-[9px]">draft</span>}
+      <span className={stackedMetaClass(wrapped)}>
+        <span className={ROW_META}>
+          {pull.author}
+          {wrapped ? '' : ' ·'}
+        </span>
+        <RelativeTime iso={pull.updatedAt} className={ROW_META} />
+      </span>
+    </>
+  );
+}
+
+export function stackedMetaClass(wrapped: boolean): string {
+  return `flex shrink-0 gap-x-1.5 ${wrapped ? 'flex-col items-end' : 'items-center'}`;
+}
 
 export function PullListRow({
   target,
@@ -27,6 +64,7 @@ export function PullListRow({
       route={pullRoute(target.owner, target.repo, target.number)}
       href={href}
       current={current}
+      serif
       onPointerEnter={() => prefetchPull(target.owner, target.repo, target.number, token)}
       trailing={<ClosePullIcon target={target} token={token} shown={current} />}
     >
