@@ -11,6 +11,7 @@ import { useSourceResults } from './useSourceResults';
 import { ScopeMark } from '@/features/brand/ScopeMark';
 import { CurrentBranchTitle, CurrentPullTitle } from '@/features/pull-requests/CurrentPullTitle';
 import { MergePullButton } from '@/features/pull-requests/MergePullButton';
+import { PreviewLink } from '@/features/pull-requests/PreviewLink';
 import { PullRequestMenu } from '@/features/pull-requests/PullRequestMenu';
 import { type RepoRef } from '@/features/sources/parseRepoLink';
 import { SelectableLink } from '@/features/surface-ui/SelectableLink';
@@ -35,7 +36,12 @@ export function CodebaseHeader() {
       {reading && !readingPullList && <HeaderSubject repo={reading} pullNumber={pullNumber} branch={branch} />}
       <div className="ml-auto flex shrink-0 items-center gap-2">
         <GithubSignedOutNotice />
-        {reading && pullNumber !== null && <MergePullButton repo={reading} number={pullNumber} />}
+        {reading && pullNumber !== null && (
+          <>
+            <PreviewLink repo={reading} number={pullNumber} />
+            <MergePullButton repo={reading} number={pullNumber} />
+          </>
+        )}
         <ThemeToggle />
       </div>
     </header>

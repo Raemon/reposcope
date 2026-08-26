@@ -8,6 +8,7 @@ import {
 } from '@/features/codebases/githubRequest';
 import { requireGithubUser } from '@/features/github-auth/requireGithubUser';
 import { imageTypeOf } from './imageFiles';
+import { previewDeploymentUrl } from './previewDeployment';
 import { mapWithWorkers } from './workerPool';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
 
@@ -78,6 +79,7 @@ export interface PullRequestCommits extends ChangeSummary {
   baseRef: string;
   headRef: string;
   conflicted: boolean;
+  previewUrl: string | null;
 }
 
 export interface FileEdit {
@@ -210,6 +212,10 @@ export async function describePullRequest(
     githubJson<GithubPull>(`${API}/repos/${owner}/${name}/pulls/${number}`, fresh),
     githubJson<GithubCommit[]>(`${API}/repos/${owner}/${name}/pulls/${number}/commits?per_page=100`),
   ]);
+  const [preview, summaries] = await Promise.all([
+    previewDeploymentUrl(owner, name, pull.head.sha),
+    summarizeCommits(owner, name, commits),
+  ]);
   return {
     pull: summarizePull(pull),
     body: pull.body ?? null,
@@ -218,7 +224,8 @@ export async function describePullRequest(
     additions: pull.additions ?? 0,
     deletions: pull.deletions ?? 0,
     conflicted: hasConflicts(pull),
-    commits: await summarizeCommits(owner, name, commits),
+    previewUrl: preview,
+    commits: summaries,
   };
 }
 
