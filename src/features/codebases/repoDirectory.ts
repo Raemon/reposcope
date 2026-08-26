@@ -1,6 +1,6 @@
-import { githubJson, GithubRequestError } from './githubRequest';
-import { userGithubToken } from './githubToken';
+import { githubJson } from './githubRequest';
 import type { GithubAccess } from '@/features/github-auth/githubAccess';
+import { describeViewer } from '@/features/github-auth/viewerIdentity';
 
 export interface RepoSummary {
   owner: string;
@@ -34,8 +34,7 @@ export async function listOwnerRepos(login: string): Promise<RepoSummary[]> {
 }
 
 export async function listViewerRepos(access: GithubAccess): Promise<ViewerRepos> {
-  if (!userGithubToken()) throw new GithubRequestError(401, 'GitHub is not connected');
-  const { login } = await githubJson<{ login: string }>(`${API}/user`);
+  const { login } = await describeViewer();
   const visibility = access === 'public' ? 'public' : 'all';
   const repos = await fetchPages(
     `${API}/user/repos?${PAGE}&affiliation=owner,collaborator,organization_member&visibility=${visibility}`,

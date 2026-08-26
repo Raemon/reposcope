@@ -7,6 +7,7 @@ import { timeAgo } from '@/features/surface-ui/timeAgo';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 import { HoverCardHtml } from '@/features/surface-ui/HoverCard';
 import { useCachedJson } from '@/features/sources/useCachedJson';
+import { useIsOwnAuthor } from '@/features/github-auth/useViewerLogin';
 import { usePollWhileVisible } from '@/features/sources/usePollWhileVisible';
 
 export function PullDiscussion({
@@ -24,6 +25,7 @@ export function PullDiscussion({
 }) {
   const ready = useStoreReady();
   const token = useGithubToken();
+  const isOwnAuthor = useIsOwnAuthor();
   const commentState = useCachedJson<PullComment[]>(pullCommentsPath(owner, repo, number), token, ready);
   const { data: comments, error } = commentState;
 
@@ -34,7 +36,7 @@ export function PullDiscussion({
       <DiscussionEntry
         owner={owner}
         repo={repo}
-        author={author}
+        author={isOwnAuthor(author) ? null : author}
         note="description"
         body={body?.trim() ? body : 'No description.'}
       />
@@ -50,7 +52,7 @@ export function PullDiscussion({
             key={comment.id}
             owner={owner}
             repo={repo}
-            author={comment.author}
+            author={isOwnAuthor(comment.author) ? null : comment.author}
             note={timeAgo(comment.createdAt)}
             path={comment.path}
             body={comment.body}
@@ -71,7 +73,7 @@ function DiscussionEntry({
 }: {
   owner: string;
   repo: string;
-  author: string;
+  author: string | null;
   note: string;
   path?: string | null;
   body: string;
@@ -79,7 +81,7 @@ function DiscussionEntry({
   return (
     <article className="border-b border-panel-edge px-1.5 py-1">
       <header className="flex items-baseline gap-1.5 text-[9px] text-ink-dim">
-        <span className="shrink-0 text-ink">{author}</span>
+        {author && <span className="shrink-0 text-ink">{author}</span>}
         <span className="shrink-0">{note}</span>
         {path && <span className="min-w-0 flex-1 truncate">{path}</span>}
       </header>
