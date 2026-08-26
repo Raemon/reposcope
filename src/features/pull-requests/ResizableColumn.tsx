@@ -1,14 +1,12 @@
 'use client';
 
 import { useCallback, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
-import { usePaneMode } from './centralLayout';
+import { PANE_WIDTH, usePaneMode } from './centralLayout';
 import { useColumnNav, type ColumnRow } from './columnNav';
 import { COLUMN_HEADER, type ColumnId } from './navColumn';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 
 const HEADER_ROW = 'flex w-full shrink-0 items-center gap-1.5 border-panel-edge px-1.5 py-[1px] text-left';
-
-const PANE_BODY = 'mx-auto w-full max-w-[980px]';
 
 const MIN_WIDTH = 140;
 const MAX_WIDTH = 900;
@@ -185,7 +183,7 @@ export function ResizableColumn({
     return (
       <section onPointerDown={nav.focus} onPointerLeave={nav.clearHover} className="flex min-h-0 min-w-0 flex-1 flex-col bg-panel">
         <div ref={nav.bodyRef} className="min-h-0 flex-1 overflow-auto">
-          <div className={PANE_BODY}>{children}</div>
+          <div className={PANE_WIDTH}>{children}</div>
         </div>
         {footer}
       </section>

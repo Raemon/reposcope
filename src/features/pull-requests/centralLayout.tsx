@@ -21,8 +21,10 @@ const TAB_OF_COLUMN: Record<ColumnId, CentralTab> = {
   diff: 'files',
 };
 
-const TAB_ROW = 'flex shrink-0 items-center gap-1 border-b border-panel-edge bg-panel px-1.5 py-1';
-const TAB_BUTTON = 'rounded px-2 py-[2px] text-[10px] uppercase tracking-[0.18em]';
+export const PANE_WIDTH = 'mx-auto w-full max-w-[980px]';
+
+const TAB_ROW = 'shrink-0 border-b border-panel-edge bg-panel py-1';
+const TAB_BUTTON = 'rounded px-1.5 py-[2px] text-[10px] uppercase tracking-[0.18em]';
 
 interface CentralValue {
   central: boolean;
@@ -65,9 +67,11 @@ export function CentralTabBar() {
   if (!central) return null;
   return (
     <div className={TAB_ROW}>
-      {TABS.map((entry) => (
-        <TabButton key={entry.tab} {...entry} />
-      ))}
+      <div className={`${PANE_WIDTH} flex items-center gap-1`}>
+        {TABS.map((entry) => (
+          <TabButton key={entry.tab} {...entry} />
+        ))}
+      </div>
     </div>
   );
 }
