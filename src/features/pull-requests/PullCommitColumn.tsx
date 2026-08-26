@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { ChangeCounts } from './ChangeCounts';
+import { ChangeCountCells, ChangeCounts } from './ChangeCounts';
 import type { PreviewToken } from './ColumnPreview';
 import { useColumnNav, type ColumnRow } from './columnNav';
-import { ROW_META, stackedMetaClass } from './PullListRow';
+import { ROW_META } from './PullListRow';
 import type { ChangeSummary, CommitSummary } from './pullRequests';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { RelativeTime } from '@/features/surface-ui/RelativeTime';
@@ -49,13 +49,17 @@ function CommitEntry({ commit, row, onActivate }: { commit: CommitSummary; row: 
       <span className="min-w-0 flex-1 break-words">
         <span ref={message}>{commit.message}</span>
       </span>
-      <span className={stackedMetaClass(wrapped)}>
+      <span className={commitMetaClass(wrapped)}>
         <span className={ROW_META}>{commit.fileCount}f</span>
-        <ChangeCounts additions={commit.additions} deletions={commit.deletions} />
+        <ChangeCountCells additions={commit.additions} deletions={commit.deletions} />
         <RelativeTime iso={commit.date} className={ROW_META} />
       </span>
     </CommitRow>
   );
+}
+
+function commitMetaClass(wrapped: boolean): string {
+  return `grid shrink-0 justify-items-end gap-x-1.5 ${wrapped ? 'grid-cols-2' : 'grid-flow-col items-center'}`;
 }
 
 function CommitRow({
