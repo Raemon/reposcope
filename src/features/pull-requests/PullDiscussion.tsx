@@ -5,12 +5,13 @@ import { pullCommentsPath } from './pullPaths';
 import { renderMarkdown } from '@/features/markdown/renderMarkdown';
 import type { PullComment } from './pullRequests';
 import { timeAgo } from '@/features/surface-ui/timeAgo';
-
-const NOTE = 'px-5 py-2 text-meta';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 import { HoverCardHtml } from '@/features/surface-ui/HoverCard';
 import { useCachedJson } from '@/features/sources/useCachedJson';
+import { useIsOwnAuthor } from '@/features/github-auth/useViewerLogin';
 import { usePollWhileVisible } from '@/features/sources/usePollWhileVisible';
+
+const NOTE = 'px-5 py-2 text-meta';
 
 export function PullDiscussion({
   owner,
@@ -81,10 +82,11 @@ function DiscussionEntry({
   body: string;
 }) {
   const wide = useSheetRows();
+  const isOwnAuthor = useIsOwnAuthor();
   return (
     <article className={entryClass(wide, opening)}>
       <header className={`flex items-baseline gap-2 ${wide ? 'mb-2 text-meta' : 'text-[9px]'} text-ink-dim`}>
-        <span className="shrink-0 font-serif text-row text-ink">{author}</span>
+        {!isOwnAuthor(author) && <span className="shrink-0 font-serif text-row text-ink">{author}</span>}
         {path && <span className="min-w-0 flex-1 truncate">{path}</span>}
         <span className={`shrink-0 ${path ? '' : 'ml-auto'}`}>{note}</span>
       </header>

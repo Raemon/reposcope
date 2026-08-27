@@ -33,9 +33,14 @@ export async function listOwnerRepos(login: string): Promise<RepoSummary[]> {
   return fetchPages(await ownerListUrl(login));
 }
 
-export async function listViewerRepos(access: GithubAccess): Promise<ViewerRepos> {
+export async function describeViewer(): Promise<{ login: string }> {
   if (!userGithubToken()) throw new GithubRequestError(401, 'GitHub is not connected');
   const { login } = await githubJson<{ login: string }>(`${API}/user`);
+  return { login };
+}
+
+export async function listViewerRepos(access: GithubAccess): Promise<ViewerRepos> {
+  const { login } = await describeViewer();
   const visibility = access === 'public' ? 'public' : 'all';
   const repos = await fetchPages(
     `${API}/user/repos?${PAGE}&affiliation=owner,collaborator,organization_member&visibility=${visibility}`,

@@ -10,11 +10,12 @@ import { sidebarGroups } from './sidebarGroups';
 import { useSourceResults } from './useSourceResults';
 import { ScopeMark } from '@/features/brand/ScopeMark';
 import { SHEET } from '@/features/pull-requests/centralLayout';
-import { useCentralView } from '@/features/pull-requests/centralViewStore';
 import { CurrentBranchTitle, CurrentPullTitle } from '@/features/pull-requests/CurrentPullTitle';
 import { MergePullButton } from '@/features/pull-requests/MergePullButton';
 import { PreviewLink } from '@/features/pull-requests/PreviewLink';
 import { PullRequestMenu } from '@/features/pull-requests/PullRequestMenu';
+import { ViewModeToggle } from '@/features/pull-requests/ViewModeToggle';
+import { useViewMode } from '@/features/pull-requests/viewModeStore';
 import { type RepoRef } from '@/features/sources/parseRepoLink';
 import { SelectableLink } from '@/features/surface-ui/SelectableLink';
 import { ThemeToggle } from '@/features/theme/ThemeToggle';
@@ -29,7 +30,7 @@ export function CodebaseHeader() {
   const pullNumber = pullBeingRead(pathname);
   const branch = branchBeingRead(pathname);
   const readingPullList = reading !== null && pathname === repoRoute(reading.owner, reading.name);
-  const central = useCentralView();
+  const central = useViewMode() === 'central' && pullNumber !== null;
   return (
     <header className={central ? `${SHEET} flex items-center gap-2 bg-bg py-2` : 'flex items-center gap-2 border-b border-panel-edge bg-panel px-2 py-5'}>
       <Link href="/" aria-label="reposcope home" className="shrink-0">
@@ -44,6 +45,7 @@ export function CodebaseHeader() {
           <>
             <PreviewLink repo={reading} number={pullNumber} />
             <MergePullButton repo={reading} number={pullNumber} />
+            <ViewModeToggle />
           </>
         )}
         <ThemeToggle />
