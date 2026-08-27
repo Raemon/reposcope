@@ -2,6 +2,7 @@
 
 import { useCallback, useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { DiffFileSection } from './DiffFileSection';
+import { useCentralLayout } from './centralLayout';
 import { DiffLayoutToggle } from './DiffLayoutToggle';
 import { EditTarget } from './editTarget';
 import { ImageThumbnailStrip } from './ImageThumbnailStrip';
@@ -36,6 +37,7 @@ export function DiffPanes({
   onCommitted?: () => void | Promise<void>;
   ref?: Ref<DiffPanesHandle>;
 }) {
+  const { central } = useCentralLayout();
   const scroller = useRef<HTMLDivElement | null>(null);
   const sections = useRef(new Map<string, HTMLElement>());
   const [toggled, setToggled] = useState<Record<string, boolean>>({});
@@ -60,7 +62,7 @@ export function DiffPanes({
     <EditTarget value={editablePull && { pull: editablePull, headRef: fileSet.headRef, onCommitted }}>
       <ReviewThreadProvider owner={owner} repo={repo} number={number}>
         <div className="flex min-h-0 flex-1 flex-col">
-          <DiffLayoutToggle />
+          {!central && <DiffLayoutToggle />}
           <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
             <ImageStrip
               key={`${fileSet.baseRef}:${fileSet.headRef}`}

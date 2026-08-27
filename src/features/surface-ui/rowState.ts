@@ -16,6 +16,13 @@ export function rowShowsAccent(state: RowState): boolean {
   return state === 'selected' || state === 'both';
 }
 
-export function rowStateClass(state: RowState): string {
-  return ROW_STATE_CLASS[state];
+const SHEET_STATE_CLASS: Record<RowState, string> = {
+  plain: 'text-ink',
+  highlighted: 'bg-btn/60 text-ink',
+  selected: 'text-accent shadow-[inset_2px_0_0_var(--accent)]',
+  both: 'bg-btn/60 text-accent shadow-[inset_2px_0_0_var(--accent)]',
+};
+
+export function rowStateClass(state: RowState, sheet = false): string {
+  return sheet ? SHEET_STATE_CLASS[state] : ROW_STATE_CLASS[state];
 }

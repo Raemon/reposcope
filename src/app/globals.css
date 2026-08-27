@@ -32,6 +32,18 @@
   --color-error-bg: var(--error-bg);
   --color-error-ink: var(--error-ink);
 
+  --text-label: 10px;
+  --text-label--line-height: 1.4;
+  --text-label--letter-spacing: 0.18em;
+  --text-meta: 10px;
+  --text-meta--line-height: 1.5;
+  --text-row: 13px;
+  --text-row--line-height: 1.35;
+  --text-doc: 13px;
+  --text-doc--line-height: 1.6;
+  --text-title: 20px;
+  --text-title--line-height: 1.25;
+
   --color-del-bg: var(--del-bg);
   --color-del-emph: var(--del-emph);
   --color-del-ink: var(--del-ink);
@@ -219,7 +231,8 @@
 .markdown-body h4,
 .markdown-body h5,
 .markdown-body h6 {
-  margin: 0.6rem 0 0.3rem;
+  margin: 0.9rem 0 0.4rem;
+  font-family: var(--font-serif);
   font-weight: 600;
   line-height: 1.25;
 }
@@ -238,8 +251,8 @@
 
 .markdown-body h1,
 .markdown-body h2 {
-  border-bottom: 1px solid var(--panel-edge);
-  padding-bottom: 0.15rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--ink) 14%, transparent);
+  padding-bottom: 0.2rem;
 }
 
 .markdown-body a {

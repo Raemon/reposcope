@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { PullDiscussion } from './PullDiscussion';
+import { PullIdentity } from './PullIdentity';
 import { AllPullsColumn, RepoPullsColumn } from './PullListColumn';
 import { ReviewWorkspace } from './ReviewWorkspace';
 import { setCurrentPull } from './currentPullStore';
@@ -37,8 +38,8 @@ export function PullRequestView({
   }, [pull, owner, repo]);
 
   if (!pull) {
-    if (pullState.error) return <p className="px-2 py-1 text-[11px] text-error-ink">{pullState.error}</p>;
-    return <p className="px-2 py-1 text-[11px] text-ink-dim">Loading #{number}…</p>;
+    if (pullState.error) return <p className="px-5 py-2 text-meta text-error-ink">{pullState.error}</p>;
+    return <p className="px-5 py-2 text-meta text-ink-dim">Loading #{number}…</p>;
   }
 
   return (
@@ -57,6 +58,7 @@ export function PullRequestView({
           <RepoPullsColumn owner={owner} repo={repo} size={listSize} onSize={setListSize} />
         )
       }
+      identity={<PullIdentity pull={pull} />}
       discussion={<PullDiscussion owner={owner} repo={repo} number={number} author={pull.pull.author} body={pull.body} />}
       editableWhole={editablePull(pull.pull)}
     />

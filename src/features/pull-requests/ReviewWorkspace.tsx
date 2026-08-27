@@ -1,8 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { CentralTabBar, useShowsColumn } from './centralLayout';
+import { CentralSheet, CentralTabBar, useCentralLayout, useShowsColumn } from './centralLayout';
 import { ColumnPreview } from './ColumnPreview';
+import { DiffLayoutToggle } from './DiffLayoutToggle';
 import { DiffPanes, type DiffPanesHandle } from './DiffPanes';
 import { PullCommitColumn, WHOLE_CHANGE, commitItems, commitTokens } from './PullCommitColumn';
 import { PullFilesColumn, fileTokens, orderedFiles } from './PullFilesColumn';
@@ -25,6 +26,7 @@ export function ReviewWorkspace({
   wholeFilesPath,
   listColumn,
   discussion,
+  identity,
   editableWhole,
 }: {
   owner: string;
@@ -36,6 +38,7 @@ export function ReviewWorkspace({
   wholeFilesPath: string;
   listColumn: ReactNode;
   discussion: ReactNode | null;
+  identity?: ReactNode;
   editableWhole: PullRequestSummary | null;
 }) {
   const ready = useStoreReady();
@@ -72,6 +75,8 @@ export function ReviewWorkspace({
   }, []);
   const fileItems = useMemo(() => orderedFiles(fileSet).map((file) => file.filename), [fileSet]);
 
+  const { central, tab } = useCentralLayout();
+  const stacked = central && tab === 'files';
   const showsDiff = useShowsColumn('diff');
   const showsDiscussion = useShowsColumn('discussion');
   const showsCommits = useShowsColumn('commits');
@@ -124,55 +129,70 @@ export function ReviewWorkspace({
     }
   }
 
-  return (
-    <div className="flex h-full min-h-0 flex-col">
-      <CentralTabBar />
-      <div className="flex min-h-0 flex-1">
-        {listColumn}
-        {discussion !== null && (
-          <ResizableColumn navId="discussion" icon="❝" title="discussion" size={discussionSize} onSize={setDiscussionSize}>
-            {discussion}
-          </ResizableColumn>
-        )}
-        <ResizableColumn
-          navId="commits"
-          icon="◆"
-          title="commits"
-          preview={<ColumnPreview column="commits" tokens={commitTokens(change, selection)} />}
-          size={commitSize}
-          onSize={setCommitSize}
-        >
-          <PullCommitColumn change={change} selection={selection} onSelect={setSelection} />
+  const workspace = (
+    <div className={`flex min-h-0 flex-1 ${stacked ? 'flex-col' : ''}`}>
+      {listColumn}
+      {discussion !== null && (
+        <ResizableColumn navId="discussion" icon="❝" title="discussion" size={discussionSize} onSize={setDiscussionSize}>
+          {discussion}
         </ResizableColumn>
-        <ResizableColumn
-          navId="files"
-          icon="▤"
-          title="files"
-          preview={<ColumnPreview column="files" tokens={fileTokens(fileSet, path)} />}
-          size={fileSize}
-          onSize={setFileSize}
-        >
-          <PullFilesColumn fileSet={fileSet} fileError={fileError} path={path} onSelect={revealFile} />
-        </ResizableColumn>
-        {!showsDiff ? null : fileSet === null && fileError !== null ? (
-          <p className="flex-1 px-2 py-1 text-[11px] text-error-ink">{fileError}</p>
-        ) : (
-          <div className="flex min-w-0 flex-1 flex-col">
-            {notice !== null && <p className="shrink-0 px-2 py-1 text-[11px] text-error-ink">{notice}</p>}
-            <DiffPanes
-              ref={diffPanes}
-              owner={owner}
-              repo={repo}
-              number={number}
-              fileSet={fileSet}
-              selected={path}
-              editablePull={selection === WHOLE_CHANGE ? editableWhole : null}
-              onCommitted={reloadInPlace}
-            />
-          </div>
-        )}
-      </div>
+      )}
+      <ResizableColumn
+        navId="commits"
+        icon="◆"
+        title="commits"
+        preview={<ColumnPreview column="commits" tokens={commitTokens(change, selection)} />}
+        size={commitSize}
+        onSize={setCommitSize}
+      >
+        <PullCommitColumn change={change} selection={selection} onSelect={setSelection} />
+      </ResizableColumn>
+      <ResizableColumn
+        navId="files"
+        icon="▤"
+        title="files"
+        preview={<ColumnPreview column="files" tokens={fileTokens(fileSet, path)} />}
+        size={fileSize}
+        onSize={setFileSize}
+        paneClass={stacked ? 'max-h-[30vh] shrink-0 border-b border-panel-edge' : undefined}
+      >
+        <PullFilesColumn fileSet={fileSet} fileError={fileError} path={path} onSelect={revealFile} />
+      </ResizableColumn>
+      {!showsDiff ? null : fileSet === null && fileError !== null ? (
+        <p className="flex-1 px-5 py-2 text-meta text-error-ink">{fileError}</p>
+      ) : (
+        <div className="flex min-w-0 flex-1 flex-col">
+          {notice !== null && <p className="shrink-0 px-5 py-2 text-meta text-error-ink">{notice}</p>}
+          <DiffPanes
+            ref={diffPanes}
+            owner={owner}
+            repo={repo}
+            number={number}
+            fileSet={fileSet}
+            selected={path}
+            editablePull={selection === WHOLE_CHANGE ? editableWhole : null}
+            onCommitted={reloadInPlace}
+          />
+        </div>
+      )}
     </div>
+  );
+
+  if (!central) return <div className="flex h-full min-h-0 flex-col">{workspace}</div>;
+  return (
+    <CentralSheet
+      head={
+        <>
+          {identity}
+          <CentralTabBar
+            counts={{ commits: change.commits.length, files: fileSet?.files.length }}
+            trailing={stacked ? <DiffLayoutToggle inline /> : null}
+          />
+        </>
+      }
+    >
+      {workspace}
+    </CentralSheet>
   );
 }
 
