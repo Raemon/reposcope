@@ -8,6 +8,7 @@ import { NavListRow } from './NavListRow';
 import type { PullTarget } from './pullActionStore';
 import { prefetchPull } from './prefetchPull';
 import { pullRoute } from './pullPaths';
+import { useIsOwnAuthor } from '@/features/github-auth/useViewerLogin';
 import { useGithubToken } from '@/features/sources/sourceStore';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { RelativeTime } from '@/features/surface-ui/RelativeTime';
@@ -26,6 +27,7 @@ export const LIST_NOTE = 'px-2 py-1 text-[11px] leading-4';
 
 export function PullRowFields({ pull }: { pull: PullRowSummary }) {
   const [title, wrapped] = useWrappedText<HTMLSpanElement>();
+  const isOwnAuthor = useIsOwnAuthor();
   return (
     <>
       <span className={ROW_META}>#{pull.number}</span>
@@ -34,10 +36,12 @@ export function PullRowFields({ pull }: { pull: PullRowSummary }) {
       </span>
       {pull.draft && <span className="shrink-0 rounded bg-btn px-1 font-mono text-[9px]">draft</span>}
       <span className={stackedMetaClass(wrapped)}>
-        <span className={ROW_META}>
-          {pull.author}
-          {wrapped ? '' : ' ·'}
-        </span>
+        {!isOwnAuthor(pull.author) && (
+          <span className={ROW_META}>
+            {pull.author}
+            {wrapped ? '' : ' ·'}
+          </span>
+        )}
         <RelativeTime iso={pull.updatedAt} className={ROW_META} />
       </span>
     </>
