@@ -7,6 +7,7 @@ import { timeAgo } from '@/features/surface-ui/timeAgo';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 import { HoverCardHtml } from '@/features/surface-ui/HoverCard';
 import { useCachedJson } from '@/features/sources/useCachedJson';
+import { useIsOwnAuthor } from '@/features/github-auth/useViewerLogin';
 import { usePollWhileVisible } from '@/features/sources/usePollWhileVisible';
 
 export function PullDiscussion({
@@ -76,10 +77,11 @@ function DiscussionEntry({
   path?: string | null;
   body: string;
 }) {
+  const isOwnAuthor = useIsOwnAuthor();
   return (
     <article className="border-b border-panel-edge px-1.5 py-1">
       <header className="flex items-baseline gap-1.5 text-[9px] text-ink-dim">
-        <span className="shrink-0 text-ink">{author}</span>
+        {!isOwnAuthor(author) && <span className="shrink-0 text-ink">{author}</span>}
         <span className="shrink-0">{note}</span>
         {path && <span className="min-w-0 flex-1 truncate">{path}</span>}
       </header>
