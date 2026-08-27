@@ -36,7 +36,7 @@ export function NavListRow({
   children: ReactNode;
 }) {
   const row = useColumnNav('pulls').row(route, current);
-  const wide = useSheetRows();
+  const wide = useSheetRows('pulls');
   return (
     <div
       data-nav-cursor={row.props.cursor || undefined}

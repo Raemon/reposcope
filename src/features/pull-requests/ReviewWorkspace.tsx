@@ -75,8 +75,7 @@ export function ReviewWorkspace({
   }, []);
   const fileItems = useMemo(() => orderedFiles(fileSet).map((file) => file.filename), [fileSet]);
 
-  const { central, tab } = useCentralLayout();
-  const stacked = central && tab === 'files';
+  const { central } = useCentralLayout();
   const showsDiff = useShowsColumn('diff');
   const showsDiscussion = useShowsColumn('discussion');
   const showsCommits = useShowsColumn('commits');
@@ -130,7 +129,7 @@ export function ReviewWorkspace({
   }
 
   const workspace = (
-    <div className={`flex min-h-0 flex-1 ${stacked ? 'flex-col' : ''}`}>
+    <div className="flex min-h-0 flex-1">
       {listColumn}
       {discussion !== null && (
         <ResizableColumn navId="discussion" icon="❝" title="discussion" size={discussionSize} onSize={setDiscussionSize}>
@@ -154,7 +153,6 @@ export function ReviewWorkspace({
         preview={<ColumnPreview column="files" tokens={fileTokens(fileSet, path)} />}
         size={fileSize}
         onSize={setFileSize}
-        paneClass={stacked ? 'max-h-[30vh] shrink-0 border-b border-panel-edge' : undefined}
       >
         <PullFilesColumn fileSet={fileSet} fileError={fileError} path={path} onSelect={revealFile} />
       </ResizableColumn>
@@ -186,7 +184,7 @@ export function ReviewWorkspace({
           {identity}
           <CentralTabBar
             counts={{ commits: change.commits.length, files: fileSet?.files.length }}
-            trailing={stacked ? <DiffLayoutToggle inline /> : null}
+            trailing={showsDiff ? <DiffLayoutToggle inline /> : null}
           />
         </>
       }

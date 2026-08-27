@@ -9,7 +9,7 @@ import { branchBeingRead, pullBeingRead, repoBeingRead, repoRoute } from './repo
 import { sidebarGroups } from './sidebarGroups';
 import { useSourceResults } from './useSourceResults';
 import { ScopeMark } from '@/features/brand/ScopeMark';
-import { SHEET } from '@/features/pull-requests/centralLayout';
+import { useSheetBand } from '@/features/pull-requests/centralLayout';
 import { CurrentBranchTitle, CurrentPullTitle } from '@/features/pull-requests/CurrentPullTitle';
 import { MergePullButton } from '@/features/pull-requests/MergePullButton';
 import { PreviewLink } from '@/features/pull-requests/PreviewLink';
@@ -31,8 +31,9 @@ export function CodebaseHeader() {
   const branch = branchBeingRead(pathname);
   const readingPullList = reading !== null && pathname === repoRoute(reading.owner, reading.name);
   const central = useViewMode() === 'central' && pullNumber !== null;
+  const band = useSheetBand();
   return (
-    <header className={central ? `${SHEET} flex items-center gap-2 bg-bg py-2` : 'flex items-center gap-2 border-b border-panel-edge bg-panel px-2 py-5'}>
+    <header className={central ? `${band} flex items-center gap-2 bg-bg py-2` : 'flex items-center gap-2 border-b border-panel-edge bg-panel px-2 py-5'}>
       <Link href="/" aria-label="reposcope home" className="shrink-0">
         <ScopeMark size={20} title="reposcope home" />
       </Link>

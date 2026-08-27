@@ -81,7 +81,7 @@ function DiscussionEntry({
   opening?: boolean;
   body: string;
 }) {
-  const wide = useSheetRows();
+  const wide = useSheetRows('discussion');
   const isOwnAuthor = useIsOwnAuthor();
   return (
     <article className={entryClass(wide, opening)}>

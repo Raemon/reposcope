@@ -163,7 +163,6 @@ export function ResizableColumn({
   size,
   onSize,
   footer,
-  paneClass,
   children,
 }: {
   navId: ColumnId;
@@ -174,7 +173,6 @@ export function ResizableColumn({
   size: ColumnSize;
   onSize: (next: ColumnSize) => void;
   footer?: ReactNode;
-  paneClass?: string;
   children: ReactNode;
 }) {
   const nav = useColumnNav(navId);
@@ -186,7 +184,7 @@ export function ResizableColumn({
       <section
         onPointerDown={nav.focus}
         onPointerLeave={nav.clearHover}
-        className={`flex min-h-0 min-w-0 flex-col ${paneClass ?? 'flex-1'}`}
+        className="flex min-h-0 min-w-0 flex-1 flex-col"
       >
         <div ref={nav.bodyRef} className="min-h-0 flex-1 overflow-auto">
           {children}

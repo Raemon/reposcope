@@ -1,7 +1,6 @@
 'use client';
 
 import { ChangeCounts } from './ChangeCounts';
-import { useSheetRows } from './centralLayout';
 import { useColumnNav } from './columnNav';
 import { FileDiff } from './FileDiff';
 import { ImageDiff } from './ImageDiff';
@@ -33,14 +32,13 @@ export function DiffFileSection({
   sectionRef: (node: HTMLElement | null) => void;
 }) {
   const row = useColumnNav('diff').row(file.filename, selected);
-  const wide = useSheetRows();
   return (
     <section ref={sectionRef} className="border-b border-panel-edge">
       <SelectableRow
         {...row.props}
         onActivate={onToggle}
         expanded={open}
-        className={`sticky top-0 z-20 flex w-full items-baseline gap-2 border-b border-panel-edge text-left ${wide ? 'px-5 py-1.5 text-row' : 'px-2 py-[2px] text-[11px] leading-4'} ${sectionTone(row.state)}`}
+        className={`sticky top-0 z-20 flex w-full items-baseline gap-2 border-b border-panel-edge px-2 py-[2px] text-left text-[11px] leading-4 ${sectionTone(row.state)}`}
       >
         <span aria-hidden className="w-2 shrink-0 text-meta text-ink-dim">
           {open ? '▾' : '▸'}

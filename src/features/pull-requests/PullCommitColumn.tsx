@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ChangeCountCells } from './ChangeCounts';
-import { useSheetRows } from './centralLayout';
 import type { PreviewToken } from './ColumnPreview';
 import { useColumnNav, type ColumnRow } from './columnNav';
 import type { ChangeSummary, CommitSummary } from './pullRequests';
@@ -13,11 +12,9 @@ import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 import { useWrappedText } from '@/features/surface-ui/useWrappedText';
 
 const ROW = 'flex w-full items-center gap-1.5 px-1.5 py-1 text-left font-serif text-[12px] leading-[1.15]';
-const SHEET_ROW = 'flex w-full items-center gap-3 px-3 py-2 text-left font-serif text-row';
-const HASH = 'w-[3ch] shrink-0 font-mono text-meta';
+const HASH = 'ml-1.5 w-[3ch] shrink-0 font-mono text-meta';
 const HASH_CHARS = 3;
 const META = 'grid shrink-0 items-center justify-items-end gap-x-2 font-mono text-meta text-ink-dim';
-const RAIL = 'grid-cols-[4ch_5ch_5ch_4ch]';
 const COPIED_MS = 1200;
 export const WHOLE_CHANGE = 'all';
 
@@ -36,11 +33,9 @@ export function PullCommitColumn({
     <>
       <CommitRow row={rowFor(WHOLE_CHANGE)} onActivate={() => onSelect(WHOLE_CHANGE)} leading={<span aria-hidden className={HASH} />}>
         <span className="min-w-0 flex-1">all changes</span>
-        <MetaRail>
-          <RailGap />
+        <span className={metaClass(false)}>
           <ChangeCountCells additions={change.additions} deletions={change.deletions} />
-          <RailGap />
-        </MetaRail>
+        </span>
       </CommitRow>
       {change.commits.map((commit) => (
         <CommitEntry key={commit.sha} commit={commit} row={rowFor(commit.sha)} onActivate={() => onSelect(commit.sha)} />
@@ -56,27 +51,17 @@ function CommitEntry({ commit, row, onActivate }: { commit: CommitSummary; row: 
       <span className="min-w-0 flex-1 break-words">
         <span ref={message}>{commit.message}</span>
       </span>
-      <MetaRail stacked={wrapped}>
+      <span className={metaClass(wrapped)}>
         <span>{commit.fileCount}f</span>
         <ChangeCountCells additions={commit.additions} deletions={commit.deletions} />
         <RelativeTime iso={commit.date} />
-      </MetaRail>
+      </span>
     </CommitRow>
   );
 }
 
-function MetaRail({ stacked = false, children }: { stacked?: boolean; children: ReactNode }) {
-  const wide = useSheetRows();
-  return <span className={`${META} ${railColumns(wide, stacked)}`}>{children}</span>;
-}
-
-function RailGap() {
-  return <span aria-hidden />;
-}
-
-function railColumns(wide: boolean, stacked: boolean): string {
-  if (stacked) return 'grid-cols-2';
-  return wide ? RAIL : 'grid-flow-col';
+function metaClass(stacked: boolean): string {
+  return `${META} ${stacked ? 'grid-cols-2' : 'grid-flow-col'}`;
 }
 
 function CommitRow({
@@ -90,15 +75,14 @@ function CommitRow({
   leading: ReactNode;
   children: ReactNode;
 }) {
-  const wide = useSheetRows();
   return (
     <div
       data-nav-cursor={row.props.cursor || undefined}
       onPointerEnter={row.props.onPointerEnter}
-      className={`flex items-center border-b ${wide ? 'border-ink/10 pl-5' : 'border-ink/15 pl-1.5'} ${rowStateClass(row.state, wide)}`}
+      className={`flex items-center border-b border-ink/15 ${rowStateClass(row.state)}`}
     >
       {leading}
-      <SelectableRow {...row.props} onActivate={onActivate} className={wide ? SHEET_ROW : ROW}>
+      <SelectableRow {...row.props} onActivate={onActivate} className={ROW}>
         {children}
       </SelectableRow>
     </div>

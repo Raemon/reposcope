@@ -1,13 +1,13 @@
 'use client';
 
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, type ReactNode } from 'react';
+import { setCentralTab, useCentralTab, type CentralTab } from './centralTabStore';
 import { useColumnNav } from './columnNav';
 import type { ColumnId } from './navColumn';
 import { useViewMode } from './viewModeStore';
 
-export type CentralTab = 'pulls' | 'discussion' | 'commits' | 'files';
+export type { CentralTab };
 
-export const SHEET = 'mx-auto w-full max-w-[900px]';
 export const SHEET_GUTTER = 'px-5';
 
 const TABS: { tab: CentralTab; column: ColumnId; label: string }[] = [
@@ -17,12 +17,18 @@ const TABS: { tab: CentralTab; column: ColumnId; label: string }[] = [
   { tab: 'files', column: 'files', label: 'files & diff' },
 ];
 
-const TAB_OF_COLUMN: Record<ColumnId, CentralTab> = {
-  pulls: 'pulls',
-  discussion: 'discussion',
-  commits: 'commits',
-  files: 'files',
-  diff: 'files',
+const COLUMNS_OF_TAB: Record<CentralTab, ColumnId[]> = {
+  pulls: ['pulls'],
+  discussion: ['discussion'],
+  commits: ['commits', 'files', 'diff'],
+  files: ['files', 'diff'],
+};
+
+const SHEET_MAX: Record<CentralTab, string> = {
+  pulls: 'max-w-[900px]',
+  discussion: 'max-w-[900px]',
+  commits: 'max-w-[1500px]',
+  files: 'max-w-[1200px]',
 };
 
 interface CentralValue {
@@ -31,39 +37,43 @@ interface CentralValue {
   setTab: (tab: CentralTab) => void;
 }
 
-const CentralContext = createContext<CentralValue>({ central: false, tab: 'files', setTab: () => {} });
+const CentralContext = createContext(false);
 
 export function CentralLayoutProvider({ children }: { children: ReactNode }) {
-  const [tab, setTab] = useState<CentralTab>('files');
   const central = useViewMode() === 'central';
-  return <CentralContext.Provider value={{ central, tab, setTab }}>{children}</CentralContext.Provider>;
+  return <CentralContext.Provider value={central}>{children}</CentralContext.Provider>;
 }
 
 export function useCentralLayout(): CentralValue {
-  return useContext(CentralContext);
+  return { central: useContext(CentralContext), tab: useCentralTab(), setTab: setCentralTab };
 }
 
-export function useSheetRows(): boolean {
-  return useCentralLayout().central;
+export function useSheetBand(): string {
+  return `mx-auto w-full ${SHEET_MAX[useCentralTab()]}`;
 }
 
 export function useShowsColumn(id: ColumnId): boolean {
   const { central, tab } = useCentralLayout();
-  return !central || TAB_OF_COLUMN[id] === tab;
+  return !central || COLUMNS_OF_TAB[tab].includes(id);
 }
 
 export type PaneMode = 'hidden' | 'column' | 'pane';
 
 export function usePaneMode(id: ColumnId): PaneMode {
-  const { central } = useCentralLayout();
+  const { central, tab } = useCentralLayout();
   if (!useShowsColumn(id)) return 'hidden';
-  return central ? 'pane' : 'column';
+  return central && COLUMNS_OF_TAB[tab].length === 1 ? 'pane' : 'column';
+}
+
+export function useSheetRows(id: ColumnId): boolean {
+  return usePaneMode(id) === 'pane';
 }
 
 export function CentralSheet({ head, children }: { head: ReactNode; children: ReactNode }) {
+  const band = useSheetBand();
   return (
     <div className="flex h-full min-h-0 flex-col bg-bg">
-      <div className={`${SHEET} flex min-h-0 flex-1 flex-col border border-b-0 border-panel-edge bg-panel`}>
+      <div className={`${band} flex min-h-0 flex-1 flex-col border border-b-0 border-panel-edge bg-panel`}>
         {head}
         {children}
       </div>
