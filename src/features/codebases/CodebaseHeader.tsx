@@ -13,6 +13,7 @@ import { CurrentBranchTitle, CurrentPullTitle } from '@/features/pull-requests/C
 import { MergePullButton } from '@/features/pull-requests/MergePullButton';
 import { PreviewLink } from '@/features/pull-requests/PreviewLink';
 import { PullRequestMenu } from '@/features/pull-requests/PullRequestMenu';
+import { ViewModeToggle } from '@/features/pull-requests/ViewModeToggle';
 import { type RepoRef } from '@/features/sources/parseRepoLink';
 import { SelectableLink } from '@/features/surface-ui/SelectableLink';
 import { ThemeToggle } from '@/features/theme/ThemeToggle';
@@ -40,6 +41,7 @@ export function CodebaseHeader() {
           <>
             <PreviewLink repo={reading} number={pullNumber} />
             <MergePullButton repo={reading} number={pullNumber} />
+            <ViewModeToggle />
           </>
         )}
         <ThemeToggle />

@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
 import { useColumnNav } from './columnNav';
 import type { ColumnId } from './navColumn';
+import { useViewMode } from './viewModeStore';
 
 export type CentralTab = 'pulls' | 'discussion' | 'commits' | 'files';
 
@@ -34,8 +35,9 @@ interface CentralValue {
 
 const CentralContext = createContext<CentralValue>({ central: false, tab: 'files', setTab: () => {} });
 
-export function CentralLayoutProvider({ central, children }: { central: boolean; children: ReactNode }) {
+export function CentralLayoutProvider({ children }: { children: ReactNode }) {
   const [tab, setTab] = useState<CentralTab>('files');
+  const central = useViewMode() === 'central';
   return <CentralContext.Provider value={{ central, tab, setTab }}>{children}</CentralContext.Provider>;
 }
 
@@ -55,11 +57,6 @@ export function usePaneMode(id: ColumnId): PaneMode {
   const shown = useShowsColumn(id);
   if (!shown) return 'hidden';
   return central && id !== 'files' ? 'pane' : 'column';
-}
-
-export function useViewHref(): (href: string) => string {
-  const { central } = useCentralLayout();
-  return (href) => (central ? `${href}${href.includes('?') ? '&' : '?'}view=central` : href);
 }
 
 export function CentralTabBar() {
