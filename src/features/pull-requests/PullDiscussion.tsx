@@ -25,7 +25,6 @@ export function PullDiscussion({
 }) {
   const ready = useStoreReady();
   const token = useGithubToken();
-  const isOwnAuthor = useIsOwnAuthor();
   const commentState = useCachedJson<PullComment[]>(pullCommentsPath(owner, repo, number), token, ready);
   const { data: comments, error } = commentState;
 
@@ -36,7 +35,7 @@ export function PullDiscussion({
       <DiscussionEntry
         owner={owner}
         repo={repo}
-        author={isOwnAuthor(author) ? null : author}
+        author={author}
         note="description"
         body={body?.trim() ? body : 'No description.'}
       />
@@ -52,7 +51,7 @@ export function PullDiscussion({
             key={comment.id}
             owner={owner}
             repo={repo}
-            author={isOwnAuthor(comment.author) ? null : comment.author}
+            author={comment.author}
             note={timeAgo(comment.createdAt)}
             path={comment.path}
             body={comment.body}
@@ -73,15 +72,16 @@ function DiscussionEntry({
 }: {
   owner: string;
   repo: string;
-  author: string | null;
+  author: string;
   note: string;
   path?: string | null;
   body: string;
 }) {
+  const isOwnAuthor = useIsOwnAuthor();
   return (
     <article className="border-b border-panel-edge px-1.5 py-1">
       <header className="flex items-baseline gap-1.5 text-[9px] text-ink-dim">
-        {author && <span className="shrink-0 text-ink">{author}</span>}
+        {!isOwnAuthor(author) && <span className="shrink-0 text-ink">{author}</span>}
         <span className="shrink-0">{note}</span>
         {path && <span className="min-w-0 flex-1 truncate">{path}</span>}
       </header>

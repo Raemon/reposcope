@@ -28,7 +28,6 @@ export const LIST_NOTE = 'px-2 py-1 text-[11px] leading-4';
 export function PullRowFields({ pull }: { pull: PullRowSummary }) {
   const [title, wrapped] = useWrappedText<HTMLSpanElement>();
   const isOwnAuthor = useIsOwnAuthor();
-  const author = isOwnAuthor(pull.author) ? null : pull.author;
   return (
     <>
       <span className={ROW_META}>#{pull.number}</span>
@@ -37,9 +36,9 @@ export function PullRowFields({ pull }: { pull: PullRowSummary }) {
       </span>
       {pull.draft && <span className="shrink-0 rounded bg-btn px-1 font-mono text-[9px]">draft</span>}
       <span className={stackedMetaClass(wrapped)}>
-        {author && (
+        {!isOwnAuthor(pull.author) && (
           <span className={ROW_META}>
-            {author}
+            {pull.author}
             {wrapped ? '' : ' ·'}
           </span>
         )}

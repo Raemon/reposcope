@@ -1,6 +1,6 @@
-import { githubJson } from './githubRequest';
+import { githubJson, GithubRequestError } from './githubRequest';
+import { userGithubToken } from './githubToken';
 import type { GithubAccess } from '@/features/github-auth/githubAccess';
-import { describeViewer } from '@/features/github-auth/viewerIdentity';
 
 export interface RepoSummary {
   owner: string;
@@ -31,6 +31,12 @@ const MAX_PAGES = 5;
 
 export async function listOwnerRepos(login: string): Promise<RepoSummary[]> {
   return fetchPages(await ownerListUrl(login));
+}
+
+export async function describeViewer(): Promise<{ login: string }> {
+  if (!userGithubToken()) throw new GithubRequestError(401, 'GitHub is not connected');
+  const { login } = await githubJson<{ login: string }>(`${API}/user`);
+  return { login };
 }
 
 export async function listViewerRepos(access: GithubAccess): Promise<ViewerRepos> {
