@@ -7,13 +7,13 @@ export default async function PullRequestPage({
   searchParams,
 }: {
   params: Promise<{ owner: string; repo: string; number: string }>;
-  searchParams: Promise<{ from?: string; view?: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
   const { owner, repo, number } = await params;
-  const { from, view } = await searchParams;
+  const { from } = await searchParams;
   return (
     <ColumnNavProvider>
-      <CentralLayoutProvider urlCentral={view === 'central'}>
+      <CentralLayoutProvider>
         <PullRequestView owner={owner} repo={repo} number={Number(number)} acrossRepos={from === 'all'} />
       </CentralLayoutProvider>
     </ColumnNavProvider>

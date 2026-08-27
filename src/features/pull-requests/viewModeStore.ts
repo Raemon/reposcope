@@ -1,15 +1,19 @@
 'use client';
 
-import { createLocalSetting } from '@/features/surface-ui/localSetting';
+import { localPref, usePref } from './localPref';
 
 export type ViewMode = 'columns' | 'central';
 
-const viewMode = createLocalSetting<ViewMode>({
-  key: 'reposcope.viewMode',
-  values: ['columns', 'central'],
-  fallback: () => 'columns',
-  serverValue: 'columns',
-});
+const viewPref = localPref<ViewMode>('reposcope.viewMode', 'columns', decodeViewMode);
 
-export const setViewMode = viewMode.set;
-export const useViewMode = viewMode.use;
+export function setViewMode(mode: ViewMode): void {
+  viewPref.set(mode);
+}
+
+export function useViewMode(): ViewMode {
+  return usePref(viewPref);
+}
+
+function decodeViewMode(stored: unknown): ViewMode | undefined {
+  return stored === 'columns' || stored === 'central' ? stored : undefined;
+}
