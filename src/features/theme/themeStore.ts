@@ -1,27 +1,20 @@
 'use client';
 
-import { useSyncExternalStore } from 'react';
+import { createLocalSetting } from '@/features/surface-ui/localSetting';
 
 export type Theme = 'light' | 'dark';
 
-const THEME_KEY = 'reposcope.theme';
-const listeners = new Set<() => void>();
+const theme = createLocalSetting<Theme>({
+  key: 'reposcope.theme',
+  values: ['light', 'dark'],
+  fallback: systemTheme,
+  serverValue: 'light',
+  apply: applyTheme,
+});
 
-export function readTheme(): Theme {
-  const stored = readItem(THEME_KEY);
-  if (stored === 'light' || stored === 'dark') return stored;
-  return systemTheme();
-}
-
-export function setTheme(theme: Theme): void {
-  writeItem(THEME_KEY, theme);
-  applyTheme(theme);
-  for (const listener of listeners) listener();
-}
-
-export function useTheme(): Theme {
-  return useSyncExternalStore(subscribe, readTheme, () => 'light');
-}
+export const readTheme = theme.read;
+export const setTheme = theme.set;
+export const useTheme = theme.use;
 
 function applyTheme(theme: Theme): void {
   const root = document.documentElement;
@@ -31,27 +24,4 @@ function applyTheme(theme: Theme): void {
 
 function systemTheme(): Theme {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-}
-
-function subscribe(listener: () => void): () => void {
-  listeners.add(listener);
-  window.addEventListener('storage', listener);
-  return () => {
-    listeners.delete(listener);
-    window.removeEventListener('storage', listener);
-  };
-}
-
-function readItem(key: string): string | null {
-  try {
-    return window.localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
-function writeItem(key: string, value: string): void {
-  try {
-    window.localStorage.setItem(key, value);
-  } catch {}
 }

@@ -13,7 +13,7 @@ export default async function PullRequestPage({
   const { from, view } = await searchParams;
   return (
     <ColumnNavProvider>
-      <CentralLayoutProvider central={view === 'central'}>
+      <CentralLayoutProvider urlCentral={view === 'central'}>
         <PullRequestView owner={owner} repo={repo} number={Number(number)} acrossRepos={from === 'all'} />
       </CentralLayoutProvider>
     </ColumnNavProvider>
