@@ -1,22 +1,15 @@
 'use client';
 
 import { setTheme, useTheme } from './themeStore';
-import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
+import { IconToggleButton } from '@/features/surface-ui/IconToggleButton';
 
 export function ThemeToggle() {
   const theme = useTheme();
   const next = theme === 'dark' ? 'light' : 'dark';
   return (
-    <HoverCardTrigger label={`Switch to ${next} mode`} className="shrink-0" focusable={false} tooltipStyle>
-      <button
-        type="button"
-        onClick={() => setTheme(next)}
-        aria-label={`Switch to ${next} mode`}
-        className="rounded text-ink-dim hover:bg-btn-hover hover:text-ink"
-      >
-        {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
-      </button>
-    </HoverCardTrigger>
+    <IconToggleButton label={`Switch to ${next} mode`} onClick={() => setTheme(next)}>
+      {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+    </IconToggleButton>
   );
 }
 

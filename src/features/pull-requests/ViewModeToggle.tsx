@@ -2,22 +2,15 @@
 
 import type { ReactNode } from 'react';
 import { setViewMode, useViewMode } from './viewModeStore';
-import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
+import { IconToggleButton } from '@/features/surface-ui/IconToggleButton';
 
 export function ViewModeToggle() {
   const mode = useViewMode();
   const next = mode === 'central' ? 'columns' : 'central';
   return (
-    <HoverCardTrigger label={`Switch to ${next} layout`} className="shrink-0" focusable={false} tooltipStyle>
-      <button
-        type="button"
-        onClick={() => setViewMode(next)}
-        aria-label={`Switch to ${next} layout`}
-        className="rounded text-ink-dim hover:bg-btn-hover hover:text-ink"
-      >
-        {mode === 'central' ? <ColumnsIcon /> : <CentralIcon />}
-      </button>
-    </HoverCardTrigger>
+    <IconToggleButton label={`Switch to ${next} layout`} onClick={() => setViewMode(next)}>
+      {mode === 'central' ? <ColumnsIcon /> : <CentralIcon />}
+    </IconToggleButton>
   );
 }
 
