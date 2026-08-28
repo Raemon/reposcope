@@ -6,8 +6,6 @@ import { DiffLayoutToggle } from './DiffLayoutToggle';
 import { EditTarget } from './editTarget';
 import { ImageThumbnailStrip } from './ImageThumbnailStrip';
 import { imageFilesOf, isImagePath } from './imageFiles';
-import { ReviewThreadProvider } from './reviewThreadStore';
-import { orderedFiles as filesInOrder } from './PullFilesColumn';
 import type { ChangedFile, ChangedFileSet, PullRequestSummary } from './pullRequests';
 
 const SCROLL_MS = 100;
@@ -20,8 +18,8 @@ export interface DiffPanesHandle {
 export function DiffPanes({
   owner,
   repo,
-  number,
   fileSet,
+  files,
   selected,
   editablePull = null,
   onCommitted,
@@ -29,8 +27,8 @@ export function DiffPanes({
 }: {
   owner: string;
   repo: string;
-  number: number | null;
   fileSet: ChangedFileSet | null;
+  files: ChangedFile[];
   selected: string | null;
   editablePull?: PullRequestSummary | null;
   onCommitted?: () => void | Promise<void>;
@@ -54,41 +52,38 @@ export function DiffPanes({
   }));
 
   if (!fileSet) return <p className="flex-1 px-2 py-1 text-[11px] text-ink-dim">Loading…</p>;
-  if (fileSet.files.length === 0) return <p className="flex-1 px-2 py-1 text-[11px] text-ink-dim">No files changed</p>;
-  const orderedFiles = filesInOrder(fileSet);
+  if (files.length === 0) return <p className="flex-1 px-2 py-1 text-[11px] text-ink-dim">No files changed</p>;
   return (
     <EditTarget value={editablePull && { pull: editablePull, headRef: fileSet.headRef, onCommitted }}>
-      <ReviewThreadProvider owner={owner} repo={repo} number={number}>
-        <div className="flex min-h-0 flex-1 flex-col">
-          <DiffLayoutToggle />
-          <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
-            <ImageStrip
-              key={`${fileSet.baseRef}:${fileSet.headRef}`}
+      <div className="flex min-h-0 flex-1 flex-col">
+        <DiffLayoutToggle />
+        <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
+          <ImageStrip
+            key={`${fileSet.baseRef}:${fileSet.headRef}`}
+            owner={owner}
+            repo={repo}
+            fileSet={fileSet}
+            files={imageFilesOf(files)}
+          />
+          {files.map((file) => (
+            <DiffFileSection
+              key={file.filename}
               owner={owner}
               repo={repo}
-              fileSet={fileSet}
-              files={imageFilesOf(orderedFiles)}
+              file={file}
+              baseRef={fileSet.baseRef}
+              headRef={fileSet.headRef}
+              selected={file.filename === selected}
+              open={openFile(toggled, file.filename)}
+              onToggle={() => toggleFile(file.filename)}
+              sectionRef={(node) => {
+                if (node) sections.current.set(file.filename, node);
+                else sections.current.delete(file.filename);
+              }}
             />
-            {orderedFiles.map((file) => (
-              <DiffFileSection
-                key={file.filename}
-                owner={owner}
-                repo={repo}
-                file={file}
-                baseRef={fileSet.baseRef}
-                headRef={fileSet.headRef}
-                selected={file.filename === selected}
-                open={openFile(toggled, file.filename)}
-                onToggle={() => toggleFile(file.filename)}
-                sectionRef={(node) => {
-                  if (node) sections.current.set(file.filename, node);
-                  else sections.current.delete(file.filename);
-                }}
-              />
-            ))}
-          </div>
+          ))}
         </div>
-      </ReviewThreadProvider>
+      </div>
     </EditTarget>
   );
 }
