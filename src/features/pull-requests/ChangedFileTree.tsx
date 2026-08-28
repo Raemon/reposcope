@@ -23,14 +23,13 @@ export function ChangedFileTree(props: TreeProps) {
 }
 
 function GroupedRows({ files, selected, onSelect }: TreeProps) {
-  const nav = useColumnNav('files');
   return (
     <>
       {groupByFolder(files).map((group) => (
         <div key={group.folder}>
           <FolderLabel folder={group.folder} />
           {group.files.map((file) => (
-            <FileRow key={file.filename} nav={nav} file={file} selected={selected} onSelect={onSelect} indented={group.folder !== ''} />
+            <FileRow key={file.filename} file={file} selected={selected} onSelect={onSelect} indented={group.folder !== ''} />
           ))}
         </div>
       ))}
@@ -39,32 +38,29 @@ function GroupedRows({ files, selected, onSelect }: TreeProps) {
 }
 
 function FlatRows({ files, selected, onSelect }: TreeProps) {
-  const nav = useColumnNav('files');
   return (
     <>
       {files.map((file) => (
-        <FileRow key={file.filename} nav={nav} file={file} selected={selected} onSelect={onSelect} indented={false} withParent />
+        <FileRow key={file.filename} file={file} selected={selected} onSelect={onSelect} indented={false} withParent />
       ))}
     </>
   );
 }
 
 function FileRow({
-  nav,
   file,
   selected,
   onSelect,
   indented,
   withParent = false,
 }: {
-  nav: ReturnType<typeof useColumnNav>;
   file: ChangedFile;
   selected: string | null;
   onSelect: (filename: string) => void;
   indented: boolean;
   withParent?: boolean;
 }) {
-  const row = nav.row(file.filename, file.filename === selected);
+  const row = useColumnNav('files').row(file.filename, file.filename === selected);
   return (
     <SelectableRow
       {...row.props}

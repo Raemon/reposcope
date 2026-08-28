@@ -27,12 +27,10 @@ export function PullFilesColumn({
 }
 
 export function fileTokens(files: ChangedFile[], selected: string | null): PreviewToken[] {
-  return files.map((file) => {
-    return {
-      key: file.filename,
-      label: baseName(file.filename).slice(0, 2),
-      title: file.filename,
-      accent: file.filename === selected,
-    };
-  });
+  return files.map((file) => ({
+    key: file.filename,
+    label: baseName(file.filename).slice(0, 2),
+    title: file.filename,
+    accent: file.filename === selected,
+  }));
 }
