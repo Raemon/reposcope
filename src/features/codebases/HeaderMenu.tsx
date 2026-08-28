@@ -37,7 +37,7 @@ function LabelButton({ label, open, toggle }: PopoverTrigger & { label: ReactNod
       }`}
     >
       <span className="truncate">{label}</span>
-      <span aria-hidden className="shrink-0 text-[9px] text-ink-dim/60">
+      <span aria-hidden className="shrink-0 text-[11px] text-ink-dim/60">
         ▾
       </span>
     </button>

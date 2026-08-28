@@ -197,8 +197,8 @@ function CollapseChevron({ anchor }: { anchor: CollapseAnchor }) {
       type="button"
       onClick={anchor.toggle}
       aria-label={anchor.collapsed ? 'Expand code block' : 'Collapse code block'}
-      className={`shrink-0 text-[8px] leading-[15px] text-ink-dim hover:text-ink ${
-        anchor.collapsed ? '' : 'opacity-0 group-hover:opacity-100'
+      className={`shrink-0 text-[11px] leading-[15px] text-ink-dim hover:text-ink ${
+        anchor.collapsed ? '' : 'opacity-40 group-hover:opacity-100'
       }`}
     >
       {anchor.collapsed ? '▸' : '▾'}
@@ -226,7 +226,12 @@ function HunkLine({ label, expand, onEdit }: { label: string; expand: HunkContro
   const body = (
     <>
       <span className="min-w-0 flex-1 truncate">{label}</span>
-      {expand.hint && <span className="shrink-0 text-ink-dim/80">{expand.hint}</span>}
+      {expand.hint && (
+        <span className="flex shrink-0 items-center gap-1 text-ink-dim/80">
+          <span aria-hidden className="text-[11px]">{expand.expanded ? '▾' : '▸'}</span>
+          {expand.hint}
+        </span>
+      )}
     </>
   );
   const line = `${ROW} w-full bg-procgen px-1 text-left text-[9px] text-ink-dim`;
