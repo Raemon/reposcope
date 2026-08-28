@@ -13,7 +13,7 @@ import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 
 const ROW = 'flex h-[15px] items-center gap-1 leading-[15px]';
-const GUTTER = 'w-[38px] shrink-0 select-none pr-1 text-right text-[9px] text-ink-dim';
+const GUTTER = 'flex w-[46px] shrink-0 select-none items-center text-[9px] text-ink-dim';
 const TOUCHED_MARK = 'bg-add-bg/60 shadow-[inset_2px_0_0_var(--add-emph)]';
 const EDIT_BTN =
   'sticky right-0 shrink-0 rounded bg-procgen px-1 uppercase tracking-[0.14em] hover:bg-btn-hover hover:text-ink';
@@ -182,11 +182,10 @@ function foldLabel(anchor: CollapseAnchor): string {
 }
 
 function GutterCell({ line, anchor }: { line: number; anchor: CollapseAnchor | null }) {
-  if (!anchor) return <span className={GUTTER}>{line}</span>;
   return (
-    <span className={`${GUTTER} flex items-center justify-end gap-0.5`}>
-      <CollapseChevron anchor={anchor} />
-      <span>{line}</span>
+    <span className={GUTTER}>
+      <span className="min-w-0 flex-1 text-right">{line}</span>
+      <span className="w-3 shrink-0 text-center">{anchor && <CollapseChevron anchor={anchor} />}</span>
     </span>
   );
 }

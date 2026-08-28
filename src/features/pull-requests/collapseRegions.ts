@@ -51,10 +51,13 @@ const IMPORT_BY_EXTENSION: Record<string, RegExp> = {
   rb: /^\s*require/,
 };
 
+const MARKUP_EXTENSIONS = new Set(['tsx', 'jsx', 'js', 'mjs', 'cjs', 'html', 'htm', 'xml', 'svg', 'vue', 'svelte', 'mdx', 'astro']);
+
 export function collapseRegions(rows: DiffRow[], contiguous: boolean, filename: string): CollapseRegion[] {
   const side: Side = rows.some((row) => row.right) ? 'right' : 'left';
-  const brackets = bracketSpans(rows, side, contiguous);
-  const importLine = IMPORT_BY_EXTENSION[extensionOf(filename)];
+  const extension = extensionOf(filename);
+  const brackets = bracketSpans(rows, side, contiguous, MARKUP_EXTENSIONS.has(extension));
+  const importLine = IMPORT_BY_EXTENSION[extension];
   const imports = importLine ? importRuns(rows, side, importCoveredRows(rows, side, brackets, importLine), importLine, contiguous) : [];
   const wideEnough = brackets.filter((span) => span.end - span.start >= 2);
   return finalize(rows, [...imports, ...wideEnough]);
@@ -71,6 +74,7 @@ function textOf(row: DiffRow | undefined, side: Side): string | null {
 interface ScanState {
   inBlockComment: boolean;
   inTemplate: boolean;
+  markup: boolean;
 }
 
 interface OpenBracket {
@@ -78,28 +82,87 @@ interface OpenBracket {
   row: number;
 }
 
+interface OpenTag {
+  name: string;
+  row: number;
+}
+
+interface Scan {
+  state: ScanState;
+  brackets: OpenBracket[];
+  tags: OpenTag[];
+  pending: { name: string; row: number; depth: number } | null;
+}
+
+type Token =
+  | { t: 'bracket'; char: string }
+  | { t: 'tagStart'; name: string }
+  | { t: 'tagClose'; name: string }
+  | { t: 'gt' }
+  | { t: 'selfGt' }
+  | { t: 'tagBreak' };
+
 const CLOSE_TO_OPEN: Record<string, string> = { ')': '(', ']': '[', '}': '{' };
 
-function bracketSpans(rows: DiffRow[], side: Side, contiguous: boolean): Span[] {
+function bracketSpans(rows: DiffRow[], side: Side, contiguous: boolean, markup: boolean): Span[] {
   const spans: Span[] = [];
-  const state: ScanState = { inBlockComment: false, inTemplate: false };
-  const stack: OpenBracket[] = [];
+  const scan: Scan = { state: { inBlockComment: false, inTemplate: false, markup }, brackets: [], tags: [], pending: null };
   rows.forEach((row, index) => {
     if (row.kind === 'hunk') {
-      if (!contiguous) resetScan(state, stack);
+      if (!contiguous) resetScan(scan);
       return;
     }
     const text = textOf(row, side);
     if (text === null) return;
-    for (const bracket of bracketsIn(text, state)) applyBracket(bracket, index, stack, spans);
+    for (const token of tokensIn(text, scan.state)) applyToken(token, index, scan, spans);
   });
   return spans;
 }
 
-function resetScan(state: ScanState, stack: OpenBracket[]) {
-  state.inBlockComment = false;
-  state.inTemplate = false;
-  stack.length = 0;
+function resetScan(scan: Scan) {
+  scan.state.inBlockComment = false;
+  scan.state.inTemplate = false;
+  scan.brackets.length = 0;
+  scan.tags.length = 0;
+  scan.pending = null;
+}
+
+function applyToken(token: Token, row: number, scan: Scan, spans: Span[]) {
+  if (token.t === 'bracket') {
+    trackPendingDepth(scan, token.char);
+    applyBracket(token.char, row, scan.brackets, spans);
+  } else if (token.t === 'tagStart') {
+    scan.pending = { name: token.name, row, depth: 0 };
+  } else if (token.t === 'tagClose') {
+    scan.pending = null;
+    closeTag(token.name, row, scan.tags, spans);
+  } else {
+    resolvePendingTag(token.t, row, scan, spans);
+  }
+}
+
+function trackPendingDepth(scan: Scan, char: string) {
+  if (!scan.pending) return;
+  scan.pending.depth += char in CLOSE_TO_OPEN ? -1 : 1;
+  if (scan.pending.depth < 0) scan.pending = null;
+}
+
+function resolvePendingTag(kind: 'gt' | 'selfGt' | 'tagBreak', row: number, scan: Scan, spans: Span[]) {
+  const pending = scan.pending;
+  if (!pending || pending.depth > 0) return;
+  if (kind === 'gt') scan.tags.push({ name: pending.name, row: pending.row });
+  if (kind === 'selfGt' && row > pending.row) spans.push({ start: pending.row, end: row, imports: false });
+  scan.pending = null;
+}
+
+function closeTag(name: string, row: number, tags: OpenTag[], spans: Span[]) {
+  for (let index = tags.length - 1; index >= 0; index -= 1) {
+    const open = tags[index];
+    if (!open || open.name !== name) continue;
+    if (row > open.row) spans.push({ start: open.row, end: row, imports: false });
+    tags.length = index;
+    return;
+  }
 }
 
 function applyBracket(bracket: string, row: number, stack: OpenBracket[], spans: Span[]) {
@@ -116,8 +179,8 @@ function applyBracket(bracket: string, row: number, stack: OpenBracket[], spans:
   if (row > top.row) spans.push({ start: top.row, end: row, imports: false });
 }
 
-function bracketsIn(text: string, state: ScanState): string[] {
-  const found: string[] = [];
+function tokensIn(text: string, state: ScanState): Token[] {
+  const found: Token[] = [];
   let at = 0;
   while (at < text.length) {
     if (state.inBlockComment) at = pastBlockComment(text, at, state);
@@ -140,7 +203,7 @@ function pastTemplate(text: string, at: number, state: ScanState): number {
   return end ?? text.length;
 }
 
-function plainCode(text: string, at: number, state: ScanState, found: string[]): number {
+function plainCode(text: string, at: number, state: ScanState, found: Token[]): number {
   const char = text[at] ?? '';
   const pair = char + (text[at + 1] ?? '');
   if (pair === '//' || lineCommentHash(text, at)) return text.length;
@@ -153,8 +216,42 @@ function plainCode(text: string, at: number, state: ScanState, found: string[]):
     state.inTemplate = true;
     return at + 1;
   }
-  if ('()[]{}'.includes(char)) found.push(char);
+  if ('()[]{}'.includes(char)) {
+    found.push({ t: 'bracket', char });
+    return at + 1;
+  }
+  if (state.markup) return markupCode(text, at, pair, found);
   return at + 1;
+}
+
+const TAG_CLOSE = /^<\/\s*([A-Za-z][\w.:$-]*)?\s*>/;
+const TAG_START = /^<([A-Za-z][\w.:$-]*)/;
+
+function markupCode(text: string, at: number, pair: string, found: Token[]): number {
+  if (pair === '/>') {
+    found.push({ t: 'selfGt' });
+    return at + 2;
+  }
+  if (text[at] === '<') return tagToken(text, at, found);
+  if (text[at] === '>' && text[at - 1] !== '=') found.push({ t: 'gt' });
+  else if (text[at] === ';' || text[at] === '?') found.push({ t: 'tagBreak' });
+  return at + 1;
+}
+
+function tagToken(text: string, at: number, found: Token[]): number {
+  const rest = text.slice(at);
+  const close = rest.match(TAG_CLOSE);
+  if (close) {
+    found.push({ t: 'tagClose', name: close[1] ?? '' });
+    return at + close[0].length;
+  }
+  if (rest.startsWith('<>')) {
+    found.push({ t: 'tagStart', name: '' }, { t: 'gt' });
+    return at + 2;
+  }
+  const name = rest.match(TAG_START)?.[1];
+  if (name !== undefined) found.push({ t: 'tagStart', name });
+  return at + (name === undefined ? 1 : name.length + 1);
 }
 
 function lineCommentHash(text: string, at: number): boolean {
