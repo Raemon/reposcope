@@ -83,10 +83,10 @@ function DiscussionEntry({
       <header className="flex items-baseline gap-1.5 text-[9px] text-ink-dim">
         {!isOwnAuthor(author) && <span className="shrink-0 text-ink">{author}</span>}
         <span className="shrink-0">{note}</span>
-        {path && <span className="min-w-0 flex-1 truncate">{path}</span>}
+        {path && <span className="min-w-0 flex-1 truncate font-serif text-[10px]">{path}</span>}
       </header>
       <HoverCardHtml
-        className="markdown-body break-words text-[11px] leading-4 text-ink"
+        className="markdown-body break-words text-[12px] leading-4 text-ink"
         html={renderMarkdown(body, { owner, repo })}
         tooltipStyle
       />

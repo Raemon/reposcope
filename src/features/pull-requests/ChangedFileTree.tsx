@@ -44,7 +44,7 @@ function FileRow({
       onActivate={() => onSelect(file.filename)}
       className={`${ROW} ${rowStateClass(row.state)}`}
     >
-      <span className="min-w-0 flex-1 truncate">
+      <span className="min-w-0 flex-1 truncate font-serif text-[12px]">
         <ParentFolder path={file.filename} />
         <FileName path={file.filename} tinted={!rowShowsAccent(row.state)} />
       </span>
