@@ -131,8 +131,7 @@ export function ColumnHeader({
   focused,
   row,
   action,
-  chevron = '‹',
-  label = `Collapse ${title}`,
+  expanded,
   onCollapse,
 }: {
   title: string;
@@ -141,8 +140,7 @@ export function ColumnHeader({
   focused: boolean;
   row: ColumnRow;
   action?: ReactNode;
-  chevron?: string;
-  label?: string;
+  expanded?: boolean;
   onCollapse: () => void;
 }) {
   return (
@@ -153,9 +151,10 @@ export function ColumnHeader({
         title={title}
         titleTone={focused ? 'text-accent' : 'text-ink-dim'}
         note={note}
-        chevron={chevron}
+        chevron={expanded === undefined ? '‹' : expanded ? '⌄' : '›'}
         className="min-w-0 flex-1"
-        label={label}
+        expanded={expanded}
+        label={`${expanded === false ? 'Expand' : 'Collapse'} ${title}`}
         onActivate={onCollapse}
       />
       {action}
@@ -163,18 +162,7 @@ export function ColumnHeader({
   );
 }
 
-export function ResizableColumn({
-  navId,
-  title,
-  icon,
-  note,
-  preview,
-  size,
-  onSize,
-  action,
-  footer,
-  children,
-}: {
+interface ColumnProps {
   navId: ColumnId;
   title: string;
   icon: string;
@@ -185,17 +173,15 @@ export function ResizableColumn({
   action?: ReactNode;
   footer?: ReactNode;
   children: ReactNode;
-}) {
+}
+
+export function ResizableColumn(props: ColumnProps) {
+  const { navId, title, icon, note, preview, size, onSize, action, footer, children } = props;
   const nav = useColumnNav(navId);
   const startDrag = useDragWidth(size, onSize);
   const pane = usePaneMode(navId);
   if (pane === 'hidden') return null;
-  if (pane === 'stacked')
-    return (
-      <StackedColumn nav={nav} title={title} icon={icon} note={note} size={size} onSize={onSize} action={action} footer={footer}>
-        {children}
-      </StackedColumn>
-    );
+  if (pane === 'stacked') return <StackedColumn nav={nav} {...props} />;
   if (pane === 'pane')
     return (
       <section onPointerDown={nav.focus} onPointerLeave={nav.clearHover} className="flex min-h-0 min-w-0 flex-1 flex-col bg-panel">
@@ -250,17 +236,7 @@ function StackedColumn({
   action,
   footer,
   children,
-}: {
-  nav: ReturnType<typeof useColumnNav>;
-  title: string;
-  icon: string;
-  note?: string;
-  size: ColumnSize;
-  onSize: (next: ColumnSize) => void;
-  action?: ReactNode;
-  footer?: ReactNode;
-  children: ReactNode;
-}) {
+}: ColumnProps & { nav: ReturnType<typeof useColumnNav> }) {
   return (
     <section onPointerDown={nav.focus} onPointerLeave={nav.clearHover} className="flex shrink-0 flex-col bg-panel">
       <ColumnHeader
@@ -270,8 +246,7 @@ function StackedColumn({
         focused={nav.focused}
         row={nav.row(COLUMN_HEADER)}
         action={action}
-        chevron={size.open ? '⌄' : '›'}
-        label={`${size.open ? 'Collapse' : 'Expand'} ${title}`}
+        expanded={size.open}
         onCollapse={() => onSize({ ...size, open: !size.open })}
       />
       {size.open && (
