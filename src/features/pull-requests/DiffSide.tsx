@@ -151,11 +151,10 @@ function DiffLineView({
   const openable = Boolean(editable && side === 'right');
   return (
     <div
-      className={`group relative ${ROW} ${lineTone(side, changed, line.touched)} ${openable ? 'cursor-text' : ''}`}
+      className={`group ${ROW} ${lineTone(side, changed, line.touched)} ${openable ? 'cursor-text' : ''}`}
       onClick={openable && onEdit ? (event) => event.detail >= 3 && onEdit() : undefined}
     >
-      {anchor && <CollapseChevron anchor={anchor} />}
-      <span className={GUTTER}>{cell.line}</span>
+      <GutterCell line={cell.line} anchor={anchor} />
       <span className="diff-code whitespace-pre pr-2 text-[11px]">
         {codeSegments(cell.text, lineTokens, changed ? ranges : null).map((segment, index) => (
           <span
@@ -182,13 +181,23 @@ function foldLabel(anchor: CollapseAnchor): string {
   return `${folded} · ${anchor.hiddenThreads} ${anchor.hiddenThreads === 1 ? 'thread' : 'threads'}`;
 }
 
+function GutterCell({ line, anchor }: { line: number; anchor: CollapseAnchor | null }) {
+  if (!anchor) return <span className={GUTTER}>{line}</span>;
+  return (
+    <span className={`${GUTTER} flex items-center justify-end gap-0.5`}>
+      <CollapseChevron anchor={anchor} />
+      <span>{line}</span>
+    </span>
+  );
+}
+
 function CollapseChevron({ anchor }: { anchor: CollapseAnchor }) {
   return (
     <button
       type="button"
       onClick={anchor.toggle}
       aria-label={anchor.collapsed ? 'Expand code block' : 'Collapse code block'}
-      className={`absolute inset-y-0 left-0 w-3 text-center text-[8px] leading-[15px] text-ink-dim hover:text-ink ${
+      className={`shrink-0 text-[8px] leading-[15px] text-ink-dim hover:text-ink ${
         anchor.collapsed ? '' : 'opacity-0 group-hover:opacity-100'
       }`}
     >
