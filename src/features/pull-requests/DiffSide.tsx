@@ -7,6 +7,7 @@ import type { DiffLine } from './diffLines';
 import type { ThemedToken } from './diffHighlight';
 import type { CharRange, IntralineRanges } from './intralineDiff';
 import type { DiffRow } from './splitDiff';
+import type { CollapseAnchor } from './useCodeCollapse';
 import type { SideTokens } from './useDiffSideHighlight';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
@@ -16,6 +17,8 @@ const GUTTER = 'w-[38px] shrink-0 select-none pr-1 text-right text-[9px] text-in
 const TOUCHED_MARK = 'bg-add-bg/60 shadow-[inset_2px_0_0_var(--add-emph)]';
 const EDIT_BTN =
   'sticky right-0 shrink-0 rounded bg-procgen px-1 uppercase tracking-[0.14em] hover:bg-btn-hover hover:text-ink';
+const FOLD_BADGE =
+  'mr-2 shrink-0 rounded bg-procgen px-1 text-[9px] italic text-ink-dim hover:bg-btn-hover hover:text-ink';
 
 export interface HunkControl {
   expanded: boolean;
@@ -30,6 +33,7 @@ export interface SideProps {
   tokens: SideTokens | null;
   emphasis: (IntralineRanges | null)[];
   expand: HunkControl;
+  anchors: Map<number, CollapseAnchor>;
   editable?: boolean;
   onEditBlock?: (rowIndex: number) => void;
   editor?: ReactNode;
@@ -64,6 +68,7 @@ function DiffLines({
   tokens,
   emphasis,
   expand,
+  anchors,
   editable,
   onEditBlock,
   spacer,
@@ -83,6 +88,7 @@ function DiffLines({
                 lineTokens={tokens?.[line.side][line.row] ?? null}
                 ranges={rangesFor(emphasis[line.row], line.side)}
                 expand={expand}
+                anchor={anchors.get(line.row) ?? null}
                 editable={editable}
                 onEdit={editStarter(rows, line.row, onEditBlock)}
               />
@@ -117,6 +123,7 @@ function DiffLineView({
   lineTokens,
   ranges,
   expand,
+  anchor,
   editable,
   onEdit,
 }: {
@@ -125,6 +132,7 @@ function DiffLineView({
   lineTokens: ThemedToken[] | null;
   ranges: CharRange[] | null;
   expand: HunkControl;
+  anchor: CollapseAnchor | null;
   editable?: boolean;
   onEdit?: () => void;
 }) {
@@ -137,9 +145,10 @@ function DiffLineView({
   const openable = Boolean(editable && side === 'right');
   return (
     <div
-      className={`${ROW} ${lineTone(side, changed, line.touched)} ${openable ? 'cursor-text' : ''}`}
+      className={`group relative ${ROW} ${lineTone(side, changed, line.touched)} ${openable ? 'cursor-text' : ''}`}
       onClick={openable && onEdit ? (event) => event.detail >= 3 && onEdit() : undefined}
     >
+      {anchor && <CollapseChevron anchor={anchor} />}
       <span className={GUTTER}>{cell.line}</span>
       <span className="diff-code whitespace-pre pr-2 text-[11px]">
         {codeSegments(cell.text, lineTokens, changed ? ranges : null).map((segment, index) => (
@@ -152,7 +161,27 @@ function DiffLineView({
           </span>
         ))}
       </span>
+      {anchor?.collapsed && (
+        <button type="button" onClick={anchor.toggle} className={FOLD_BADGE}>
+          ⋯ {anchor.hiddenLines} lines
+        </button>
+      )}
     </div>
+  );
+}
+
+function CollapseChevron({ anchor }: { anchor: CollapseAnchor }) {
+  return (
+    <button
+      type="button"
+      onClick={anchor.toggle}
+      aria-label={anchor.collapsed ? 'Expand code block' : 'Collapse code block'}
+      className={`absolute inset-y-0 left-0 w-3 text-center text-[8px] leading-[15px] text-ink-dim hover:text-ink ${
+        anchor.collapsed ? '' : 'opacity-0 group-hover:opacity-100'
+      }`}
+    >
+      {anchor.collapsed ? '▸' : '▾'}
+    </button>
   );
 }
 

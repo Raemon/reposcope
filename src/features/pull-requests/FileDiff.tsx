@@ -5,7 +5,7 @@ import { CodeBlockEditor } from './CodeBlockEditor';
 import { CommitEditModal } from './CommitEditModal';
 import { DiffSide, type HunkControl } from './DiffSide';
 import { useDiffLayout } from './diffLayoutStore';
-import { columnLines, unifiedLines } from './diffLines';
+import { columnLines, unifiedLines, visibleLines } from './diffLines';
 import { langForPath } from './diffHighlight';
 import { ROW_HEIGHT, SAVE_BAR } from './diffMetrics';
 import { EditTarget } from './editTarget';
@@ -14,7 +14,9 @@ import { expandDiff } from './expandDiff';
 import { InlineThreads } from './InlineThreads';
 import { setDiffPaneWidth, useDiffPaneWidth } from './diffPaneWidth';
 import { DragHandle, useDragWidth } from './ResizableColumn';
+import { useFileThreads } from './reviewThreadStore';
 import { splitDiff, type DiffRow } from './splitDiff';
+import { useCodeCollapse } from './useCodeCollapse';
 import { useDiffTokens, useIntralineEmphasis } from './useDiffSideHighlight';
 import { useHeightTransition } from './useHeightTransition';
 import { useHunkEdit, type HunkEdit } from './useHunkEdit';
@@ -45,8 +47,6 @@ export function FileDiff({
   const wholeFile = useWholeFile(owner, repo, file, baseRef, headRef, wantWholeFile);
   const patchRows = useMemo(() => splitDiff(file.patch ?? ''), [file.patch]);
   const rows = useMemo(() => rowsForDisplay(patchRows, wholeFile.lines), [patchRows, wholeFile.lines]);
-  const columns = useMemo(() => ({ left: columnLines(rows, 'left'), right: columnLines(rows, 'right') }), [rows]);
-  const merged = useMemo(() => unifiedLines(rows), [rows]);
   const emphasis = useIntralineEmphasis(rows);
   const tokens = useDiffTokens(rows, file.filename);
   const growing = useHeightTransition(rows);
@@ -64,12 +64,23 @@ export function FileDiff({
   });
   const showingWholeFile = rows !== patchRows;
   const canEdit = pull !== null && !wantWholeFile;
+  const editBlock = canEdit ? hunkEdit.edit?.block ?? null : null;
+  const threads = useFileThreads(file.filename);
+  const collapse = useCodeCollapse(rows, showingWholeFile, threads, editBlock);
+  const columns = useMemo(
+    () => ({
+      left: visibleLines(columnLines(rows, 'left'), collapse.hidden),
+      right: visibleLines(columnLines(rows, 'right'), collapse.hidden),
+    }),
+    [rows, collapse.hidden],
+  );
+  const merged = useMemo(() => visibleLines(unifiedLines(rows), collapse.hidden), [rows, collapse.hidden]);
   const expand = expandControl(wholeFile, showingWholeFile, hunkEdit, setWantWholeFile);
-  const shared = { rows, tokens, emphasis, expand };
+  const shared = { rows, tokens, emphasis, expand, anchors: collapse.anchors };
   const editing = {
     editable: canEdit,
     onEditBlock: hunkEdit.begin,
-    editedRows: canEdit ? hunkEdit.edit?.block ?? null : null,
+    editedRows: editBlock,
     editor: canEdit && hunkEdit.edit ? hunkEditor(file.filename, hunkEdit) : null,
   };
   return (

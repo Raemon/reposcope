@@ -22,6 +22,10 @@ export function unifiedLines(rows: DiffRow[]): DiffLine[] {
   return changeRuns(rows).flatMap(runLines);
 }
 
+export function visibleLines(lines: DiffLine[], hidden: Set<number>): DiffLine[] {
+  return hidden.size === 0 ? lines : lines.filter((line) => !hidden.has(line.row));
+}
+
 function changeRuns(rows: DiffRow[]): PlacedRow[][] {
   const runs: PlacedRow[][] = [];
   rows.forEach((row, index) => {
