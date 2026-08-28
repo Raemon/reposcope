@@ -1,6 +1,7 @@
 'use client';
 
 import { setDiffLayout, useDiffLayout, type DiffLayout } from './diffLayoutStore';
+import { DiffSortMenu } from './DiffSortMenu';
 import { BUTTON } from '@/features/surface-ui/buttonStyles';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 
@@ -12,7 +13,7 @@ const CHOICES: { layout: DiffLayout; icon: string; label: string }[] = [
 export function DiffLayoutToggle() {
   const current = useDiffLayout();
   return (
-    <div className="flex shrink-0 items-center justify-end gap-1 border-b border-panel-edge bg-panel px-1.5 py-[1px]">
+    <div className="relative z-30 flex shrink-0 items-center justify-end gap-1 border-b border-panel-edge bg-panel px-1.5 py-[1px]">
       {CHOICES.map(({ layout, icon, label }) => (
         <HoverCardTrigger key={layout} label={`Show diffs in a ${label} view`} focusable={false} tooltipStyle>
           <button
@@ -26,6 +27,7 @@ export function DiffLayoutToggle() {
           </button>
         </HoverCardTrigger>
       ))}
+      <DiffSortMenu />
     </div>
   );
 }

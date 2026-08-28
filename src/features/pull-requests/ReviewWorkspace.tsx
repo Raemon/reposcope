@@ -5,28 +5,20 @@ import { CentralTabBar, useShowsColumn } from './centralLayout';
 import { ColumnPreview } from './ColumnPreview';
 import { DiffPanes, type DiffPanesHandle } from './DiffPanes';
 import { PullCommitColumn, WHOLE_CHANGE, commitItems, commitTokens } from './PullCommitColumn';
-import { PullFilesColumn, fileTokens, orderedFiles } from './PullFilesColumn';
+import { PullFilesColumn, fileTokens } from './PullFilesColumn';
 import { ResizableColumn, type ColumnSize } from './ResizableColumn';
 import { useRegisterColumn } from './columnNav';
+import { commentCountsOf, sortChangedFiles } from './diffSort';
+import { useDiffSort } from './diffSortStore';
 import { commitFilesPath } from './pullPaths';
 import type { ChangedFileSet, ChangeSummary, PullRequestSummary } from './pullRequests';
+import { ReviewThreadProvider, useReviewTarget } from './reviewThreadStore';
 import { useStickyColumn } from './stickyColumns';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 import { useCachedJson } from '@/features/sources/useCachedJson';
 import { usePollWhileVisible } from '@/features/sources/usePollWhileVisible';
 
-export function ReviewWorkspace({
-  owner,
-  repo,
-  number,
-  subjectKey,
-  change,
-  reloadChange,
-  wholeFilesPath,
-  listColumn,
-  discussion,
-  editableWhole,
-}: {
+interface ReviewWorkspaceProps {
   owner: string;
   repo: string;
   number: number | null;
@@ -37,7 +29,27 @@ export function ReviewWorkspace({
   listColumn: ReactNode;
   discussion: ReactNode | null;
   editableWhole: PullRequestSummary | null;
-}) {
+}
+
+export function ReviewWorkspace(props: ReviewWorkspaceProps) {
+  return (
+    <ReviewThreadProvider owner={props.owner} repo={props.repo} number={props.number}>
+      <Workspace {...props} />
+    </ReviewThreadProvider>
+  );
+}
+
+function Workspace({
+  owner,
+  repo,
+  subjectKey,
+  change,
+  reloadChange,
+  wholeFilesPath,
+  listColumn,
+  discussion,
+  editableWhole,
+}: ReviewWorkspaceProps) {
   const ready = useStoreReady();
   const token = useGithubToken();
   const [notice, setNotice] = useState<string | null>(null);
@@ -70,7 +82,14 @@ export function ReviewWorkspace({
     setPath(filename);
     diffPanes.current?.scrollToFile(filename);
   }, []);
-  const fileItems = useMemo(() => orderedFiles(fileSet).map((file) => file.filename), [fileSet]);
+  const sort = useDiffSort();
+  const { threads } = useReviewTarget();
+  const files = useMemo(
+    () => sortChangedFiles(fileSet?.files ?? [], sort, commentCountsOf(threads)),
+    [fileSet, sort, threads],
+  );
+  const fileItems = useMemo(() => files.map((file) => file.filename), [files]);
+  const loadedFiles = fileSet === null ? null : files;
 
   const showsDiff = useShowsColumn('diff');
   const showsDiscussion = useShowsColumn('discussion');
@@ -148,11 +167,11 @@ export function ReviewWorkspace({
           navId="files"
           icon="▤"
           title="files"
-          preview={<ColumnPreview column="files" tokens={fileTokens(fileSet, path)} />}
+          preview={<ColumnPreview column="files" tokens={fileTokens(files, path)} />}
           size={fileSize}
           onSize={setFileSize}
         >
-          <PullFilesColumn fileSet={fileSet} fileError={fileError} path={path} onSelect={revealFile} />
+          <PullFilesColumn files={loadedFiles} fileError={fileError} path={path} onSelect={revealFile} />
         </ResizableColumn>
         {!showsDiff ? null : fileSet === null && fileError !== null ? (
           <p className="flex-1 px-2 py-1 text-[11px] text-error-ink">{fileError}</p>
@@ -163,8 +182,8 @@ export function ReviewWorkspace({
               ref={diffPanes}
               owner={owner}
               repo={repo}
-              number={number}
               fileSet={fileSet}
+              files={files}
               selected={path}
               editablePull={selection === WHOLE_CHANGE ? editableWhole : null}
               onCommitted={reloadInPlace}
