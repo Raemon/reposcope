@@ -1,0 +1,147 @@
+export interface LineRule {
+  open: RegExp;
+  close: RegExp;
+  selfClosed?: RegExp;
+  skip?: RegExp;
+}
+
+export interface FoldDialect {
+  tokens: boolean;
+  markup: boolean;
+  heredocs: boolean;
+  triples: boolean;
+  markdown: boolean;
+  indent: boolean;
+  hashComments: boolean;
+  slashComments: boolean;
+  dashComments: boolean;
+  regexLiterals: boolean;
+  preprocessor: boolean;
+  importLine: RegExp | null;
+  lineRules: LineRule[];
+}
+
+const JS_IMPORT = /^\s*(import[\s({"']|export\s.*\sfrom\s|require\s*\(|\w[\w.]*\s*=\s*require\s*\()/;
+const C_INCLUDE = /^\s*#\s*include[\s<"]/;
+const PLAIN_IMPORT = /^\s*import\s/;
+
+const IMPORT_BY_EXTENSION: Record<string, RegExp> = {
+  ts: JS_IMPORT,
+  tsx: JS_IMPORT,
+  js: JS_IMPORT,
+  jsx: JS_IMPORT,
+  mjs: JS_IMPORT,
+  cjs: JS_IMPORT,
+  mts: JS_IMPORT,
+  cts: JS_IMPORT,
+  vue: JS_IMPORT,
+  svelte: JS_IMPORT,
+  py: /^\s*(import\s|from\s+\S+\s+import[\s(])/,
+  pyi: /^\s*(import\s|from\s+\S+\s+import[\s(])/,
+  go: /^\s*import[\s(]/,
+  java: PLAIN_IMPORT,
+  kt: PLAIN_IMPORT,
+  kts: PLAIN_IMPORT,
+  swift: PLAIN_IMPORT,
+  scala: PLAIN_IMPORT,
+  c: C_INCLUDE,
+  h: C_INCLUDE,
+  cc: C_INCLUDE,
+  cpp: C_INCLUDE,
+  hpp: C_INCLUDE,
+  m: C_INCLUDE,
+  mm: C_INCLUDE,
+  rs: /^\s*(use\s+[\w:{*]|extern\s+crate\s)/,
+  php: /^\s*(use\s+[\w\\]|require|include)/,
+  cs: /^\s*(using\s+\w|global\s+using\s)/,
+  rb: /^\s*require/,
+};
+
+const RUBY_BLOCK: LineRule = {
+  open: /^\s*(def|class|module|case|begin|if|unless|while|until)\b(?!:)|\bdo(\s*\|[^|]*\|)?\s*$/,
+  close: /^\s*end\b/,
+  selfClosed: /\bend\s*$/,
+  skip: /^\s*#/,
+};
+const ELIXIR_BLOCK: LineRule = { open: /\bdo\s*$/, close: /^\s*end\b/, skip: /^\s*#/ };
+const LUA_BLOCK: LineRule = {
+  open: /^\s*(local\s+)?function\b|^\s*(if|for|while|repeat)\b|[=(,{]\s*function\s*[(\s]/,
+  close: /^\s*(end|until)\b/,
+  selfClosed: /\bend\s*$/,
+  skip: /^\s*--/,
+};
+const SHELL_IF: LineRule = { open: /^\s*if\b/, close: /^\s*fi\b/, selfClosed: /\bfi;?\s*$/, skip: /^\s*#/ };
+const SHELL_LOOP: LineRule = { open: /^\s*(for|while|until|select)\b/, close: /^\s*done\b/, selfClosed: /\bdone;?\s*$/, skip: /^\s*#/ };
+const SHELL_CASE: LineRule = { open: /^\s*case\b/, close: /^\s*esac\b/, selfClosed: /\besac;?\s*$/, skip: /^\s*#/ };
+const SQL_BLOCK: LineRule = {
+  open: /^\s*begin\b|\bcase\s+when\b|\bcase\s*$/i,
+  close: /^\s*end(\s+case)?\s*;?\s*$/i,
+  selfClosed: /\bend\b(\s+as\s+\w+)?\s*[,;)]*\s*$/i,
+  skip: /^\s*--/,
+};
+const REGION_MARKER: LineRule = {
+  open: /^\s*(\/\/|--|<!--)?\s*#\s*(pragma\s+)?region\b/i,
+  close: /^\s*(\/\/|--|<!--)?\s*#\s*(pragma\s+)?endregion\b/i,
+};
+const PREPROCESSOR: LineRule = { open: /^\s*#\s*if(n?def)?\b/, close: /^\s*#\s*endif\b/ };
+
+const SHELL_RULES = [SHELL_IF, SHELL_LOOP, SHELL_CASE];
+
+const LINE_RULES: Record<string, LineRule[]> = {
+  rb: [RUBY_BLOCK],
+  rake: [RUBY_BLOCK],
+  ex: [ELIXIR_BLOCK],
+  exs: [ELIXIR_BLOCK],
+  lua: [LUA_BLOCK],
+  sh: SHELL_RULES,
+  bash: SHELL_RULES,
+  zsh: SHELL_RULES,
+  sql: [SQL_BLOCK],
+};
+
+const MARKUP_EXTENSIONS = new Set(['tsx', 'jsx', 'js', 'mjs', 'cjs', 'html', 'htm', 'xml', 'svg', 'vue', 'svelte', 'mdx', 'astro']);
+const PREPROCESSOR_EXTENSIONS = new Set(['c', 'h', 'cc', 'cpp', 'cxx', 'hpp', 'hh', 'm', 'mm', 'cs']);
+const PROSE_EXTENSIONS = new Set(['md', 'markdown', 'mdx', 'txt', 'rst', 'adoc']);
+const TOKENLESS_EXTENSIONS = new Set(['md', 'markdown', 'txt', 'rst', 'adoc']);
+const MARKDOWN_EXTENSIONS = new Set(['md', 'markdown', 'mdx']);
+const INDENT_EXTENSIONS = new Set(['py', 'pyi', 'yaml', 'yml', 'coffee', 'nim', 'hs', 'sass', 'styl', 'haml', 'slim', 'pug', 'jade']);
+const TRIPLE_EXTENSIONS = new Set(['py', 'pyi', 'kt', 'kts', 'scala']);
+const HEREDOC_EXTENSIONS = new Set(['sh', 'bash', 'zsh', 'rb', 'rake', 'pl', 'pm', 'php']);
+const HASHLESS_EXTENSIONS = new Set([
+  'ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs', 'mts', 'cts', 'vue', 'svelte', 'astro',
+  'css', 'scss', 'less', 'sass', 'styl',
+  'html', 'htm', 'xml', 'svg',
+  'java', 'kt', 'kts', 'swift', 'scala', 'go', 'rs', 'json',
+]);
+const SLASHLESS_EXTENSIONS = new Set([
+  'py', 'pyi', 'rb', 'rake', 'sh', 'bash', 'zsh', 'yaml', 'yml',
+  'pl', 'pm', 'ex', 'exs', 'coffee', 'nim', 'r', 'lua', 'sql', 'hs', 'tf', 'toml',
+]);
+const DASH_COMMENT_EXTENSIONS = new Set(['lua', 'sql', 'hs', 'elm']);
+const REGEX_LITERAL_EXTENSIONS = new Set(['ts', 'tsx', 'js', 'jsx', 'mjs', 'cjs', 'mts', 'cts', 'vue', 'svelte']);
+
+export function foldDialect(extension: string): FoldDialect {
+  return {
+    tokens: !TOKENLESS_EXTENSIONS.has(extension),
+    markup: MARKUP_EXTENSIONS.has(extension),
+    heredocs: HEREDOC_EXTENSIONS.has(extension),
+    triples: TRIPLE_EXTENSIONS.has(extension),
+    markdown: MARKDOWN_EXTENSIONS.has(extension),
+    indent: INDENT_EXTENSIONS.has(extension),
+    hashComments: !HASHLESS_EXTENSIONS.has(extension),
+    slashComments: !SLASHLESS_EXTENSIONS.has(extension),
+    dashComments: DASH_COMMENT_EXTENSIONS.has(extension),
+    regexLiterals: REGEX_LITERAL_EXTENSIONS.has(extension),
+    preprocessor: PREPROCESSOR_EXTENSIONS.has(extension),
+    importLine: IMPORT_BY_EXTENSION[extension] ?? null,
+    lineRules: lineRulesFor(extension),
+  };
+}
+
+function lineRulesFor(extension: string): LineRule[] {
+  return [
+    ...(LINE_RULES[extension] ?? []),
+    ...(PREPROCESSOR_EXTENSIONS.has(extension) ? [PREPROCESSOR] : []),
+    ...(PROSE_EXTENSIONS.has(extension) ? [] : [REGION_MARKER]),
+  ];
+}

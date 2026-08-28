@@ -1,3 +1,6 @@
+import { foldDialect, type FoldDialect } from './foldDialects';
+import { indentSpans, lineRuleSpans, markdownSpans } from './foldLineSpans';
+import { pushSpan, scanRows, textOf, type Side, type Span } from './foldSpan';
 import type { DiffRow } from './splitDiff';
 
 export interface CollapseRegion {
@@ -8,58 +11,18 @@ export interface CollapseRegion {
   hasChanges: boolean;
 }
 
-interface Span {
-  start: number;
-  end: number;
-  imports: boolean;
-}
-
-type Side = 'left' | 'right';
-
-const JS_IMPORT = /^\s*(import[\s({"']|export\s.*\sfrom\s|require\s*\(|\w[\w.]*\s*=\s*require\s*\()/;
-const C_INCLUDE = /^\s*#\s*include[\s<"]/;
-const PLAIN_IMPORT = /^\s*import\s/;
-
-const IMPORT_BY_EXTENSION: Record<string, RegExp> = {
-  ts: JS_IMPORT,
-  tsx: JS_IMPORT,
-  js: JS_IMPORT,
-  jsx: JS_IMPORT,
-  mjs: JS_IMPORT,
-  cjs: JS_IMPORT,
-  mts: JS_IMPORT,
-  cts: JS_IMPORT,
-  vue: JS_IMPORT,
-  svelte: JS_IMPORT,
-  py: /^\s*(import\s|from\s+\S+\s+import[\s(])/,
-  go: /^\s*import[\s(]/,
-  java: PLAIN_IMPORT,
-  kt: PLAIN_IMPORT,
-  kts: PLAIN_IMPORT,
-  swift: PLAIN_IMPORT,
-  scala: PLAIN_IMPORT,
-  c: C_INCLUDE,
-  h: C_INCLUDE,
-  cc: C_INCLUDE,
-  cpp: C_INCLUDE,
-  hpp: C_INCLUDE,
-  m: C_INCLUDE,
-  mm: C_INCLUDE,
-  rs: /^\s*(use\s+[\w:{*]|extern\s+crate\s)/,
-  php: /^\s*(use\s+[\w\\]|require|include)/,
-  cs: /^\s*(using\s+\w|global\s+using\s)/,
-  rb: /^\s*require/,
-};
-
-const MARKUP_EXTENSIONS = new Set(['tsx', 'jsx', 'js', 'mjs', 'cjs', 'html', 'htm', 'xml', 'svg', 'vue', 'svelte', 'mdx', 'astro']);
-
 export function collapseRegions(rows: DiffRow[], contiguous: boolean, filename: string): CollapseRegion[] {
   const side: Side = rows.some((row) => row.right) ? 'right' : 'left';
-  const extension = extensionOf(filename);
-  const brackets = bracketSpans(rows, side, contiguous, MARKUP_EXTENSIONS.has(extension));
-  const importLine = IMPORT_BY_EXTENSION[extension];
-  const imports = importLine ? importRuns(rows, side, importCoveredRows(rows, side, brackets, importLine), importLine, contiguous) : [];
-  const wideEnough = brackets.filter((span) => span.end - span.start >= 2);
+  const dialect = foldDialect(extensionOf(filename));
+  const { spans: tokens, covered } = dialect.tokens ? tokenSpans(rows, side, contiguous, dialect) : emptyTokenScan();
+  const spans = [
+    ...tokens,
+    ...lineRuleSpans(rows, side, contiguous, dialect.lineRules, covered),
+    ...(dialect.markdown ? markdownSpans(rows, side, contiguous) : []),
+    ...(dialect.indent ? indentSpans(rows, side, contiguous, covered) : []),
+  ];
+  const imports = importSpans(rows, side, contiguous, tokens, dialect.importLine);
+  const wideEnough = spans.filter((span) => span.end - span.start >= 2);
   return finalize(rows, [...imports, ...wideEnough]);
 }
 
@@ -67,14 +30,27 @@ function extensionOf(filename: string): string {
   return filename.slice(filename.lastIndexOf('.') + 1).toLowerCase();
 }
 
-function textOf(row: DiffRow | undefined, side: Side): string | null {
-  return row?.[side]?.text ?? null;
+function importSpans(rows: DiffRow[], side: Side, contiguous: boolean, tokens: Span[], importLine: RegExp | null): Span[] {
+  if (!importLine) return [];
+  return importRuns(rows, side, importCoveredRows(rows, side, tokens, importLine), importLine, contiguous);
 }
 
 interface ScanState {
-  inBlockComment: boolean;
+  blockClose: string | null;
   inTemplate: boolean;
+  interpolation: number;
+  triple: string | null;
+  heredoc: string | null;
+  heredocNext: string | null;
+  deadBranch: number;
   markup: boolean;
+  heredocs: boolean;
+  triples: boolean;
+  hashComments: boolean;
+  slashComments: boolean;
+  dashComments: boolean;
+  regexLiterals: boolean;
+  preprocessor: boolean;
 }
 
 interface OpenBracket {
@@ -87,11 +63,25 @@ interface OpenTag {
   row: number;
 }
 
+interface PendingTag {
+  name: string;
+  row: number;
+  depth: number;
+}
+
+type SpanKind = 'comment' | 'template' | 'string';
+
 interface Scan {
   state: ScanState;
   brackets: OpenBracket[];
   tags: OpenTag[];
-  pending: { name: string; row: number; depth: number } | null;
+  pendings: PendingTag[];
+  opened: Partial<Record<SpanKind, number>>;
+}
+
+interface TokenScan {
+  spans: Span[];
+  covered: Set<number>;
 }
 
 type Token =
@@ -100,69 +90,101 @@ type Token =
   | { t: 'tagClose'; name: string }
   | { t: 'gt' }
   | { t: 'selfGt' }
-  | { t: 'tagBreak' };
+  | { t: 'tagBreak' }
+  | { t: 'spanStart'; kind: SpanKind }
+  | { t: 'spanEnd'; kind: SpanKind };
 
 const CLOSE_TO_OPEN: Record<string, string> = { ')': '(', ']': '[', '}': '{' };
 
-function bracketSpans(rows: DiffRow[], side: Side, contiguous: boolean, markup: boolean): Span[] {
-  const spans: Span[] = [];
-  const scan: Scan = { state: { inBlockComment: false, inTemplate: false, markup }, brackets: [], tags: [], pending: null };
-  rows.forEach((row, index) => {
-    if (row.kind === 'hunk') {
-      if (!contiguous) resetScan(scan);
-      return;
-    }
-    const text = textOf(row, side);
-    if (text === null) return;
-    for (const token of tokensIn(text, scan.state)) applyToken(token, index, scan, spans);
-  });
-  return spans;
+function emptyTokenScan(): TokenScan {
+  return { spans: [], covered: new Set<number>() };
 }
 
-function resetScan(scan: Scan) {
-  scan.state.inBlockComment = false;
-  scan.state.inTemplate = false;
-  scan.brackets.length = 0;
-  scan.tags.length = 0;
-  scan.pending = null;
+function tokenSpans(rows: DiffRow[], side: Side, contiguous: boolean, dialect: FoldDialect): TokenScan {
+  const result = emptyTokenScan();
+  const scan = newScan(dialect);
+  scanRows(
+    rows,
+    side,
+    contiguous,
+    () => Object.assign(scan, newScan(dialect)),
+    (text, index) => {
+      for (const token of tokensIn(text, scan.state)) applyToken(token, index, scan, result);
+    },
+  );
+  return result;
 }
 
-function applyToken(token: Token, row: number, scan: Scan, spans: Span[]) {
+function newScan(dialect: FoldDialect): Scan {
+  return {
+    state: {
+      blockClose: null,
+      inTemplate: false,
+      interpolation: 0,
+      triple: null,
+      heredoc: null,
+      heredocNext: null,
+      deadBranch: 0,
+      markup: dialect.markup,
+      heredocs: dialect.heredocs,
+      triples: dialect.triples,
+      hashComments: dialect.hashComments,
+      slashComments: dialect.slashComments,
+      dashComments: dialect.dashComments,
+      regexLiterals: dialect.regexLiterals,
+      preprocessor: dialect.preprocessor,
+    },
+    brackets: [],
+    tags: [],
+    pendings: [],
+    opened: {},
+  };
+}
+
+function applyToken(token: Token, row: number, scan: Scan, result: TokenScan) {
   if (token.t === 'bracket') {
     trackPendingDepth(scan, token.char);
-    applyBracket(token.char, row, scan.brackets, spans);
+    applyBracket(token.char, row, scan.brackets, result.spans);
   } else if (token.t === 'tagStart') {
-    scan.pending = { name: token.name, row, depth: 0 };
+    scan.pendings.push({ name: token.name, row, depth: 0 });
   } else if (token.t === 'tagClose') {
-    scan.pending = null;
-    closeTag(token.name, row, scan.tags, spans);
+    scan.pendings.length = 0;
+    closeTag(token.name, row, scan.tags, result.spans);
+  } else if (token.t === 'spanStart') {
+    scan.opened[token.kind] = row;
+  } else if (token.t === 'spanEnd') {
+    endOpenedSpan(token.kind, row, scan, result);
   } else {
-    resolvePendingTag(token.t, row, scan, spans);
+    resolvePendingTag(token.t, row, scan, result.spans);
   }
+}
+
+function endOpenedSpan(kind: SpanKind, row: number, scan: Scan, result: TokenScan) {
+  const start = scan.opened[kind];
+  delete scan.opened[kind];
+  if (start === undefined) return;
+  pushSpan(result.spans, start, row);
+  for (let inside = start + 1; inside <= row; inside += 1) result.covered.add(inside);
 }
 
 function trackPendingDepth(scan: Scan, char: string) {
-  if (!scan.pending) return;
-  scan.pending.depth += char in CLOSE_TO_OPEN ? -1 : 1;
-  if (scan.pending.depth < 0) scan.pending = null;
+  const delta = char in CLOSE_TO_OPEN ? -1 : 1;
+  for (const pending of scan.pendings) pending.depth += delta;
+  if (scan.pendings.some((pending) => pending.depth < 0)) {
+    scan.pendings = scan.pendings.filter((pending) => pending.depth >= 0);
+  }
 }
 
 function resolvePendingTag(kind: 'gt' | 'selfGt' | 'tagBreak', row: number, scan: Scan, spans: Span[]) {
-  const pending = scan.pending;
-  if (!pending || pending.depth > 0) return;
-  if (kind === 'gt') scan.tags.push({ name: pending.name, row: pending.row });
-  if (kind === 'selfGt' && row > pending.row) spans.push({ start: pending.row, end: row, imports: false });
-  scan.pending = null;
-}
-
-function closeTag(name: string, row: number, tags: OpenTag[], spans: Span[]) {
-  for (let index = tags.length - 1; index >= 0; index -= 1) {
-    const open = tags[index];
-    if (!open || open.name !== name) continue;
-    if (row > open.row) spans.push({ start: open.row, end: row, imports: false });
-    tags.length = index;
+  if (kind === 'tagBreak') {
+    while ((scan.pendings[scan.pendings.length - 1]?.depth ?? 1) <= 0) scan.pendings.pop();
     return;
   }
+  const pending = scan.pendings[scan.pendings.length - 1];
+  if (!pending || pending.depth > 0) return;
+  if (kind === 'gt') scan.tags.push({ name: pending.name, row: pending.row });
+  if (kind === 'selfGt') pushSpan(spans, pending.row, row);
+  scan.pendings.pop();
 }
 
 function applyBracket(bracket: string, row: number, stack: OpenBracket[], spans: Span[]) {
@@ -176,51 +198,176 @@ function applyBracket(bracket: string, row: number, stack: OpenBracket[], spans:
     stack.length = 0;
     return;
   }
-  if (row > top.row) spans.push({ start: top.row, end: row, imports: false });
+  pushSpan(spans, top.row, row);
+}
+
+function closeTag(name: string, row: number, tags: OpenTag[], spans: Span[]) {
+  for (let index = tags.length - 1; index >= 0; index -= 1) {
+    const open = tags[index];
+    if (!open || open.name !== name) continue;
+    pushSpan(spans, open.row, row);
+    tags.length = index;
+    return;
+  }
 }
 
 function tokensIn(text: string, state: ScanState): Token[] {
   const found: Token[] = [];
+  if (state.heredoc) return heredocLine(text, state, found);
+  if (state.preprocessor && deadBranchLine(text, state)) return found;
   let at = 0;
   while (at < text.length) {
-    if (state.inBlockComment) at = pastBlockComment(text, at, state);
-    else if (state.inTemplate) at = pastTemplate(text, at, state);
+    if (state.blockClose) at = pastBlockComment(text, at, state, found);
+    else if (state.triple) at = pastTriple(text, at, state, found);
+    else if (state.inTemplate && state.interpolation === 0) at = pastTemplate(text, at, state, found);
     else at = plainCode(text, at, state, found);
+  }
+  if (state.heredocNext) {
+    state.heredoc = state.heredocNext;
+    state.heredocNext = null;
   }
   return found;
 }
 
-function pastBlockComment(text: string, at: number, state: ScanState): number {
-  const end = text.indexOf('*/', at);
-  if (end < 0) return text.length;
-  state.inBlockComment = false;
-  return end + 2;
+function heredocLine(text: string, state: ScanState, found: Token[]): Token[] {
+  if (text.trim() === state.heredoc) {
+    state.heredoc = null;
+    found.push({ t: 'spanEnd', kind: 'string' });
+  }
+  return found;
 }
 
-function pastTemplate(text: string, at: number, state: ScanState): number {
-  const end = endOfSpan(text, at, '`');
-  if (end !== null) state.inTemplate = false;
-  return end ?? text.length;
+function deadBranchLine(text: string, state: ScanState): boolean {
+  if (state.deadBranch > 0) {
+    if (/^\s*#\s*if(n?def)?\b/.test(text)) state.deadBranch += 1;
+    else if (/^\s*#\s*endif\b/.test(text)) state.deadBranch -= 1;
+    else if (state.deadBranch === 1 && /^\s*#\s*(else|elif)\b/.test(text)) state.deadBranch = 0;
+    return true;
+  }
+  if (/^\s*#\s*if\s+0\b/.test(text)) {
+    state.deadBranch = 1;
+    return true;
+  }
+  return false;
+}
+
+function pastMarkedSpan(text: string, at: number, close: string, kind: SpanKind, found: Token[]): number | null {
+  const end = text.indexOf(close, at);
+  if (end < 0) return null;
+  found.push({ t: 'spanEnd', kind });
+  return end + close.length;
+}
+
+function pastBlockComment(text: string, at: number, state: ScanState, found: Token[]): number {
+  const next = pastMarkedSpan(text, at, state.blockClose ?? '', 'comment', found);
+  if (next !== null) state.blockClose = null;
+  return next ?? text.length;
+}
+
+function pastTriple(text: string, at: number, state: ScanState, found: Token[]): number {
+  const next = pastMarkedSpan(text, at, state.triple ?? '', 'string', found);
+  if (next !== null) state.triple = null;
+  return next ?? text.length;
+}
+
+function pastTemplate(text: string, at: number, state: ScanState, found: Token[]): number {
+  for (let scan = at; scan < text.length; scan += 1) {
+    if (text[scan] === '\\') scan += 1;
+    else if (text[scan] === '`') {
+      state.inTemplate = false;
+      found.push({ t: 'spanEnd', kind: 'template' });
+      return scan + 1;
+    } else if (text[scan] === '$' && text[scan + 1] === '{') {
+      state.interpolation = 1;
+      found.push({ t: 'bracket', char: '{' });
+      return scan + 2;
+    }
+  }
+  return text.length;
 }
 
 function plainCode(text: string, at: number, state: ScanState, found: Token[]): number {
   const char = text[at] ?? '';
   const pair = char + (text[at + 1] ?? '');
-  if (pair === '//' || lineCommentHash(text, at)) return text.length;
-  if (pair === '/*') {
-    state.inBlockComment = true;
-    return at + 2;
+  if (state.slashComments && pair === '//') return text.length;
+  if (state.dashComments && pair === '--') return text.length;
+  if (state.hashComments && lineCommentHash(text, at)) return text.length;
+  if (pair === '/*') return startBlockComment(state, found, '*/', at + 2);
+  if (state.markup && text.startsWith('<!--', at)) return startBlockComment(state, found, '-->', at + 4);
+  if (state.regexLiterals && char === '/' && pair !== '/>') {
+    const past = regexToken(text, at);
+    if (past !== null) return past;
   }
-  if (char === "'" || char === '"') return endOfSpan(text, at + 1, char) ?? text.length;
-  if (char === '`') {
-    state.inTemplate = true;
-    return at + 1;
+  if (state.triples && (char === '"' || char === "'") && text.startsWith(char.repeat(3), at)) {
+    return startTriple(text, at, char, state, found);
   }
-  if ('()[]{}'.includes(char)) {
-    found.push({ t: 'bracket', char });
-    return at + 1;
-  }
+  if (state.heredocs && pair === '<<') return startHeredoc(text, at, state, found);
+  if (char === "'" || char === '"') return endOfSpan(text, at + 1, char) ?? at + 1;
+  if (char === '`') return startTemplate(text, at, state, found);
+  if ('()[]{}'.includes(char)) return bracketChar(char, at, state, found);
   if (state.markup) return markupCode(text, at, pair, found);
+  return at + 1;
+}
+
+function startBlockComment(state: ScanState, found: Token[], close: string, next: number): number {
+  state.blockClose = close;
+  found.push({ t: 'spanStart', kind: 'comment' });
+  return next;
+}
+
+function regexToken(text: string, at: number): number | null {
+  if (!regexCanStart(text, at)) return null;
+  let inClass = false;
+  for (let scan = at + 1; scan < text.length; scan += 1) {
+    const char = text[scan];
+    if (char === '\\') scan += 1;
+    else if (char === '[') inClass = true;
+    else if (char === ']') inClass = false;
+    else if (char === '/' && !inClass) return scan + 1;
+  }
+  return null;
+}
+
+function regexCanStart(text: string, at: number): boolean {
+  const before = text.slice(0, at).trimEnd();
+  if (before === '') return true;
+  const last = before[before.length - 1] ?? '';
+  return '=(,:;!&|?[{'.includes(last) || /\breturn$/.test(before);
+}
+
+function startTriple(text: string, at: number, quote: string, state: ScanState, found: Token[]): number {
+  const triple = quote.repeat(3);
+  const end = text.indexOf(triple, at + 3);
+  if (end >= 0) return end + 3;
+  state.triple = triple;
+  found.push({ t: 'spanStart', kind: 'string' });
+  return text.length;
+}
+
+const HEREDOC_START = /^<<<?[-~]?(["']?)([A-Za-z_]\w*)\1/;
+
+function startHeredoc(text: string, at: number, state: ScanState, found: Token[]): number {
+  if (at > 0 && /[\w)\]'"]/.test(text[at - 1] ?? '')) return at + 2;
+  const terminator = text.slice(at).match(HEREDOC_START)?.[2];
+  if (terminator === undefined) return at + 2;
+  state.heredocNext = terminator;
+  found.push({ t: 'spanStart', kind: 'string' });
+  return text.length;
+}
+
+function startTemplate(text: string, at: number, state: ScanState, found: Token[]): number {
+  if (state.interpolation > 0) return endOfSpan(text, at + 1, '`') ?? text.length;
+  state.inTemplate = true;
+  found.push({ t: 'spanStart', kind: 'template' });
+  return at + 1;
+}
+
+function bracketChar(char: string, at: number, state: ScanState, found: Token[]): number {
+  if (state.interpolation > 0) {
+    if (char === '{') state.interpolation += 1;
+    else if (char === '}') state.interpolation -= 1;
+  }
+  found.push({ t: 'bracket', char });
   return at + 1;
 }
 
@@ -266,39 +413,47 @@ function endOfSpan(text: string, at: number, close: string): number | null {
   return null;
 }
 
-function importCoveredRows(rows: DiffRow[], side: Side, brackets: Span[], importLine: RegExp): Set<number> {
+function importCoveredRows(rows: DiffRow[], side: Side, spans: Span[], importLine: RegExp): Set<number> {
   const covered = new Set<number>();
-  for (const span of brackets) {
+  for (const span of spans) {
     if (!importLine.test(textOf(rows[span.start], side) ?? '')) continue;
     for (let row = span.start; row <= span.end; row += 1) covered.add(row);
   }
   return covered;
 }
 
-function importRuns(rows: DiffRow[], side: Side, covered: Set<number>, importLine: RegExp, contiguous: boolean): Span[] {
+interface ImportRun {
+  start: number;
+  last: number;
+}
+
+function importRuns(rows: DiffRow[], side: Side, importCovered: Set<number>, importLine: RegExp, contiguous: boolean): Span[] {
   const runs: Span[] = [];
-  let start = -1;
-  let last = -1;
-  const flush = () => {
-    if (start >= 0 && last > start) runs.push({ start, end: last, imports: true });
-    start = -1;
-    last = -1;
-  };
-  rows.forEach((row, index) => {
-    if (row.kind === 'hunk') {
-      if (!contiguous) flush();
-      return;
-    }
-    const text = textOf(row, side);
-    if (covered.has(index) || (text !== null && importLine.test(text))) {
-      if (start < 0) start = index;
-      last = index;
-    } else if (start < 0 || (text !== null && text.trim() !== '')) {
-      flush();
-    }
-  });
-  flush();
+  const run: ImportRun = { start: -1, last: -1 };
+  scanRows(
+    rows,
+    side,
+    contiguous,
+    () => flushImportRun(run, runs),
+    (text, index) => importRunStep(text, index, importCovered, importLine, run, runs),
+  );
+  flushImportRun(run, runs);
   return runs;
+}
+
+function importRunStep(text: string, index: number, importCovered: Set<number>, importLine: RegExp, run: ImportRun, runs: Span[]) {
+  if (importCovered.has(index) || importLine.test(text)) {
+    if (run.start < 0) run.start = index;
+    run.last = index;
+  } else if (run.start < 0 || text.trim() !== '') {
+    flushImportRun(run, runs);
+  }
+}
+
+function flushImportRun(run: ImportRun, runs: Span[]) {
+  if (run.start >= 0 && run.last > run.start) runs.push({ start: run.start, end: run.last, imports: true });
+  run.start = -1;
+  run.last = -1;
 }
 
 function finalize(rows: DiffRow[], spans: Span[]): CollapseRegion[] {
