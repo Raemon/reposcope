@@ -75,6 +75,7 @@ function DiffLines({
 }: SideProps & { from: number; to: number }) {
   if (from >= to) return null;
   const spacerLine = spacer ? lastLineOfRow(lines, spacer.afterRow) : -1;
+  const rowsWithRightLine = new Set(lines.flatMap((line) => (line.side === 'right' ? [line.row] : [])));
   return (
     <div className="min-w-0 flex-1 overflow-x-auto">
       <div className="w-max min-w-full">
@@ -88,7 +89,7 @@ function DiffLines({
                 lineTokens={tokens?.[line.side][line.row] ?? null}
                 ranges={rangesFor(emphasis[line.row], line.side)}
                 expand={expand}
-                anchor={anchors.get(line.row) ?? null}
+                anchor={anchorOf(line, anchors, rowsWithRightLine)}
                 editable={editable}
                 onEdit={editStarter(rows, line.row, onEditBlock)}
               />
@@ -108,6 +109,11 @@ function lastLineOfRow(lines: DiffLine[], row: number): number {
 
 function rangesFor(emphasis: IntralineRanges | null | undefined, side: 'left' | 'right'): CharRange[] | null {
   return (side === 'left' ? emphasis?.before : emphasis?.after) ?? null;
+}
+
+function anchorOf(line: DiffLine, anchors: Map<number, CollapseAnchor>, rowsWithRightLine: Set<number>): CollapseAnchor | null {
+  if (line.side === 'left' && rowsWithRightLine.has(line.row)) return null;
+  return anchors.get(line.row) ?? null;
 }
 
 function editStarter(rows: DiffRow[], index: number, onEditBlock?: (rowIndex: number) => void) {
@@ -163,11 +169,17 @@ function DiffLineView({
       </span>
       {anchor?.collapsed && (
         <button type="button" onClick={anchor.toggle} className={FOLD_BADGE}>
-          ⋯ {anchor.hiddenLines} lines
+          {foldLabel(anchor)}
         </button>
       )}
     </div>
   );
+}
+
+function foldLabel(anchor: CollapseAnchor): string {
+  const folded = `⋯ ${anchor.hiddenLines} ${anchor.hiddenLines === 1 ? 'line' : 'lines'}`;
+  if (anchor.hiddenThreads === 0) return folded;
+  return `${folded} · ${anchor.hiddenThreads} ${anchor.hiddenThreads === 1 ? 'thread' : 'threads'}`;
 }
 
 function CollapseChevron({ anchor }: { anchor: CollapseAnchor }) {

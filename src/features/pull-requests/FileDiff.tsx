@@ -49,7 +49,6 @@ export function FileDiff({
   const rows = useMemo(() => rowsForDisplay(patchRows, wholeFile.lines), [patchRows, wholeFile.lines]);
   const emphasis = useIntralineEmphasis(rows);
   const tokens = useDiffTokens(rows, file.filename);
-  const growing = useHeightTransition(rows);
   const pull = target?.pull ?? null;
   const hunkEdit = useHunkEdit({
     owner,
@@ -66,15 +65,9 @@ export function FileDiff({
   const canEdit = pull !== null && !wantWholeFile;
   const editBlock = canEdit ? hunkEdit.edit?.block ?? null : null;
   const threads = useFileThreads(file.filename);
-  const collapse = useCodeCollapse(rows, showingWholeFile, threads, editBlock);
-  const columns = useMemo(
-    () => ({
-      left: visibleLines(columnLines(rows, 'left'), collapse.hidden),
-      right: visibleLines(columnLines(rows, 'right'), collapse.hidden),
-    }),
-    [rows, collapse.hidden],
-  );
-  const merged = useMemo(() => visibleLines(unifiedLines(rows), collapse.hidden), [rows, collapse.hidden]);
+  const collapse = useCodeCollapse(rows, showingWholeFile, file.filename, threads, editBlock);
+  const lines = useMemo(() => foldedLines(rows, collapse.hidden), [rows, collapse.hidden]);
+  const growing = useHeightTransition(rows, collapse.hidden);
   const expand = expandControl(wholeFile, showingWholeFile, hunkEdit, setWantWholeFile);
   const shared = { rows, tokens, emphasis, expand, anchors: collapse.anchors };
   const editing = {
@@ -87,23 +80,23 @@ export function FileDiff({
     <div ref={growing} className="flex" style={{ paddingBottom: threadOverflow }}>
       <div className="min-w-0 flex-1">
         {unified ? (
-          <DiffSide {...shared} lines={merged} labels {...editing} />
+          <DiffSide {...shared} lines={lines.unified} labels {...editing} />
         ) : (
           <div className="flex">
             <section className="relative flex shrink-0 flex-col border-r border-panel-edge" style={{ width: removedSize.width }}>
-              <DiffSide {...shared} lines={columns.left} labels spacer={canEdit ? spacerFor(hunkEdit.edit) : null} />
+              <DiffSide {...shared} lines={lines.left} labels spacer={canEdit ? spacerFor(hunkEdit.edit) : null} />
               <DragHandle onPointerDown={startDrag} />
             </section>
             <section className="flex min-w-0 flex-1 flex-col">
-              <DiffSide {...shared} lines={columns.right} labels={false} {...editing} />
+              <DiffSide {...shared} lines={lines.right} labels={false} {...editing} />
             </section>
           </div>
         )}
       </div>
       <InlineThreads
-        path={file.filename}
+        threads={threads}
         rows={rows}
-        lines={unified ? merged : columns.right}
+        lines={unified ? lines.unified : lines.right}
         onOverflow={setThreadOverflow}
       />
       {canEdit && hunkEdit.message !== null && hunkEdit.edit !== null && (
@@ -124,6 +117,14 @@ export function FileDiff({
 
 function rowsForDisplay(patchRows: DiffRow[], lines: WholeFile['lines']): DiffRow[] {
   return lines ? expandDiff(patchRows, lines.base, lines.head) : patchRows;
+}
+
+function foldedLines(rows: DiffRow[], hidden: Set<number>) {
+  return {
+    left: visibleLines(columnLines(rows, 'left'), hidden),
+    right: visibleLines(columnLines(rows, 'right'), hidden),
+    unified: visibleLines(unifiedLines(rows), hidden),
+  };
 }
 
 function expandControl(

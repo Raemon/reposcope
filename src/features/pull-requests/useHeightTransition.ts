@@ -4,7 +4,7 @@ import { useLayoutEffect, useRef } from 'react';
 import { EXPAND_MS } from './diffMetrics';
 import type { DiffRow } from './splitDiff';
 
-export function useHeightTransition(rows: DiffRow[]) {
+export function useHeightTransition(rows: DiffRow[], hidden: Set<number>) {
   const node = useRef<HTMLDivElement | null>(null);
   const measured = useRef<number | null>(null);
 
@@ -16,7 +16,7 @@ export function useHeightTransition(rows: DiffRow[]) {
     measured.current = height;
     if (from === null || from === height) return;
     return playGrow(element, from, height);
-  }, [rows]);
+  }, [rows, hidden]);
 
   return node;
 }

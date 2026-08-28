@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { collapseRegions, type CollapseRegion } from './collapseRegions';
+import { rowOf } from './commentAnchors';
 import type { EditableBlock } from './editableBlocks';
 import type { ReviewThread } from './reviewThreads';
 import type { DiffRow } from './splitDiff';
@@ -9,6 +10,7 @@ import type { DiffRow } from './splitDiff';
 export interface CollapseAnchor {
   collapsed: boolean;
   hiddenLines: number;
+  hiddenThreads: number;
   toggle: () => void;
 }
 
@@ -23,10 +25,11 @@ type SetOverrides = (update: (held: Overrides) => Overrides) => void;
 export function useCodeCollapse(
   rows: DiffRow[],
   contiguous: boolean,
+  filename: string,
   threads: ReviewThread[],
   edit: EditableBlock | null,
 ): CodeCollapse {
-  const regions = useMemo(() => collapseRegions(rows, contiguous), [rows, contiguous]);
+  const regions = useMemo(() => collapseRegions(rows, contiguous, filename), [rows, contiguous, filename]);
   const threadRows = useMemo(() => threadRowIndexes(threads, rows), [threads, rows]);
   const [overrides, setOverrides] = useState<Overrides>({});
   return useMemo(
@@ -38,7 +41,7 @@ export function useCodeCollapse(
 function threadRowIndexes(threads: ReviewThread[], rows: DiffRow[]): Set<number> {
   const found = new Set<number>();
   for (const thread of threads) {
-    const index = rows.findIndex((row) => thread.line !== null && row[thread.side]?.line === thread.line);
+    const index = rowOf(thread, rows);
     if (index >= 0) found.add(index);
   }
   return found;
@@ -54,33 +57,29 @@ function buildCollapse(
   const anchors = new Map<number, CollapseAnchor>();
   const hidden = new Set<number>();
   for (const region of regions) {
-    const collapsed = isCollapsed(region, threadRows, edit, overrides);
-    anchors.set(region.start, anchorFor(region, collapsed, setOverrides));
+    if (edit && region.start <= edit.lastRow && region.end >= edit.firstRow) continue;
+    const collapsed = overrides[region.key] ?? defaultCollapsed(region, threadRows);
+    anchors.set(region.start, anchorFor(region, collapsed, hiddenThreadCount(region, threadRows), setOverrides));
     if (collapsed) for (let row = region.start + 1; row <= region.end; row += 1) hidden.add(row);
   }
   return { anchors, hidden };
 }
 
-function anchorFor(region: CollapseRegion, collapsed: boolean, setOverrides: SetOverrides): CollapseAnchor {
+function anchorFor(region: CollapseRegion, collapsed: boolean, hiddenThreads: number, setOverrides: SetOverrides): CollapseAnchor {
   return {
     collapsed,
     hiddenLines: region.end - region.start,
+    hiddenThreads,
     toggle: () => setOverrides((held) => ({ ...held, [region.key]: !collapsed })),
   };
 }
 
-function isCollapsed(
-  region: CollapseRegion,
-  threadRows: Set<number>,
-  edit: EditableBlock | null,
-  overrides: Overrides,
-): boolean {
-  if (edit && region.start <= edit.lastRow && region.end >= edit.firstRow) return false;
-  return overrides[region.key] ?? defaultCollapsed(region, threadRows);
+function defaultCollapsed(region: CollapseRegion, threadRows: Set<number>): boolean {
+  return region.imports && !region.hasChanges && hiddenThreadCount(region, threadRows) === 0;
 }
 
-function defaultCollapsed(region: CollapseRegion, threadRows: Set<number>): boolean {
-  if (!region.imports || region.hasChanges) return false;
-  for (let row = region.start + 1; row <= region.end; row += 1) if (threadRows.has(row)) return false;
-  return true;
+function hiddenThreadCount(region: CollapseRegion, threadRows: Set<number>): number {
+  let count = 0;
+  for (let row = region.start + 1; row <= region.end; row += 1) if (threadRows.has(row)) count += 1;
+  return count;
 }
