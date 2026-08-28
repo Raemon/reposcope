@@ -1,6 +1,6 @@
 import { repoRoute } from '@/features/codebases/repoPaths';
 
-export type PullState = 'open' | 'all';
+export type PullState = 'open' | 'closed' | 'all';
 
 export function pullPath(owner: string, repo: string, number: number): string {
   return `/api/github/pull?${repoParams(owner, repo)}&number=${number}`;
@@ -51,7 +51,8 @@ export function repoPullsPath(owner: string, repo: string, state: PullState = 'o
 }
 
 export function pullStateParam(request: Request): PullState {
-  return new URL(request.url).searchParams.get('state') === 'all' ? 'all' : 'open';
+  const asked = new URL(request.url).searchParams.get('state');
+  return asked === 'all' || asked === 'closed' ? asked : 'open';
 }
 
 export function mergePullPath(owner: string, repo: string, number: number): string {

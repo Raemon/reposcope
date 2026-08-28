@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { useColumnNav } from './columnNav';
 import { LIST_NOTE as NOTE, PullListRow, PullRowFields, ROW_META } from './PullListRow';
+import { usePullFilters } from './pullFilterStore';
 import { allPullsRoute, pullRoute } from './pullPaths';
 import type { CrossRepoPull } from './pullRequests';
 import { useAllPullList } from './usePullLists';
@@ -14,12 +15,18 @@ function updatedWithinLastWeek(pull: CrossRepoPull): boolean {
   return Date.now() - Date.parse(pull.updatedAt) < WEEK_MS;
 }
 
+function staysVisible(pull: CrossRepoPull, pathname: string, cursor: string | null): boolean {
+  const route = pullRoute(pull.owner, pull.repo, pull.number);
+  return updatedWithinLastWeek(pull) || pathname === route || cursor === route;
+}
+
 function widestRepoName(pulls: CrossRepoPull[]): number {
   return pulls.reduce((widest, pull) => Math.max(widest, pull.repo.length), 0);
 }
 
 export function AllPullRequestList() {
   const { scanning, repoCount, found, error, listed } = useAllPullList();
+  const listingOpenPulls = usePullFilters().onlyOpen;
   const pathname = usePathname();
   const { cursor } = useColumnNav('pulls');
   const [showingOlder, setShowingOlder] = useState(false);
@@ -33,10 +40,8 @@ export function AllPullRequestList() {
     );
   }
 
-  const visible = listed.filter((pull) => {
-    const route = pullRoute(pull.owner, pull.repo, pull.number);
-    return showingOlder || updatedWithinLastWeek(pull) || pathname === route || cursor === route;
-  });
+  const recentOnly = listingOpenPulls && !showingOlder;
+  const visible = listed.filter((pull) => !recentOnly || staysVisible(pull, pathname, cursor));
   const olderCount = listed.length - visible.length;
   const repoColumnCh = widestRepoName(visible);
 
@@ -85,6 +90,7 @@ function PullRow({
       target={{ owner: pull.owner, repo: pull.repo, number: pull.number }}
       href={allPullsRoute(pull.owner, pull.repo, pull.number)}
       current={pathname === pullRoute(pull.owner, pull.repo, pull.number)}
+      closable={pull.state === 'open'}
     >
       <span className={`${ROW_META} truncate`} style={{ width: `${repoColumnCh}ch` }}>
         {pull.repo}

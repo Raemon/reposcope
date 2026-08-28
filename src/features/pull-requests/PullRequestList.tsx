@@ -27,6 +27,7 @@ export function PullRequestList({ repo }: { repo: RepoRef }) {
             target={{ owner: repo.owner, repo: repo.name, number: pull.number }}
             href={href}
             current={pathname === href}
+            closable={pull.state === 'open'}
           >
             <PullRowFields pull={pull} />
           </PullListRow>

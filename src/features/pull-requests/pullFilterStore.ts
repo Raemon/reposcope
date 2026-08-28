@@ -19,6 +19,11 @@ export const PULL_FILTERS: { key: keyof PullFilters; label: string }[] = [
 
 const OPEN_ONLY: PullFilters = { onlyOpen: true, onlyClosed: false, onlyMine: false };
 
+const OPPOSITE: Partial<Record<keyof PullFilters, keyof PullFilters>> = {
+  onlyOpen: 'onlyClosed',
+  onlyClosed: 'onlyOpen',
+};
+
 const filterPref = localPref<PullFilters>('reposcope.pullFilters', OPEN_ONLY, decodePullFilters);
 
 export function usePullFilters(): PullFilters {
@@ -30,11 +35,18 @@ export function readPullFilters(): PullFilters {
 }
 
 export function setPullFilter(key: keyof PullFilters, on: boolean): void {
-  filterPref.set({ ...filterPref.read(), [key]: on });
+  filterPref.set(withFilter(filterPref.read(), key, on));
+}
+
+function withFilter(filters: PullFilters, key: keyof PullFilters, on: boolean): PullFilters {
+  const opposite = OPPOSITE[key];
+  if (!on || !opposite) return { ...filters, [key]: on };
+  return { ...filters, [key]: true, [opposite]: false };
 }
 
 export function pullQueryState(filters: PullFilters): PullState {
-  return filters.onlyOpen ? 'open' : 'all';
+  if (filters.onlyOpen) return 'open';
+  return filters.onlyClosed ? 'closed' : 'all';
 }
 
 export function usePullQueryState(): PullState {
@@ -66,5 +78,6 @@ function passesFilters(
 function decodePullFilters(stored: unknown): PullFilters | undefined {
   if (typeof stored !== 'object' || stored === null) return undefined;
   const held = stored as Record<string, unknown>;
-  return { onlyOpen: held.onlyOpen === true, onlyClosed: held.onlyClosed === true, onlyMine: held.onlyMine === true };
+  const onlyOpen = held.onlyOpen === true;
+  return { onlyOpen, onlyClosed: !onlyOpen && held.onlyClosed === true, onlyMine: held.onlyMine === true };
 }
