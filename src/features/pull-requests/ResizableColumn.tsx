@@ -88,7 +88,7 @@ export function SectionHeader({
   titleTone,
   note,
   chevron,
-  tone,
+  className,
   label,
   expanded,
   cursor,
@@ -100,7 +100,7 @@ export function SectionHeader({
   titleTone: string;
   note?: string;
   chevron: string;
-  tone: string;
+  className: string;
   label: string;
   expanded?: boolean;
   cursor?: boolean;
@@ -114,7 +114,7 @@ export function SectionHeader({
       onActivate={onActivate}
       label={label}
       expanded={expanded}
-      className={`${HEADER_ROW} ${tone}`}
+      className={`${HEADER_ROW} ${className}`}
     >
       <span aria-hidden className="shrink-0 text-[11px] leading-4 text-ink-dim">{icon}</span>
       <span className={`shrink-0 text-[10px] uppercase tracking-[0.18em] ${titleTone}`}>{title}</span>
@@ -130,6 +130,7 @@ export function ColumnHeader({
   note,
   focused,
   row,
+  action,
   onCollapse,
 }: {
   title: string;
@@ -137,20 +138,24 @@ export function ColumnHeader({
   note?: string;
   focused: boolean;
   row: ColumnRow;
+  action?: ReactNode;
   onCollapse: () => void;
 }) {
   return (
-    <SectionHeader
-      {...row.props}
-      icon={icon}
-      title={title}
-      titleTone={focused ? 'text-accent' : 'text-ink-dim'}
-      note={note}
-      chevron="‹"
-      tone={`border-b ${headerTone(row, focused)}`}
-      label={`Collapse ${title}`}
-      onActivate={onCollapse}
-    />
+    <div className={`flex shrink-0 items-center ${headerTone(row, focused)}`}>
+      <SectionHeader
+        {...row.props}
+        icon={icon}
+        title={title}
+        titleTone={focused ? 'text-accent' : 'text-ink-dim'}
+        note={note}
+        chevron="‹"
+        className="min-w-0 flex-1"
+        label={`Collapse ${title}`}
+        onActivate={onCollapse}
+      />
+      {action}
+    </div>
   );
 }
 
@@ -162,6 +167,7 @@ export function ResizableColumn({
   preview,
   size,
   onSize,
+  action,
   footer,
   children,
 }: {
@@ -172,6 +178,7 @@ export function ResizableColumn({
   preview?: ReactNode;
   size: ColumnSize;
   onSize: (next: ColumnSize) => void;
+  action?: ReactNode;
   footer?: ReactNode;
   children: ReactNode;
 }) {
@@ -213,6 +220,7 @@ export function ResizableColumn({
         note={note}
         focused={nav.focused}
         row={nav.row(COLUMN_HEADER)}
+        action={action}
         onCollapse={() => onSize({ ...size, open: false })}
       />
       <div ref={nav.bodyRef} className="min-h-0 flex-1 overflow-auto">{children}</div>
@@ -227,6 +235,10 @@ function columnEdge(focused: boolean): string {
 }
 
 function headerTone(row: ColumnRow, focused: boolean): string {
+  return `border-b border-panel-edge ${headerFill(row, focused)}`;
+}
+
+function headerFill(row: ColumnRow, focused: boolean): string {
   if (row.state !== 'plain') return 'bg-btn-hover';
   return focused ? 'bg-btn' : 'bg-panel';
 }

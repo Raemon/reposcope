@@ -19,10 +19,13 @@ interface PullRowSummary {
   draft: boolean;
   author: string;
   updatedAt: string;
+  state: string;
+  merged: boolean;
 }
 
 export const ROW_META = 'shrink-0 font-mono text-[9px] text-ink-dim';
 export const LIST_NOTE = 'px-2 py-1 text-[11px] leading-4';
+export const NO_PULLS = 'No matching pull requests.';
 
 export function PullRowFields({ pull }: { pull: PullRowSummary }) {
   const [title, wrapped] = useWrappedText<HTMLSpanElement>();
@@ -33,7 +36,8 @@ export function PullRowFields({ pull }: { pull: PullRowSummary }) {
       <span className="min-w-0 flex-1 break-words">
         <span ref={title}>{pull.title}</span>
       </span>
-      {pull.draft && <span className="shrink-0 rounded bg-btn px-1 font-mono text-[9px]">draft</span>}
+      {pull.draft && <RowTag>draft</RowTag>}
+      {pull.state !== 'open' && <RowTag>{pull.merged ? 'merged' : 'closed'}</RowTag>}
       <span className={stackedMetaClass(wrapped)}>
         {!isOwnAuthor(pull.author) && (
           <span className={ROW_META}>
@@ -47,6 +51,10 @@ export function PullRowFields({ pull }: { pull: PullRowSummary }) {
   );
 }
 
+function RowTag({ children }: { children: ReactNode }) {
+  return <span className="shrink-0 rounded bg-btn px-1 font-mono text-[9px]">{children}</span>;
+}
+
 export function stackedMetaClass(wrapped: boolean): string {
   return `flex shrink-0 gap-x-1.5 ${wrapped ? 'flex-col items-end' : 'items-center'}`;
 }
@@ -55,11 +63,13 @@ export function PullListRow({
   target,
   href,
   current,
+  closable,
   children,
 }: {
   target: PullTarget;
   href: string;
   current: boolean;
+  closable: boolean;
   children: ReactNode;
 }) {
   const token = useGithubToken();
@@ -70,7 +80,7 @@ export function PullListRow({
       current={current}
       serif
       onPointerEnter={() => prefetchPull(target.owner, target.repo, target.number, token)}
-      trailing={<ClosePullIcon target={target} token={token} shown={current} />}
+      trailing={closable ? <ClosePullIcon target={target} token={token} shown={current} /> : null}
     >
       {children}
     </NavListRow>
