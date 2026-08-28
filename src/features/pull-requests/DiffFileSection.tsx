@@ -4,6 +4,7 @@ import { ChangeCounts } from './ChangeCounts';
 import { useColumnNav } from './columnNav';
 import { FileDiff } from './FileDiff';
 import { ImageDiff } from './ImageDiff';
+import { FILENAME_TEXT } from './fileKind';
 import { isImagePath } from './imageFiles';
 import { imageSides } from './imageView';
 import type { ChangedFile } from './pullRequests';
@@ -43,7 +44,7 @@ export function DiffFileSection({
         <span aria-hidden className="w-2 shrink-0 text-[9px] text-ink-dim">
           {open ? '▾' : '▸'}
         </span>
-        <span className="min-w-0 flex-1 truncate font-serif text-[12px]">
+        <span className={`min-w-0 flex-1 truncate ${FILENAME_TEXT}`}>
           {file.previousFilename && <span className="text-ink-dim">{file.previousFilename} → </span>}
           {file.filename}
         </span>

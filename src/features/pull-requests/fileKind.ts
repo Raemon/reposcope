@@ -1,5 +1,7 @@
 import { isImagePath } from './imageFiles';
 
+export const FILENAME_TEXT = 'font-serif text-[12px]';
+
 const KIND_BY_EXTENSION: Record<string, string> = {
   ts: 'ts',
   mts: 'ts',
