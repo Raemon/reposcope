@@ -2,7 +2,7 @@
 
 import { localPref, usePref } from './localPref';
 
-export type DiffSort = 'comments' | 'diff' | 'diffAll' | 'folder';
+export type DiffSort = 'comments' | 'diff' | 'diffAll';
 
 const sortPref = localPref<DiffSort>('reposcope.diffSort', 'comments', decodeSort);
 
@@ -15,7 +15,5 @@ export function useDiffSort(): DiffSort {
 }
 
 function decodeSort(stored: unknown): DiffSort | undefined {
-  return stored === 'comments' || stored === 'diff' || stored === 'diffAll' || stored === 'folder'
-    ? stored
-    : undefined;
+  return stored === 'comments' || stored === 'diff' || stored === 'diffAll' ? stored : undefined;
 }

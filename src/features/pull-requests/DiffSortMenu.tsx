@@ -8,7 +8,6 @@ const CHOICES: { sort: DiffSort; label: string; short: string }[] = [
   { sort: 'comments', label: 'inline comments', short: 'comments' },
   { sort: 'diff', label: 'line-diff, excluding imports', short: 'line-diff' },
   { sort: 'diffAll', label: 'line-diff, all lines', short: 'line-diff (all)' },
-  { sort: 'folder', label: 'folder structure', short: 'folders' },
 ];
 
 export function DiffSortMenu() {
