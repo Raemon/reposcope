@@ -11,24 +11,15 @@ import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 
 const ROW = 'flex w-full items-baseline gap-1.5 py-[1px] pr-1.5 text-left text-[11px] leading-4';
 
-export function ChangedFileTree({
-  files,
-  selected,
-  onSelect,
-}: {
-  files: ChangedFile[];
-  selected: string | null;
-  onSelect: (filename: string) => void;
-}) {
-  const grouped = useDiffSort() === 'folder';
-  if (grouped) return <GroupedRows files={files} selected={selected} onSelect={onSelect} />;
-  return <FlatRows files={files} selected={selected} onSelect={onSelect} />;
-}
-
 interface TreeProps {
   files: ChangedFile[];
   selected: string | null;
   onSelect: (filename: string) => void;
+}
+
+export function ChangedFileTree(props: TreeProps) {
+  const grouped = useDiffSort() === 'folder';
+  return grouped ? <GroupedRows {...props} /> : <FlatRows {...props} />;
 }
 
 function GroupedRows({ files, selected, onSelect }: TreeProps) {
@@ -90,7 +81,7 @@ function FileRow({
 }
 
 function ParentFolder({ path }: { path: string }) {
-  const parent = folderOf(path).split('/').pop();
+  const parent = baseName(folderOf(path));
   if (!parent) return null;
   return <span className="text-ink-dim opacity-50">{parent}/</span>;
 }

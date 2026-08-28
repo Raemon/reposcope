@@ -19,21 +19,21 @@ export function sortChangedFiles(files: ChangedFile[], sort: DiffSort, comments:
   return byDescending(base, (file) => comments.get(file.filename) ?? 0, nonImportDiffCount);
 }
 
-function byDescending(files: ChangedFile[], ...ranks: ((file: ChangedFile) => number)[]): ChangedFile[] {
-  const scored = files.map((file) => ({ file, scores: ranks.map((rank) => rank(file)) }));
-  scored.sort((a, b) => firstDifference(b.scores, a.scores));
+function byDescending(
+  files: ChangedFile[],
+  primary: (file: ChangedFile) => number,
+  tiebreak: (file: ChangedFile) => number = () => 0,
+): ChangedFile[] {
+  const scored = files.map((file) => ({ file, primary: primary(file), tiebreak: tiebreak(file) }));
+  scored.sort((a, b) => b.primary - a.primary || b.tiebreak - a.tiebreak);
   return scored.map((entry) => entry.file);
-}
-
-function firstDifference(a: number[], b: number[]): number {
-  return a.reduce((held, score, at) => held || score - (b[at] ?? 0), 0);
 }
 
 function allDiffCount(file: ChangedFile): number {
   return file.additions + file.deletions;
 }
 
-export function nonImportDiffCount(file: ChangedFile): number {
+function nonImportDiffCount(file: ChangedFile): number {
   if (file.patch === null) return allDiffCount(file);
   let counted = 0;
   let inImport = false;
@@ -46,11 +46,22 @@ export function nonImportDiffCount(file: ChangedFile): number {
 }
 
 function readPatchLine(line: string, inImport: boolean): { counts: boolean; inImport: boolean } {
+  if (line.startsWith('@@')) return { counts: false, inImport: hunkOpensImport(line) };
   const changed = isChangedLine(line);
   if (!changed && !line.startsWith(' ')) return { counts: false, inImport: false };
   const text = line.slice(1).trim();
   const importing = inImport || IMPORT_OPEN.test(text);
-  return { counts: changed && !importing, inImport: importing && IMPORT_CONTINUES.test(text) };
+  return { counts: changed && !importing, inImport: stillImporting(text, importing, inImport) };
+}
+
+function stillImporting(text: string, importing: boolean, wasImporting: boolean): boolean {
+  if (!importing) return false;
+  return wasImporting ? !IMPORT_CLOSE.test(text) : IMPORT_CONTINUES.test(text);
+}
+
+function hunkOpensImport(line: string): boolean {
+  const section = line.replace(/^@@[^@]*@@ ?/, '');
+  return IMPORT_OPEN.test(section) && IMPORT_CONTINUES.test(section);
 }
 
 function isChangedLine(line: string): boolean {
@@ -60,3 +71,4 @@ function isChangedLine(line: string): boolean {
 const IMPORT_OPEN =
   /^(import[\s({"']|export\s+(\*|\{[^}]*\}|type\s+\{[^}]*\})\s+from\s|\}\s+from\s+['"]|from\s+\S+\s+import[\s(]|(const|let|var)\s+[^=]+=\s*require\s*\(|require\s+['"]|use\s+\S+;|#include[\s<"]|using\s+\S+;)/;
 const IMPORT_CONTINUES = /[,{(]\s*$/;
+const IMPORT_CLOSE = /^[)}]|['");]\s*$/;

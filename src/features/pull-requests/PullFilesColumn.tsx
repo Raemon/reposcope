@@ -2,6 +2,7 @@
 
 import { ChangedFileTree } from './ChangedFileTree';
 import type { PreviewToken } from './ColumnPreview';
+import { baseName } from './fileTree';
 import type { ChangedFile } from './pullRequests';
 
 export function PullFilesColumn({
@@ -27,10 +28,9 @@ export function PullFilesColumn({
 
 export function fileTokens(files: ChangedFile[], selected: string | null): PreviewToken[] {
   return files.map((file) => {
-    const name = file.filename.split('/').pop() ?? file.filename;
     return {
       key: file.filename,
-      label: name.slice(0, 2),
+      label: baseName(file.filename).slice(0, 2),
       title: file.filename,
       accent: file.filename === selected,
     };

@@ -89,6 +89,7 @@ function Workspace({
     [fileSet, sort, threads],
   );
   const fileItems = useMemo(() => files.map((file) => file.filename), [files]);
+  const loadedFiles = fileSet === null ? null : files;
 
   const showsDiff = useShowsColumn('diff');
   const showsDiscussion = useShowsColumn('discussion');
@@ -170,7 +171,7 @@ function Workspace({
           size={fileSize}
           onSize={setFileSize}
         >
-          <PullFilesColumn files={fileSet === null ? null : files} fileError={fileError} path={path} onSelect={revealFile} />
+          <PullFilesColumn files={loadedFiles} fileError={fileError} path={path} onSelect={revealFile} />
         </ResizableColumn>
         {!showsDiff ? null : fileSet === null && fileError !== null ? (
           <p className="flex-1 px-2 py-1 text-[11px] text-error-ink">{fileError}</p>
