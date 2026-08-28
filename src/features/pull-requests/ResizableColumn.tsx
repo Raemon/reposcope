@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import { useCallback, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { PANE_WIDTH, usePaneMode } from './centralLayout';
 import { useColumnNav, type ColumnRow } from './columnNav';
 import { COLUMN_HEADER, type ColumnId } from './navColumn';
@@ -44,7 +44,7 @@ export function DragHandle({ onPointerDown }: { onPointerDown: (event: ReactPoin
       onPointerDown={onPointerDown}
       role="separator"
       aria-orientation="vertical"
-      className="absolute inset-y-0 -right-[3px] z-10 w-[6px] cursor-col-resize hover:bg-btn-active"
+      className="absolute inset-y-0 -right-[3px] z-10 hidden w-[6px] cursor-col-resize hover:bg-btn-active md:block"
     />
   );
 }
@@ -73,10 +73,10 @@ export function CollapsedColumn({
       onPointerDown={onPointerDown}
       onPointerLeave={onPointerLeave}
       aria-label={`Expand ${title}`}
-      className={`flex w-7 min-h-0 shrink-0 flex-col items-center gap-2.5 border-r py-1 text-[10px] uppercase tracking-[0.18em] text-ink-dim hover:text-ink ${columnEdge(focused)}`}
+      className={`flex w-full shrink-0 items-center gap-1.5 border-b px-1.5 py-1 text-[10px] uppercase tracking-[0.18em] text-ink-dim hover:text-ink md:w-7 md:min-h-0 md:flex-col md:gap-2.5 md:border-b-0 md:border-r md:px-0 ${columnEdge(focused)}`}
     >
       <span aria-hidden className="shrink-0 text-[11px] leading-none">{icon}</span>
-      <span className="max-h-[40%] shrink-0 overflow-hidden [writing-mode:vertical-rl]">{title}</span>
+      <span className="shrink-0 overflow-hidden md:max-h-[40%] md:[writing-mode:vertical-rl]">{title}</span>
       {preview}
     </button>
   );
@@ -99,7 +99,7 @@ export function SectionHeader({
   title: string;
   titleTone: string;
   note?: string;
-  chevron: string;
+  chevron: ReactNode;
   className: string;
   label: string;
   expanded?: boolean;
@@ -131,7 +131,6 @@ export function ColumnHeader({
   focused,
   row,
   action,
-  expanded,
   onCollapse,
 }: {
   title: string;
@@ -140,7 +139,6 @@ export function ColumnHeader({
   focused: boolean;
   row: ColumnRow;
   action?: ReactNode;
-  expanded?: boolean;
   onCollapse: () => void;
 }) {
   return (
@@ -151,10 +149,9 @@ export function ColumnHeader({
         title={title}
         titleTone={focused ? 'text-accent' : 'text-ink-dim'}
         note={note}
-        chevron={expanded === undefined ? '‹' : expanded ? '⌄' : '›'}
+        chevron={<span className="inline-block max-md:-rotate-90">‹</span>}
         className="min-w-0 flex-1"
-        expanded={expanded}
-        label={`${expanded === false ? 'Expand' : 'Collapse'} ${title}`}
+        label={`Collapse ${title}`}
         onActivate={onCollapse}
       />
       {action}
@@ -181,7 +178,6 @@ export function ResizableColumn(props: ColumnProps) {
   const startDrag = useDragWidth(size, onSize);
   const pane = usePaneMode(navId);
   if (pane === 'hidden') return null;
-  if (pane === 'stacked') return <StackedColumn nav={nav} {...props} />;
   if (pane === 'pane')
     return (
       <section onPointerDown={nav.focus} onPointerLeave={nav.clearHover} className="flex min-h-0 min-w-0 flex-1 flex-col bg-panel">
@@ -207,8 +203,8 @@ export function ResizableColumn(props: ColumnProps) {
     <section
       onPointerDown={nav.focus}
       onPointerLeave={nav.clearHover}
-      className={`relative flex min-h-0 shrink-0 flex-col border-r bg-panel ${columnEdge(nav.focused)}`}
-      style={{ width: size.width }}
+      className={`relative flex w-full shrink-0 flex-col border-b bg-panel md:w-[var(--col-w)] md:min-h-0 md:border-b-0 md:border-r ${columnEdge(nav.focused)}`}
+      style={{ '--col-w': `${size.width}px` } as CSSProperties}
     >
       <ColumnHeader
         title={title}
@@ -219,42 +215,9 @@ export function ResizableColumn(props: ColumnProps) {
         action={action}
         onCollapse={() => onSize({ ...size, open: false })}
       />
-      <div ref={nav.bodyRef} className="min-h-0 flex-1 overflow-auto">{children}</div>
+      <div ref={nav.bodyRef} className="max-h-[50vh] overflow-auto md:max-h-none md:min-h-0 md:flex-1">{children}</div>
       {footer}
       <DragHandle onPointerDown={startDrag} />
-    </section>
-  );
-}
-
-function StackedColumn({
-  nav,
-  title,
-  icon,
-  note,
-  size,
-  onSize,
-  action,
-  footer,
-  children,
-}: ColumnProps & { nav: ReturnType<typeof useColumnNav> }) {
-  return (
-    <section onPointerDown={nav.focus} onPointerLeave={nav.clearHover} className="flex shrink-0 flex-col bg-panel">
-      <ColumnHeader
-        title={title}
-        icon={icon}
-        note={note}
-        focused={nav.focused}
-        row={nav.row(COLUMN_HEADER)}
-        action={action}
-        expanded={size.open}
-        onCollapse={() => onSize({ ...size, open: !size.open })}
-      />
-      {size.open && (
-        <>
-          <div ref={nav.bodyRef} className="max-h-[50vh] overflow-auto">{children}</div>
-          {footer}
-        </>
-      )}
     </section>
   );
 }

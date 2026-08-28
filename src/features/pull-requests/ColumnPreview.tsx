@@ -25,7 +25,7 @@ export function ColumnPreview({ tokens, column }: { tokens: PreviewToken[]; colu
   const nav = useColumnNav(column);
   if (tokens.length === 0) return null;
   return (
-    <span className="flex min-h-0 flex-1 flex-col items-center gap-[3px] overflow-y-auto [mask-image:linear-gradient(to_bottom,black_calc(100%-20px),transparent)]">
+    <span className="flex min-h-0 flex-1 items-center justify-end gap-[3px] overflow-auto md:flex-col md:justify-start md:[mask-image:linear-gradient(to_bottom,black_calc(100%-20px),transparent)]">
       {tokens.map((token) => (
         <PreviewChip key={token.key} token={token} row={nav.row(token.key, token.accent ?? false)} />
       ))}

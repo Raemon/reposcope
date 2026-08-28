@@ -13,7 +13,6 @@ import { CurrentBranchTitle, CurrentPullTitle } from '@/features/pull-requests/C
 import { MergePullButton } from '@/features/pull-requests/MergePullButton';
 import { PreviewLink } from '@/features/pull-requests/PreviewLink';
 import { PullRequestMenu } from '@/features/pull-requests/PullRequestMenu';
-import { useNarrowViewport } from '@/features/pull-requests/narrowViewport';
 import { ViewModeToggle } from '@/features/pull-requests/ViewModeToggle';
 import { type RepoRef } from '@/features/sources/parseRepoLink';
 import { SelectableLink } from '@/features/surface-ui/SelectableLink';
@@ -42,7 +41,9 @@ export function CodebaseHeader() {
           <>
             <PreviewLink repo={reading} number={pullNumber} />
             <MergePullButton repo={reading} number={pullNumber} />
-            <ViewModeToggle />
+            <span className="hidden md:contents">
+              <ViewModeToggle />
+            </span>
           </>
         )}
         <ThemeToggle />
@@ -113,10 +114,9 @@ function CodebaseMenu({ reading }: { reading: RepoRef | null }) {
 }
 
 function RepoLabel({ reading }: { reading: RepoRef }) {
-  const narrow = useNarrowViewport();
   return (
     <>
-      {!narrow && <span className="text-ink-dim/70">{reading.owner}/</span>}
+      <span className="hidden text-ink-dim/70 md:inline">{reading.owner}/</span>
       {reading.name}
     </>
   );

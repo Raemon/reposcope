@@ -10,7 +10,6 @@ import { ResizableColumn, type ColumnSize } from './ResizableColumn';
 import { useRegisterColumn } from './columnNav';
 import { commentCountsOf, sortChangedFiles } from './diffSort';
 import { useDiffSort } from './diffSortStore';
-import { useNarrowViewport } from './narrowViewport';
 import { commitFilesPath } from './pullPaths';
 import type { ChangedFileSet, ChangeSummary, PullRequestSummary } from './pullRequests';
 import { ReviewThreadProvider, useReviewTarget } from './reviewThreadStore';
@@ -53,7 +52,6 @@ function Workspace({
 }: ReviewWorkspaceProps) {
   const ready = useStoreReady();
   const token = useGithubToken();
-  const stacked = useNarrowViewport();
   const [notice, setNotice] = useState<string | null>(null);
   const [selection, setSelection] = useState<string>(WHOLE_CHANGE);
   const [path, setPath] = useState<string | null>(null);
@@ -148,7 +146,7 @@ function Workspace({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <CentralTabBar />
-      <div className={stacked ? 'flex min-h-0 flex-1 flex-col overflow-y-auto' : 'flex min-h-0 flex-1'}>
+      <div className="flex min-h-0 flex-1 max-md:flex-col max-md:overflow-y-auto">
         {listColumn}
         {discussion !== null && (
           <ResizableColumn navId="discussion" icon="❝" title="discussion" size={discussionSize} onSize={setDiscussionSize}>
@@ -178,7 +176,7 @@ function Workspace({
         {!showsDiff ? null : fileSet === null && fileError !== null ? (
           <p className="flex-1 px-2 py-1 text-[11px] text-error-ink">{fileError}</p>
         ) : (
-          <div className={stacked ? 'flex h-[80vh] shrink-0 flex-col' : 'flex min-w-0 flex-1 flex-col'}>
+          <div className="flex min-w-0 flex-1 flex-col max-md:h-[80vh] max-md:flex-none">
             {notice !== null && <p className="shrink-0 px-2 py-1 text-[11px] text-error-ink">{notice}</p>}
             <DiffPanes
               ref={diffPanes}
