@@ -8,6 +8,7 @@ import {
 } from '@/features/codebases/githubRequest';
 import { requireGithubUser } from '@/features/github-auth/requireGithubUser';
 import { imageTypeOf } from './imageFiles';
+import type { PullState } from './pullPaths';
 import { previewDeploymentUrl } from './previewDeployment';
 import { mapWithWorkers } from './workerPool';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
@@ -173,21 +174,25 @@ export const MAX_SCANNED_REPOS = 60;
 const SCAN_WORKERS = 6;
 const COMMIT_STAT_WORKERS = 6;
 
-export async function listPullRequests(owner: string, name: string): Promise<PullRequestSummary[]> {
+export async function listPullRequests(
+  owner: string,
+  name: string,
+  state: PullState = 'open',
+): Promise<PullRequestSummary[]> {
   const pulls = await githubJson<GithubPull[]>(
-    `${API}/repos/${owner}/${name}/pulls?state=open&sort=updated&direction=desc&per_page=50`,
+    `${API}/repos/${owner}/${name}/pulls?state=${state}&sort=updated&direction=desc&per_page=50`,
   );
   return pulls.map(summarizePull);
 }
 
-export async function listPullRequestsAcross(repos: RepoRef[]): Promise<CrossRepoPulls> {
+export async function listPullRequestsAcross(repos: RepoRef[], state: PullState = 'open'): Promise<CrossRepoPulls> {
   const queue = repos.slice(0, MAX_SCANNED_REPOS);
   const pulls: CrossRepoPull[] = [];
   const failures: { repo: string; message: string }[] = [];
   const scan = async () => {
     for (let repo = queue.shift(); repo; repo = queue.shift()) {
       try {
-        const found = await listPullRequests(repo.owner, repo.name);
+        const found = await listPullRequests(repo.owner, repo.name, state);
         pulls.push(...found.map((pull) => ({ ...pull, owner: repo.owner, repo: repo.name })));
       } catch (error) {
         failures.push({

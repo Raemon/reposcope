@@ -1,11 +1,12 @@
 import { GithubRequestError } from '@/features/codebases/githubRequest';
 import { apiRoute } from '@/features/github-auth/apiRoute';
+import { pullStateParam } from '@/features/pull-requests/pullPaths';
 import { listPullRequestsAcross, MAX_SCANNED_REPOS } from '@/features/pull-requests/pullRequests';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
 import { LOGIN_PATTERN, REPO_NAME_PATTERN } from '@/features/sources/sourceTypes';
 
 export async function GET(request: Request) {
-  return apiRoute(request, () => listPullRequestsAcross(requestedRepos(request)));
+  return apiRoute(request, () => listPullRequestsAcross(requestedRepos(request), pullStateParam(request)));
 }
 
 function requestedRepos(request: Request): RepoRef[] {

@@ -130,6 +130,7 @@ export function ColumnHeader({
   note,
   focused,
   row,
+  action,
   onCollapse,
 }: {
   title: string;
@@ -137,20 +138,24 @@ export function ColumnHeader({
   note?: string;
   focused: boolean;
   row: ColumnRow;
+  action?: ReactNode;
   onCollapse: () => void;
 }) {
   return (
-    <SectionHeader
-      {...row.props}
-      icon={icon}
-      title={title}
-      titleTone={focused ? 'text-accent' : 'text-ink-dim'}
-      note={note}
-      chevron="‹"
-      tone={`border-b ${headerTone(row, focused)}`}
-      label={`Collapse ${title}`}
-      onActivate={onCollapse}
-    />
+    <div className={`flex shrink-0 items-center border-b border-panel-edge ${headerTone(row, focused)}`}>
+      <SectionHeader
+        {...row.props}
+        icon={icon}
+        title={title}
+        titleTone={focused ? 'text-accent' : 'text-ink-dim'}
+        note={note}
+        chevron="‹"
+        tone="min-w-0 flex-1"
+        label={`Collapse ${title}`}
+        onActivate={onCollapse}
+      />
+      {action}
+    </div>
   );
 }
 
@@ -162,6 +167,7 @@ export function ResizableColumn({
   preview,
   size,
   onSize,
+  action,
   footer,
   children,
 }: {
@@ -172,6 +178,7 @@ export function ResizableColumn({
   preview?: ReactNode;
   size: ColumnSize;
   onSize: (next: ColumnSize) => void;
+  action?: ReactNode;
   footer?: ReactNode;
   children: ReactNode;
 }) {
@@ -213,6 +220,7 @@ export function ResizableColumn({
         note={note}
         focused={nav.focused}
         row={nav.row(COLUMN_HEADER)}
+        action={action}
         onCollapse={() => onSize({ ...size, open: false })}
       />
       <div ref={nav.bodyRef} className="min-h-0 flex-1 overflow-auto">{children}</div>

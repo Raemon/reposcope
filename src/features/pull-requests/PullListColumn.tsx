@@ -7,6 +7,8 @@ import { BranchesSection, useBranches } from './BranchesSection';
 import { useShowsColumn } from './centralLayout';
 import { ColumnPreview, type PreviewToken } from './ColumnPreview';
 import { useRegisterColumn } from './columnNav';
+import { PullFilterMenu } from './PullFilterMenu';
+import { useListedPulls, usePullQueryState } from './pullFilterStore';
 import { PullRequestList } from './PullRequestList';
 import { ResizableColumn, type ColumnSize } from './ResizableColumn';
 import { useStandingPulls, useStandingRepoPulls } from './pullActionStore';
@@ -37,14 +39,15 @@ interface PullNavTarget {
 export function RepoPullsColumn({ owner, repo, size, onSize }: PullColumn) {
   const ready = useStoreReady();
   const token = useGithubToken();
-  const { data: pulls } = useCachedJson<PullRequestSummary[]>(repoPullsPath(owner, repo), token, ready);
-  const standingPulls = useStandingRepoPulls(owner, repo, pulls);
+  const path = repoPullsPath(owner, repo, usePullQueryState());
+  const { data: pulls } = useCachedJson<PullRequestSummary[]>(path, token, ready);
+  const listed = useListedPulls(useStandingRepoPulls(owner, repo, pulls));
   const [branchesOpen, setBranchesOpen] = useStickyOpen('branches');
   const listingBranches = size.open && branchesOpen;
   const branches = useBranches(owner, repo, listingBranches);
   return (
     <PullsColumn
-      targets={repoTargets(owner, repo, standingPulls, listingBranches ? branches : [])}
+      targets={repoTargets(owner, repo, listed, listingBranches ? branches : [])}
       size={size}
       onSize={onSize}
       footer={
@@ -58,9 +61,9 @@ export function RepoPullsColumn({ owner, repo, size, onSize }: PullColumn) {
 
 export function AllPullsColumn({ size, onSize }: Pick<PullColumn, 'size' | 'onSize'>) {
   const { found } = useAllPullRequests();
-  const standingPulls = useStandingPulls(found?.pulls);
+  const listed = useListedPulls(useStandingPulls(found?.pulls));
   return (
-    <PullsColumn targets={standingPulls.map((pull) => pullTarget(pull.owner, pull.repo, pull, true))} size={size} onSize={onSize}>
+    <PullsColumn targets={listed.map((pull) => pullTarget(pull.owner, pull.repo, pull, true))} size={size} onSize={onSize}>
       <AllPullRequestList />
     </PullsColumn>
   );
@@ -102,6 +105,7 @@ function PullsColumn({
       preview={<ColumnPreview column="pulls" tokens={targets.map((target) => pullToken(target, target.route === selected))} />}
       size={size}
       onSize={onSize}
+      action={<PullFilterMenu />}
       footer={footer}
     >
       {children}

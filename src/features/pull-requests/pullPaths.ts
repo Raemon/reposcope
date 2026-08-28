@@ -1,5 +1,7 @@
 import { repoRoute } from '@/features/codebases/repoPaths';
 
+export type PullState = 'open' | 'all';
+
 export function pullPath(owner: string, repo: string, number: number): string {
   return `/api/github/pull?${repoParams(owner, repo)}&number=${number}`;
 }
@@ -44,8 +46,12 @@ export function branchFilesPath(owner: string, repo: string, branch: string): st
   return `/api/github/branch-files?${repoParams(owner, repo)}&branch=${encodeURIComponent(branch)}`;
 }
 
-export function repoPullsPath(owner: string, repo: string): string {
-  return `/api/github/pulls?${repoParams(owner, repo)}`;
+export function repoPullsPath(owner: string, repo: string, state: PullState = 'open'): string {
+  return `/api/github/pulls?${repoParams(owner, repo)}&state=${state}`;
+}
+
+export function pullStateParam(request: Request): PullState {
+  return new URL(request.url).searchParams.get('state') === 'all' ? 'all' : 'open';
 }
 
 export function mergePullPath(owner: string, repo: string, number: number): string {

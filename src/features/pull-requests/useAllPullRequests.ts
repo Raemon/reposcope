@@ -1,6 +1,8 @@
 'use client';
 
 import { useMemo } from 'react';
+import { usePullQueryState } from './pullFilterStore';
+import type { PullState } from './pullPaths';
 import type { CrossRepoPulls } from './pullRequests';
 import { sidebarGroups } from '@/features/codebases/sidebarGroups';
 import { useSourceResults } from '@/features/codebases/useSourceResults';
@@ -9,7 +11,9 @@ import { useGithubAccess, useGithubToken, useSources, useStoreReady } from '@/fe
 import { useCachedJson } from '@/features/sources/useCachedJson';
 
 const MAX_REPOS = 60;
-export const ALL_PULLS_CACHE_KEY = 'all-pulls';
+export function allPullsCacheKey(state: PullState): string {
+  return `all-pulls ${state}`;
+}
 
 export interface AllPullRequests {
   scanning: boolean;
@@ -27,8 +31,9 @@ export function useAllPullRequests(): AllPullRequests {
   const groups = useMemo(() => sidebarGroups(sources, results), [sources, results]);
   const repos = useMemo(() => knownRepos(groups), [groups]);
   const target = repos.map((repo) => `${repo.owner}/${repo.name}`).join(',');
-  const path = target === '' ? null : `/api/github/all-pulls?repos=${encodeURIComponent(target)}`;
-  const { data, fresh, error } = useCachedJson<CrossRepoPulls>(path, token, ready, ALL_PULLS_CACHE_KEY);
+  const state = usePullQueryState();
+  const path = target === '' ? null : `/api/github/all-pulls?repos=${encodeURIComponent(target)}&state=${state}`;
+  const { data, fresh, error } = useCachedJson<CrossRepoPulls>(path, token, ready, allPullsCacheKey(state));
 
   return {
     scanning: !ready || groups.some((group) => group.loading) || (path !== null && !fresh),

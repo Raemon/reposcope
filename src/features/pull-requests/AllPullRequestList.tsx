@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useColumnNav } from './columnNav';
 import { LIST_NOTE as NOTE, PullListRow, PullRowFields, ROW_META } from './PullListRow';
 import { useStandingPulls } from './pullActionStore';
+import { useListedPulls } from './pullFilterStore';
 import { allPullsRoute, pullRoute } from './pullPaths';
 import type { CrossRepoPull } from './pullRequests';
 import { useAllPullRequests } from './useAllPullRequests';
@@ -22,7 +23,7 @@ function widestRepoName(pulls: CrossRepoPull[]): number {
 export function AllPullRequestList() {
   const { scanning, repoCount, found, error } = useAllPullRequests();
   const pathname = usePathname();
-  const standingPulls = useStandingPulls(found?.pulls);
+  const listed = useListedPulls(useStandingPulls(found?.pulls));
   const { cursor } = useColumnNav('pulls');
   const [showingOlder, setShowingOlder] = useState(false);
 
@@ -35,18 +36,18 @@ export function AllPullRequestList() {
     );
   }
 
-  const visible = standingPulls.filter((pull) => {
+  const visible = listed.filter((pull) => {
     const route = pullRoute(pull.owner, pull.repo, pull.number);
     return showingOlder || updatedWithinLastWeek(pull) || pathname === route || cursor === route;
   });
-  const olderCount = standingPulls.length - visible.length;
+  const olderCount = listed.length - visible.length;
   const repoColumnCh = widestRepoName(visible);
 
   return (
     <nav className="min-h-0 flex-1 overflow-auto py-[1px]">
       {error && <p className={`${NOTE} text-error-ink`}>{error}</p>}
       {scanning && !error && <p className={`${NOTE} text-ink-dim`}>Reading more repositories…</p>}
-      {standingPulls.length === 0 && <p className={`${NOTE} text-ink-dim`}>No open pull requests.</p>}
+      {listed.length === 0 && <p className={`${NOTE} text-ink-dim`}>No matching pull requests.</p>}
       {visible.map((pull) => (
         <PullRow
           key={`${pull.owner}/${pull.repo}#${pull.number}`}

@@ -1,8 +1,8 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { SELECTABLE_TEXT, useSelectableClick } from '@/features/surface-ui/selectableClick';
+import { useMenuDismiss } from '@/features/surface-ui/useMenuDismiss';
 
 export function HeaderMenu({
   label,
@@ -13,29 +13,10 @@ export function HeaderMenu({
   width: string;
   children: (close: () => void) => ReactNode;
 }) {
-  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const menu = useRef<HTMLDivElement>(null);
-
   const labelClick = useSelectableClick<HTMLButtonElement>(() => setOpen((held) => !held));
-
-  useEffect(() => setOpen(false), [pathname]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onPress = (event: MouseEvent) => {
-      if (!menu.current?.contains(event.target as Node)) setOpen(false);
-    };
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('mousedown', onPress);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onPress);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
+  useMenuDismiss(menu, open, () => setOpen(false));
 
   return (
     <div ref={menu} className="relative shrink-0">
