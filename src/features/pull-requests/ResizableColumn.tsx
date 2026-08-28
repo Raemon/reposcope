@@ -235,9 +235,12 @@ function columnEdge(focused: boolean): string {
 }
 
 function headerTone(row: ColumnRow, focused: boolean): string {
-  const edge = 'border-b border-panel-edge';
-  if (row.state !== 'plain') return `${edge} bg-btn-hover`;
-  return `${edge} ${focused ? 'bg-btn' : 'bg-panel'}`;
+  return `border-b border-panel-edge ${headerFill(row, focused)}`;
+}
+
+function headerFill(row: ColumnRow, focused: boolean): string {
+  if (row.state !== 'plain') return 'bg-btn-hover';
+  return focused ? 'bg-btn' : 'bg-panel';
 }
 
 export function clampWidth(width: number): number {

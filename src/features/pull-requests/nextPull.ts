@@ -1,7 +1,7 @@
 'use client';
 
 import { standingPulls, type PullTarget } from './pullActionStore';
-import { listedPulls, pullQueryState, readPullFilters, type PullFilters } from './pullFilterStore';
+import { listedPulls, readPullFilters, type PullFilters } from './pullFilterStore';
 import { allPullsRoute, pullRoute, repoPullsPath } from './pullPaths';
 import type { CrossRepoPulls, PullRequestSummary } from './pullRequests';
 import { allPullsCacheKey } from './useAllPullRequests';
@@ -30,18 +30,13 @@ export function nextPullAfter(
 }
 
 function cachedRepoPulls({ owner, repo }: PullTarget, token: string | null, filters: PullFilters): PullTarget[] {
-  const path = repoPullsPath(owner, repo, pullQueryState(filters));
-  const pulls = readCachedJson<PullRequestSummary[]>(path, token) ?? [];
-  return filtered(pulls, token, filters).map((pull) => ({ owner, repo, number: pull.number }));
+  const pulls = readCachedJson<PullRequestSummary[]>(repoPullsPath(owner, repo, filters.state), token) ?? [];
+  return listedPulls(pulls, filters, ownAuthorCheck(token)).map((pull) => ({ owner, repo, number: pull.number }));
 }
 
 function cachedAllPulls(token: string | null, filters: PullFilters): PullTarget[] {
-  const key = allPullsCacheKey(pullQueryState(filters));
-  return filtered(readCachedJson<CrossRepoPulls>(key, token)?.pulls ?? [], token, filters);
-}
-
-function filtered<T extends PullRequestSummary>(pulls: T[], token: string | null, filters: PullFilters): T[] {
-  return listedPulls(pulls, filters, ownAuthorCheck(token));
+  const found = readCachedJson<CrossRepoPulls>(allPullsCacheKey(filters.state), token);
+  return listedPulls(found?.pulls ?? [], filters, ownAuthorCheck(token));
 }
 
 function samePull(a: PullTarget, b: PullTarget): boolean {

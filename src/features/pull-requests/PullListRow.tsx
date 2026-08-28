@@ -25,6 +25,7 @@ interface PullRowSummary {
 
 export const ROW_META = 'shrink-0 font-mono text-[9px] text-ink-dim';
 export const LIST_NOTE = 'px-2 py-1 text-[11px] leading-4';
+export const NO_PULLS = 'No matching pull requests.';
 
 export function PullRowFields({ pull }: { pull: PullRowSummary }) {
   const [title, wrapped] = useWrappedText<HTMLSpanElement>();

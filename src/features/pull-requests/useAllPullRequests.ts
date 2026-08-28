@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { usePullQueryState } from './pullFilterStore';
+import { usePullFilters } from './pullFilterStore';
 import type { PullState } from './pullPaths';
 import type { CrossRepoPulls } from './pullRequests';
 import { sidebarGroups } from '@/features/codebases/sidebarGroups';
@@ -31,7 +31,7 @@ export function useAllPullRequests(): AllPullRequests {
   const groups = useMemo(() => sidebarGroups(sources, results), [sources, results]);
   const repos = useMemo(() => knownRepos(groups), [groups]);
   const target = repos.map((repo) => `${repo.owner}/${repo.name}`).join(',');
-  const state = usePullQueryState();
+  const { state } = usePullFilters();
   const path = target === '' ? null : `/api/github/all-pulls?repos=${encodeURIComponent(target)}&state=${state}`;
   const { data, fresh, error } = useCachedJson<CrossRepoPulls>(path, token, ready, allPullsCacheKey(state));
 

@@ -3,8 +3,7 @@
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { useColumnNav } from './columnNav';
-import { LIST_NOTE as NOTE, PullListRow, PullRowFields, ROW_META } from './PullListRow';
-import { usePullFilters } from './pullFilterStore';
+import { LIST_NOTE as NOTE, NO_PULLS, PullListRow, PullRowFields, ROW_META } from './PullListRow';
 import { allPullsRoute, pullRoute } from './pullPaths';
 import type { CrossRepoPull } from './pullRequests';
 import { useAllPullList } from './usePullLists';
@@ -25,8 +24,7 @@ function widestRepoName(pulls: CrossRepoPull[]): number {
 }
 
 export function AllPullRequestList() {
-  const { scanning, repoCount, found, error, listed } = useAllPullList();
-  const listingOpenPulls = usePullFilters().onlyOpen;
+  const { scanning, repoCount, found, error, listed, state } = useAllPullList();
   const pathname = usePathname();
   const { cursor } = useColumnNav('pulls');
   const [showingOlder, setShowingOlder] = useState(false);
@@ -40,7 +38,7 @@ export function AllPullRequestList() {
     );
   }
 
-  const recentOnly = listingOpenPulls && !showingOlder;
+  const recentOnly = state === 'open' && !showingOlder;
   const visible = listed.filter((pull) => !recentOnly || staysVisible(pull, pathname, cursor));
   const olderCount = listed.length - visible.length;
   const repoColumnCh = widestRepoName(visible);
@@ -49,7 +47,7 @@ export function AllPullRequestList() {
     <nav className="min-h-0 flex-1 overflow-auto py-[1px]">
       {error && <p className={`${NOTE} text-error-ink`}>{error}</p>}
       {scanning && !error && <p className={`${NOTE} text-ink-dim`}>Reading more repositories…</p>}
-      {listed.length === 0 && <p className={`${NOTE} text-ink-dim`}>No matching pull requests.</p>}
+      {listed.length === 0 && <p className={`${NOTE} text-ink-dim`}>{NO_PULLS}</p>}
       {visible.map((pull) => (
         <PullRow
           key={`${pull.owner}/${pull.repo}#${pull.number}`}

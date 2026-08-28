@@ -1,17 +1,19 @@
 'use client';
 
-import { PULL_FILTERS, setPullFilter, usePullFilters } from './pullFilterStore';
+import { setOnlyMine, setPullState, usePullFilters } from './pullFilterStore';
 import { PopoverMenu, type PopoverTrigger } from '@/features/surface-ui/PopoverMenu';
 
 export function PullFilterMenu() {
   const filters = usePullFilters();
   return (
-    <PopoverMenu align="right-0" panelClass="w-44 py-1" trigger={(state) => <GearButton {...state} />}>
-      {() =>
-        PULL_FILTERS.map(({ key, label }) => (
-          <FilterCheckbox key={key} label={label} on={filters[key]} onChange={(next) => setPullFilter(key, next)} />
-        ))
-      }
+    <PopoverMenu align="right-0" panelClass="w-44 py-1" trigger={GearButton}>
+      {() => (
+        <>
+          <FilterCheckbox label="only open PRs" on={filters.state === 'open'} onChange={(on) => setPullState('open', on)} />
+          <FilterCheckbox label="only closed PRs" on={filters.state === 'closed'} onChange={(on) => setPullState('closed', on)} />
+          <FilterCheckbox label="only my PRs" on={filters.onlyMine} onChange={setOnlyMine} />
+        </>
+      )}
     </PopoverMenu>
   );
 }

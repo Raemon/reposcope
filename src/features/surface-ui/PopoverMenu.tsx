@@ -21,7 +21,7 @@ export function PopoverMenu({
 }) {
   const [open, setOpen] = useState(false);
   const menu = useRef<HTMLDivElement>(null);
-  useDismiss(menu, open, () => setOpen(false));
+  useDismiss(menu, open, setOpen);
   return (
     <div ref={menu} className="relative shrink-0">
       {trigger({ open, toggle: () => setOpen((held) => !held) })}
@@ -34,22 +34,20 @@ export function PopoverMenu({
   );
 }
 
-function useDismiss(menu: { current: HTMLElement | null }, open: boolean, close: () => void): void {
+function useDismiss(menu: { current: HTMLElement | null }, open: boolean, setOpen: (open: false) => void): void {
   const pathname = usePathname();
-  const dismiss = useRef(close);
-  dismiss.current = close;
 
   useEffect(() => {
-    dismiss.current();
-  }, [pathname]);
+    setOpen(false);
+  }, [pathname, setOpen]);
 
   useEffect(() => {
     if (!open) return;
     const onPress = (event: MouseEvent) => {
-      if (!menu.current?.contains(event.target as Node)) dismiss.current();
+      if (!menu.current?.contains(event.target as Node)) setOpen(false);
     };
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') dismiss.current();
+      if (event.key === 'Escape') setOpen(false);
     };
     document.addEventListener('mousedown', onPress);
     document.addEventListener('keydown', onKey);
@@ -57,5 +55,5 @@ function useDismiss(menu: { current: HTMLElement | null }, open: boolean, close:
       document.removeEventListener('mousedown', onPress);
       document.removeEventListener('keydown', onKey);
     };
-  }, [open, menu]);
+  }, [open, menu, setOpen]);
 }
