@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from 'react';
 
-const NARROW = '(max-width: 760px)';
+const NARROW = 'not all and (min-width: 48rem)';
 
 export function useNarrowViewport(): boolean {
   return useSyncExternalStore(subscribeToWidth, () => window.matchMedia(NARROW).matches, () => false);
