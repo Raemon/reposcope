@@ -10,6 +10,7 @@ export interface PreviewToken {
   label: string;
   title: string;
   accent?: boolean;
+  serif?: boolean;
 }
 
 const CHIP_TONE: Record<RowState, string> = {
@@ -35,7 +36,7 @@ export function ColumnPreview({ tokens, column }: { tokens: PreviewToken[]; colu
 
 function PreviewChip({ token, row }: { token: PreviewToken; row: ColumnRow }) {
   return (
-    <HoverCardTrigger label={token.title} focusable={false} tooltipStyle>
+    <HoverCardTrigger label={token.title} focusable={false} tooltipStyle serifLabel={token.serif ?? false}>
       <span
         data-nav-cursor={row.props.cursor || undefined}
         onPointerEnter={row.props.onPointerEnter}
