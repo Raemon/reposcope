@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, type ReactNode } from 'react';
 import { useColumnNav } from './columnNav';
 import type { ColumnId } from './navColumn';
+import { useNarrowViewport } from './narrowViewport';
 import { useViewMode } from './viewModeStore';
 
 export type CentralTab = 'pulls' | 'discussion' | 'commits' | 'files';
@@ -47,21 +48,25 @@ export function useCentralLayout(): CentralValue {
 
 export function useShowsColumn(id: ColumnId): boolean {
   const { central, tab } = useCentralLayout();
-  return !central || TAB_OF_COLUMN[id] === tab;
+  const stacked = useNarrowViewport();
+  return stacked || !central || TAB_OF_COLUMN[id] === tab;
 }
 
-export type PaneMode = 'hidden' | 'column' | 'pane';
+export type PaneMode = 'hidden' | 'column' | 'pane' | 'stacked';
 
 export function usePaneMode(id: ColumnId): PaneMode {
   const { central } = useCentralLayout();
+  const stacked = useNarrowViewport();
   const shown = useShowsColumn(id);
   if (!shown) return 'hidden';
+  if (stacked) return 'stacked';
   return central && id !== 'files' ? 'pane' : 'column';
 }
 
 export function CentralTabBar() {
   const { central } = useCentralLayout();
-  if (!central) return null;
+  const stacked = useNarrowViewport();
+  if (!central || stacked) return null;
   return (
     <div className={TAB_ROW}>
       <div className={`${PANE_WIDTH} flex items-center gap-1`}>

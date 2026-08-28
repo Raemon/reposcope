@@ -13,6 +13,7 @@ import { CurrentBranchTitle, CurrentPullTitle } from '@/features/pull-requests/C
 import { MergePullButton } from '@/features/pull-requests/MergePullButton';
 import { PreviewLink } from '@/features/pull-requests/PreviewLink';
 import { PullRequestMenu } from '@/features/pull-requests/PullRequestMenu';
+import { useNarrowViewport } from '@/features/pull-requests/narrowViewport';
 import { ViewModeToggle } from '@/features/pull-requests/ViewModeToggle';
 import { type RepoRef } from '@/features/sources/parseRepoLink';
 import { SelectableLink } from '@/features/surface-ui/SelectableLink';
@@ -112,9 +113,10 @@ function CodebaseMenu({ reading }: { reading: RepoRef | null }) {
 }
 
 function RepoLabel({ reading }: { reading: RepoRef }) {
+  const narrow = useNarrowViewport();
   return (
     <>
-      <span className="text-ink-dim/70">{reading.owner}/</span>
+      {!narrow && <span className="text-ink-dim/70">{reading.owner}/</span>}
       {reading.name}
     </>
   );

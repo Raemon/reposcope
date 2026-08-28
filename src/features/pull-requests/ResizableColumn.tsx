@@ -131,6 +131,8 @@ export function ColumnHeader({
   focused,
   row,
   action,
+  chevron = '‹',
+  label = `Collapse ${title}`,
   onCollapse,
 }: {
   title: string;
@@ -139,6 +141,8 @@ export function ColumnHeader({
   focused: boolean;
   row: ColumnRow;
   action?: ReactNode;
+  chevron?: string;
+  label?: string;
   onCollapse: () => void;
 }) {
   return (
@@ -149,9 +153,9 @@ export function ColumnHeader({
         title={title}
         titleTone={focused ? 'text-accent' : 'text-ink-dim'}
         note={note}
-        chevron="‹"
+        chevron={chevron}
         className="min-w-0 flex-1"
-        label={`Collapse ${title}`}
+        label={label}
         onActivate={onCollapse}
       />
       {action}
@@ -186,6 +190,12 @@ export function ResizableColumn({
   const startDrag = useDragWidth(size, onSize);
   const pane = usePaneMode(navId);
   if (pane === 'hidden') return null;
+  if (pane === 'stacked')
+    return (
+      <StackedColumn nav={nav} title={title} icon={icon} note={note} size={size} onSize={onSize} action={action} footer={footer}>
+        {children}
+      </StackedColumn>
+    );
   if (pane === 'pane')
     return (
       <section onPointerDown={nav.focus} onPointerLeave={nav.clearHover} className="flex min-h-0 min-w-0 flex-1 flex-col bg-panel">
@@ -226,6 +236,50 @@ export function ResizableColumn({
       <div ref={nav.bodyRef} className="min-h-0 flex-1 overflow-auto">{children}</div>
       {footer}
       <DragHandle onPointerDown={startDrag} />
+    </section>
+  );
+}
+
+function StackedColumn({
+  nav,
+  title,
+  icon,
+  note,
+  size,
+  onSize,
+  action,
+  footer,
+  children,
+}: {
+  nav: ReturnType<typeof useColumnNav>;
+  title: string;
+  icon: string;
+  note?: string;
+  size: ColumnSize;
+  onSize: (next: ColumnSize) => void;
+  action?: ReactNode;
+  footer?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section onPointerDown={nav.focus} onPointerLeave={nav.clearHover} className="flex shrink-0 flex-col bg-panel">
+      <ColumnHeader
+        title={title}
+        icon={icon}
+        note={note}
+        focused={nav.focused}
+        row={nav.row(COLUMN_HEADER)}
+        action={action}
+        chevron={size.open ? '⌄' : '›'}
+        label={`${size.open ? 'Collapse' : 'Expand'} ${title}`}
+        onCollapse={() => onSize({ ...size, open: !size.open })}
+      />
+      {size.open && (
+        <>
+          <div ref={nav.bodyRef} className="max-h-[50vh] overflow-auto">{children}</div>
+          {footer}
+        </>
+      )}
     </section>
   );
 }

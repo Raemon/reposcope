@@ -1,6 +1,7 @@
 'use client';
 
 import { setDiffLayout, useDiffLayout, type DiffLayout } from './diffLayoutStore';
+import { useNarrowViewport } from './narrowViewport';
 import { BUTTON } from '@/features/surface-ui/buttonStyles';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 
@@ -11,6 +12,7 @@ const CHOICES: { layout: DiffLayout; icon: string; label: string }[] = [
 
 export function DiffLayoutToggle() {
   const current = useDiffLayout();
+  if (useNarrowViewport()) return null;
   return (
     <div className="flex shrink-0 items-center justify-end gap-1 border-b border-panel-edge bg-panel px-1.5 py-[1px]">
       {CHOICES.map(({ layout, icon, label }) => (

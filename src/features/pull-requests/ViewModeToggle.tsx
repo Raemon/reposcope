@@ -1,12 +1,14 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { useNarrowViewport } from './narrowViewport';
 import { setViewMode, useViewMode } from './viewModeStore';
 import { IconToggleButton } from '@/features/surface-ui/IconToggleButton';
 
 export function ViewModeToggle() {
   const mode = useViewMode();
   const next = mode === 'central' ? 'columns' : 'central';
+  if (useNarrowViewport()) return null;
   return (
     <IconToggleButton label={`Switch to ${next} layout`} onClick={() => setViewMode(next)}>
       {mode === 'central' ? <ColumnsIcon /> : <CentralIcon />}
