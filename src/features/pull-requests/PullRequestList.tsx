@@ -1,22 +1,14 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import type { PullRequestSummary } from './pullRequests';
 import { LIST_NOTE, PullListRow, PullRowFields } from './PullListRow';
-import { useStandingRepoPulls } from './pullActionStore';
-import { useListedPulls, usePullQueryState } from './pullFilterStore';
-import { pullRoute, repoPullsPath } from './pullPaths';
+import { pullRoute } from './pullPaths';
+import { useRepoPullList } from './usePullLists';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
-import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
-import { useCachedJson } from '@/features/sources/useCachedJson';
 
 export function PullRequestList({ repo }: { repo: RepoRef }) {
-  const ready = useStoreReady();
-  const token = useGithubToken();
   const pathname = usePathname();
-  const path = repoPullsPath(repo.owner, repo.name, usePullQueryState());
-  const { data: pulls, error } = useCachedJson<PullRequestSummary[]>(path, token, ready);
-  const listed = useListedPulls(useStandingRepoPulls(repo.owner, repo.name, pulls));
+  const { pulls, listed, error } = useRepoPullList(repo.owner, repo.name);
 
   if (!pulls) {
     if (error) return <p className={`${LIST_NOTE} text-error-ink`}>{error}</p>;

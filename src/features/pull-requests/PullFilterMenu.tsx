@@ -1,34 +1,33 @@
 'use client';
 
-import { useRef, useState } from 'react';
 import { PULL_FILTERS, setPullFilter, usePullFilters } from './pullFilterStore';
-import { useMenuDismiss } from '@/features/surface-ui/useMenuDismiss';
+import { PopoverMenu, type PopoverTrigger } from '@/features/surface-ui/PopoverMenu';
 
 export function PullFilterMenu() {
   const filters = usePullFilters();
-  const [open, setOpen] = useState(false);
-  const menu = useRef<HTMLDivElement>(null);
-  useMenuDismiss(menu, open, () => setOpen(false));
   return (
-    <div ref={menu} className="relative shrink-0">
-      <button
-        type="button"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-label="Pull request filters"
-        onClick={() => setOpen((held) => !held)}
-        className={`px-1 text-[11px] leading-4 ${open ? 'text-accent' : 'text-ink-dim hover:text-ink'}`}
-      >
-        ⚙
-      </button>
-      {open && (
-        <div className="absolute right-0 top-full z-20 mt-1 w-44 rounded bg-panel py-1 shadow-card">
-          {PULL_FILTERS.map(({ key, label }) => (
-            <FilterCheckbox key={key} label={label} on={filters[key]} onChange={(next) => setPullFilter(key, next)} />
-          ))}
-        </div>
-      )}
-    </div>
+    <PopoverMenu align="right-0" panelClass="w-44 py-1" trigger={(state) => <GearButton {...state} />}>
+      {() =>
+        PULL_FILTERS.map(({ key, label }) => (
+          <FilterCheckbox key={key} label={label} on={filters[key]} onChange={(next) => setPullFilter(key, next)} />
+        ))
+      }
+    </PopoverMenu>
+  );
+}
+
+function GearButton({ open, toggle }: PopoverTrigger) {
+  return (
+    <button
+      type="button"
+      aria-haspopup="menu"
+      aria-expanded={open}
+      aria-label="Pull request filters"
+      onClick={toggle}
+      className={`px-1 text-[11px] leading-4 ${open ? 'text-accent' : 'text-ink-dim hover:text-ink'}`}
+    >
+      ⚙
+    </button>
   );
 }
 

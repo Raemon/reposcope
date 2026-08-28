@@ -88,7 +88,7 @@ export function SectionHeader({
   titleTone,
   note,
   chevron,
-  tone,
+  className,
   label,
   expanded,
   cursor,
@@ -100,7 +100,7 @@ export function SectionHeader({
   titleTone: string;
   note?: string;
   chevron: string;
-  tone: string;
+  className: string;
   label: string;
   expanded?: boolean;
   cursor?: boolean;
@@ -114,7 +114,7 @@ export function SectionHeader({
       onActivate={onActivate}
       label={label}
       expanded={expanded}
-      className={`${HEADER_ROW} ${tone}`}
+      className={`${HEADER_ROW} ${className}`}
     >
       <span aria-hidden className="shrink-0 text-[11px] leading-4 text-ink-dim">{icon}</span>
       <span className={`shrink-0 text-[10px] uppercase tracking-[0.18em] ${titleTone}`}>{title}</span>
@@ -142,7 +142,7 @@ export function ColumnHeader({
   onCollapse: () => void;
 }) {
   return (
-    <div className={`flex shrink-0 items-center border-b border-panel-edge ${headerTone(row, focused)}`}>
+    <div className={`flex shrink-0 items-center ${headerTone(row, focused)}`}>
       <SectionHeader
         {...row.props}
         icon={icon}
@@ -150,7 +150,7 @@ export function ColumnHeader({
         titleTone={focused ? 'text-accent' : 'text-ink-dim'}
         note={note}
         chevron="‹"
-        tone="min-w-0 flex-1"
+        className="min-w-0 flex-1"
         label={`Collapse ${title}`}
         onActivate={onCollapse}
       />
@@ -235,8 +235,9 @@ function columnEdge(focused: boolean): string {
 }
 
 function headerTone(row: ColumnRow, focused: boolean): string {
-  if (row.state !== 'plain') return 'bg-btn-hover';
-  return focused ? 'bg-btn' : 'bg-panel';
+  const edge = 'border-b border-panel-edge';
+  if (row.state !== 'plain') return `${edge} bg-btn-hover`;
+  return `${edge} ${focused ? 'bg-btn' : 'bg-panel'}`;
 }
 
 export function clampWidth(width: number): number {

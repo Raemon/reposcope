@@ -8,17 +8,13 @@ import { useShowsColumn } from './centralLayout';
 import { ColumnPreview, type PreviewToken } from './ColumnPreview';
 import { useRegisterColumn } from './columnNav';
 import { PullFilterMenu } from './PullFilterMenu';
-import { useListedPulls, usePullQueryState } from './pullFilterStore';
 import { PullRequestList } from './PullRequestList';
 import { ResizableColumn, type ColumnSize } from './ResizableColumn';
-import { useStandingPulls, useStandingRepoPulls } from './pullActionStore';
-import { branchRoute, allPullsRoute, pullRoute, repoPullsPath } from './pullPaths';
+import { branchRoute, allPullsRoute, pullRoute } from './pullPaths';
 import type { PullRequestSummary } from './pullRequests';
 import type { BranchSummary } from './branches';
 import { useStickyOpen } from './stickyColumns';
-import { useAllPullRequests } from './useAllPullRequests';
-import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
-import { useCachedJson } from '@/features/sources/useCachedJson';
+import { useAllPullList, useRepoPullList } from './usePullLists';
 
 const ICON = '⇅';
 
@@ -37,11 +33,7 @@ interface PullNavTarget {
 }
 
 export function RepoPullsColumn({ owner, repo, size, onSize }: PullColumn) {
-  const ready = useStoreReady();
-  const token = useGithubToken();
-  const path = repoPullsPath(owner, repo, usePullQueryState());
-  const { data: pulls } = useCachedJson<PullRequestSummary[]>(path, token, ready);
-  const listed = useListedPulls(useStandingRepoPulls(owner, repo, pulls));
+  const { listed } = useRepoPullList(owner, repo);
   const [branchesOpen, setBranchesOpen] = useStickyOpen('branches');
   const listingBranches = size.open && branchesOpen;
   const branches = useBranches(owner, repo, listingBranches);
@@ -60,8 +52,7 @@ export function RepoPullsColumn({ owner, repo, size, onSize }: PullColumn) {
 }
 
 export function AllPullsColumn({ size, onSize }: Pick<PullColumn, 'size' | 'onSize'>) {
-  const { found } = useAllPullRequests();
-  const listed = useListedPulls(useStandingPulls(found?.pulls));
+  const { listed } = useAllPullList();
   return (
     <PullsColumn targets={listed.map((pull) => pullTarget(pull.owner, pull.repo, pull, true))} size={size} onSize={onSize}>
       <AllPullRequestList />

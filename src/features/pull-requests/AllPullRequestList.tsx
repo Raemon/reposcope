@@ -4,11 +4,9 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { useColumnNav } from './columnNav';
 import { LIST_NOTE as NOTE, PullListRow, PullRowFields, ROW_META } from './PullListRow';
-import { useStandingPulls } from './pullActionStore';
-import { useListedPulls } from './pullFilterStore';
 import { allPullsRoute, pullRoute } from './pullPaths';
 import type { CrossRepoPull } from './pullRequests';
-import { useAllPullRequests } from './useAllPullRequests';
+import { useAllPullList } from './usePullLists';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -21,9 +19,8 @@ function widestRepoName(pulls: CrossRepoPull[]): number {
 }
 
 export function AllPullRequestList() {
-  const { scanning, repoCount, found, error } = useAllPullRequests();
+  const { scanning, repoCount, found, error, listed } = useAllPullList();
   const pathname = usePathname();
-  const listed = useListedPulls(useStandingPulls(found?.pulls));
   const { cursor } = useColumnNav('pulls');
   const [showingOlder, setShowingOlder] = useState(false);
 
