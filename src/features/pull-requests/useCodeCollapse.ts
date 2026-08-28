@@ -1,16 +1,19 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { collapseRegions, type CollapseRegion } from './collapseRegions';
 import { rowOf } from './commentAnchors';
 import type { EditableBlock } from './editableBlocks';
 import type { ReviewThread } from './reviewThreads';
 import type { DiffRow } from './splitDiff';
+import { treeCollapseRegions } from './treeSitterFolds';
 
 export interface CollapseAnchor {
   collapsed: boolean;
   hiddenLines: number;
   hiddenThreads: number;
+  kind: string;
+  depth: number;
   toggle: () => void;
 }
 
@@ -29,13 +32,39 @@ export function useCodeCollapse(
   threads: ReviewThread[],
   edit: EditableBlock | null,
 ): CodeCollapse {
-  const regions = useMemo(() => collapseRegions(rows, contiguous, filename), [rows, contiguous, filename]);
+  const heuristic = useMemo(() => collapseRegions(rows, contiguous, filename), [rows, contiguous, filename]);
+  const parsed = useTreeRegions(rows, contiguous, filename);
+  const regions = parsed ?? heuristic;
   const threadRows = useMemo(() => threadRowIndexes(threads, rows), [threads, rows]);
   const [overrides, setOverrides] = useState<Overrides>({});
   return useMemo(
     () => buildCollapse(regions, threadRows, edit, overrides, setOverrides),
     [regions, threadRows, edit, overrides],
   );
+}
+
+interface TreeRegionsHeld {
+  rows: DiffRow[];
+  contiguous: boolean;
+  filename: string;
+  regions: CollapseRegion[];
+}
+
+function useTreeRegions(rows: DiffRow[], contiguous: boolean, filename: string): CollapseRegion[] | null {
+  const [held, setHeld] = useState<TreeRegionsHeld | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    treeCollapseRegions(rows, contiguous, filename)
+      .then((regions) => {
+        if (!cancelled && regions) setHeld({ rows, contiguous, filename, regions });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [rows, contiguous, filename]);
+  if (!held || held.rows !== rows || held.contiguous !== contiguous || held.filename !== filename) return null;
+  return held.regions;
 }
 
 function threadRowIndexes(threads: ReviewThread[], rows: DiffRow[]): Set<number> {
@@ -70,6 +99,8 @@ function anchorFor(region: CollapseRegion, collapsed: boolean, hiddenThreads: nu
     collapsed,
     hiddenLines: region.end - region.start,
     hiddenThreads,
+    kind: region.kind,
+    depth: region.depth,
     toggle: () => setOverrides((held) => ({ ...held, [region.key]: !collapsed })),
   };
 }

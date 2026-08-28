@@ -34,7 +34,7 @@ function applyLineRule(held: TrackedRule, text: string, row: number, spans: Span
   if (rule.skip?.test(text)) return;
   if (rule.close.test(text)) {
     const open = stack.pop();
-    if (open !== undefined) pushSpan(spans, open, row);
+    if (open !== undefined) pushSpan(spans, open, row, rule.kind);
   }
   if (rule.open.test(text) && !rule.selfClosed?.test(text)) stack.push(row);
 }
@@ -67,7 +67,7 @@ export function indentSpans(rows: DiffRow[], side: Side, contiguous: boolean, co
 function indentLine(indent: number, row: number, scan: IndentScan, spans: Span[]) {
   while ((scan.levels[scan.levels.length - 1]?.indent ?? -1) >= indent) {
     const open = scan.levels.pop();
-    if (open) pushSpan(spans, open.row, scan.lastContent);
+    if (open) pushSpan(spans, open.row, scan.lastContent, 'block');
   }
   scan.levels.push({ indent, row });
   scan.lastContent = row;
@@ -76,7 +76,7 @@ function indentLine(indent: number, row: number, scan: IndentScan, spans: Span[]
 function flushIndent(scan: IndentScan, spans: Span[]) {
   while (scan.levels.length > 0) {
     const open = scan.levels.pop();
-    if (open) pushSpan(spans, open.row, scan.lastContent);
+    if (open) pushSpan(spans, open.row, scan.lastContent, 'block');
   }
   scan.lastContent = -1;
 }
@@ -130,7 +130,7 @@ function markdownLine(text: string, row: number, scan: MarkdownScan, spans: Span
 function headingLine(level: number, row: number, scan: MarkdownScan, spans: Span[]) {
   while ((scan.sections[scan.sections.length - 1]?.level ?? 0) >= level) {
     const open = scan.sections.pop();
-    if (open) pushSpan(spans, open.row, scan.lastContent);
+    if (open) pushSpan(spans, open.row, scan.lastContent, 'section');
   }
   scan.sections.push({ level, row });
   scan.lastContent = row;
@@ -139,6 +139,6 @@ function headingLine(level: number, row: number, scan: MarkdownScan, spans: Span
 function flushHeadings(scan: MarkdownScan, spans: Span[]) {
   while (scan.sections.length > 0) {
     const open = scan.sections.pop();
-    if (open) pushSpan(spans, open.row, scan.lastContent);
+    if (open) pushSpan(spans, open.row, scan.lastContent, 'section');
   }
 }

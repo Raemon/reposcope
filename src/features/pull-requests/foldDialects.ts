@@ -1,8 +1,13 @@
 export interface LineRule {
+  kind: string;
   open: RegExp;
   close: RegExp;
   selfClosed?: RegExp;
   skip?: RegExp;
+}
+
+export function extensionOf(filename: string): string {
+  return filename.slice(filename.lastIndexOf('.') + 1).toLowerCase();
 }
 
 export interface FoldDialect {
@@ -58,32 +63,36 @@ const IMPORT_BY_EXTENSION: Record<string, RegExp> = {
 };
 
 const RUBY_BLOCK: LineRule = {
+  kind: 'block',
   open: /^\s*(def|class|module|case|begin|if|unless|while|until)\b(?!:)|\bdo(\s*\|[^|]*\|)?\s*$/,
   close: /^\s*end\b/,
   selfClosed: /\bend\s*$/,
   skip: /^\s*#/,
 };
-const ELIXIR_BLOCK: LineRule = { open: /\bdo\s*$/, close: /^\s*end\b/, skip: /^\s*#/ };
+const ELIXIR_BLOCK: LineRule = { kind: 'block', open: /\bdo\s*$/, close: /^\s*end\b/, skip: /^\s*#/ };
 const LUA_BLOCK: LineRule = {
+  kind: 'block',
   open: /^\s*(local\s+)?function\b|^\s*(if|for|while|repeat)\b|[=(,{]\s*function\s*[(\s]/,
   close: /^\s*(end|until)\b/,
   selfClosed: /\bend\s*$/,
   skip: /^\s*--/,
 };
-const SHELL_IF: LineRule = { open: /^\s*if\b/, close: /^\s*fi\b/, selfClosed: /\bfi;?\s*$/, skip: /^\s*#/ };
-const SHELL_LOOP: LineRule = { open: /^\s*(for|while|until|select)\b/, close: /^\s*done\b/, selfClosed: /\bdone;?\s*$/, skip: /^\s*#/ };
-const SHELL_CASE: LineRule = { open: /^\s*case\b/, close: /^\s*esac\b/, selfClosed: /\besac;?\s*$/, skip: /^\s*#/ };
+const SHELL_IF: LineRule = { kind: 'block', open: /^\s*if\b/, close: /^\s*fi\b/, selfClosed: /\bfi;?\s*$/, skip: /^\s*#/ };
+const SHELL_LOOP: LineRule = { kind: 'block', open: /^\s*(for|while|until|select)\b/, close: /^\s*done\b/, selfClosed: /\bdone;?\s*$/, skip: /^\s*#/ };
+const SHELL_CASE: LineRule = { kind: 'block', open: /^\s*case\b/, close: /^\s*esac\b/, selfClosed: /\besac;?\s*$/, skip: /^\s*#/ };
 const SQL_BLOCK: LineRule = {
+  kind: 'block',
   open: /^\s*begin\b|\bcase\s+when\b|\bcase\s*$/i,
   close: /^\s*end(\s+case)?\s*;?\s*$/i,
   selfClosed: /\bend\b(\s+as\s+\w+)?\s*[,;)]*\s*$/i,
   skip: /^\s*--/,
 };
 const REGION_MARKER: LineRule = {
+  kind: 'region',
   open: /^\s*(\/\/|--|<!--)?\s*#\s*(pragma\s+)?region\b/i,
   close: /^\s*(\/\/|--|<!--)?\s*#\s*(pragma\s+)?endregion\b/i,
 };
-const PREPROCESSOR: LineRule = { open: /^\s*#\s*if(n?def)?\b/, close: /^\s*#\s*endif\b/ };
+const PREPROCESSOR: LineRule = { kind: 'preprocessor', open: /^\s*#\s*if(n?def)?\b/, close: /^\s*#\s*endif\b/ };
 
 const SHELL_RULES = [SHELL_IF, SHELL_LOOP, SHELL_CASE];
 
@@ -138,10 +147,14 @@ export function foldDialect(extension: string): FoldDialect {
   };
 }
 
+export function regionMarkerRules(extension: string): LineRule[] {
+  return PROSE_EXTENSIONS.has(extension) ? [] : [REGION_MARKER];
+}
+
 function lineRulesFor(extension: string): LineRule[] {
   return [
     ...(LINE_RULES[extension] ?? []),
     ...(PREPROCESSOR_EXTENSIONS.has(extension) ? [PREPROCESSOR] : []),
-    ...(PROSE_EXTENSIONS.has(extension) ? [] : [REGION_MARKER]),
+    ...regionMarkerRules(extension),
   ];
 }

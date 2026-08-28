@@ -1,18 +1,20 @@
-import { foldDialect, type FoldDialect } from './foldDialects';
+import { extensionOf, foldDialect, type FoldDialect } from './foldDialects';
 import { indentSpans, lineRuleSpans, markdownSpans } from './foldLineSpans';
-import { pushSpan, scanRows, textOf, type Side, type Span } from './foldSpan';
+import { pushSpan, scanRows, scanSide, textOf, type Side, type Span } from './foldSpan';
 import type { DiffRow } from './splitDiff';
 
 export interface CollapseRegion {
   start: number;
   end: number;
   key: string;
+  kind: string;
+  depth: number;
   imports: boolean;
   hasChanges: boolean;
 }
 
 export function collapseRegions(rows: DiffRow[], contiguous: boolean, filename: string): CollapseRegion[] {
-  const side: Side = rows.some((row) => row.right) ? 'right' : 'left';
+  const side = scanSide(rows);
   const dialect = foldDialect(extensionOf(filename));
   const { spans: tokens, covered } = dialect.tokens ? tokenSpans(rows, side, contiguous, dialect) : emptyTokenScan();
   const spans = [
@@ -21,13 +23,20 @@ export function collapseRegions(rows: DiffRow[], contiguous: boolean, filename: 
     ...(dialect.markdown ? markdownSpans(rows, side, contiguous) : []),
     ...(dialect.indent ? indentSpans(rows, side, contiguous, covered) : []),
   ];
-  const imports = importSpans(rows, side, contiguous, tokens, dialect.importLine);
-  const wideEnough = spans.filter((span) => span.end - span.start >= 2);
-  return finalize(rows, [...imports, ...wideEnough]);
+  return assembleRegions(rows, side, contiguous, spans, tokens, dialect.importLine);
 }
 
-function extensionOf(filename: string): string {
-  return filename.slice(filename.lastIndexOf('.') + 1).toLowerCase();
+export function assembleRegions(
+  rows: DiffRow[],
+  side: Side,
+  contiguous: boolean,
+  spans: Span[],
+  importSource: Span[],
+  importLine: RegExp | null,
+): CollapseRegion[] {
+  const imports = importSpans(rows, side, contiguous, importSource, importLine);
+  const wideEnough = spans.filter((span) => span.end - span.start >= 2);
+  return finalize(rows, [...imports, ...wideEnough]);
 }
 
 function importSpans(rows: DiffRow[], side: Side, contiguous: boolean, tokens: Span[], importLine: RegExp | null): Span[] {
@@ -163,7 +172,7 @@ function endOpenedSpan(kind: SpanKind, row: number, scan: Scan, result: TokenSca
   const start = scan.opened[kind];
   delete scan.opened[kind];
   if (start === undefined) return;
-  pushSpan(result.spans, start, row);
+  pushSpan(result.spans, start, row, kind);
   for (let inside = start + 1; inside <= row; inside += 1) result.covered.add(inside);
 }
 
@@ -183,7 +192,7 @@ function resolvePendingTag(kind: 'gt' | 'selfGt' | 'tagBreak', row: number, scan
   const pending = scan.pendings[scan.pendings.length - 1];
   if (!pending || pending.depth > 0) return;
   if (kind === 'gt') scan.tags.push({ name: pending.name, row: pending.row });
-  if (kind === 'selfGt') pushSpan(spans, pending.row, row);
+  if (kind === 'selfGt') pushSpan(spans, pending.row, row, 'element');
   scan.pendings.pop();
 }
 
@@ -198,14 +207,14 @@ function applyBracket(bracket: string, row: number, stack: OpenBracket[], spans:
     stack.length = 0;
     return;
   }
-  pushSpan(spans, top.row, row);
+  pushSpan(spans, top.row, row, 'block');
 }
 
 function closeTag(name: string, row: number, tags: OpenTag[], spans: Span[]) {
   for (let index = tags.length - 1; index >= 0; index -= 1) {
     const open = tags[index];
     if (!open || open.name !== name) continue;
-    pushSpan(spans, open.row, row);
+    pushSpan(spans, open.row, row, 'element');
     tags.length = index;
     return;
   }
@@ -451,7 +460,7 @@ function importRunStep(text: string, index: number, importCovered: Set<number>, 
 }
 
 function flushImportRun(run: ImportRun, runs: Span[]) {
-  if (run.start >= 0 && run.last > run.start) runs.push({ start: run.start, end: run.last, imports: true });
+  if (run.start >= 0 && run.last > run.start) runs.push({ start: run.start, end: run.last, kind: 'imports', imports: true });
   run.start = -1;
   run.last = -1;
 }
@@ -459,19 +468,32 @@ function flushImportRun(run: ImportRun, runs: Span[]) {
 function finalize(rows: DiffRow[], spans: Span[]): CollapseRegion[] {
   const byStart = new Map<number, Span>();
   for (const span of spans) byStart.set(span.start, preferredSpan(byStart.get(span.start), span));
-  return [...byStart.values()].sort((a, b) => a.start - b.start).map((span) => regionOf(rows, span));
+  const openEnds: number[] = [];
+  return [...byStart.values()].sort((a, b) => a.start - b.start).map((span) => regionOf(rows, span, depthOf(openEnds, span)));
 }
+
+function depthOf(openEnds: number[], span: Span): number {
+  while (openEnds.length > 0 && (openEnds[openEnds.length - 1] ?? 0) < span.start) openEnds.pop();
+  const depth = openEnds.length;
+  openEnds.push(span.end);
+  return depth;
+}
+
+const GENERIC_KINDS = new Set(['block', 'statement_block', 'compound_statement', 'body_statement', 'declaration_list', 'class_body', 'do_block', 'field_declaration_list']);
 
 function preferredSpan(held: Span | undefined, candidate: Span): Span {
   if (!held) return candidate;
   if (candidate.end !== held.end) return candidate.end > held.end ? candidate : held;
-  return candidate.imports ? candidate : held;
+  if (candidate.imports) return candidate;
+  if (GENERIC_KINDS.has(held.kind) && !GENERIC_KINDS.has(candidate.kind)) return candidate;
+  return held;
 }
 
-function regionOf(rows: DiffRow[], span: Span): CollapseRegion {
+function regionOf(rows: DiffRow[], span: Span, depth: number): CollapseRegion {
   const anchor = rows[span.start];
   return {
     ...span,
+    depth,
     key: `${anchor?.left?.line ?? 'x'}:${anchor?.right?.line ?? 'x'}`,
     hasChanges: rows.slice(span.start, span.end + 1).some((row) => row.kind === 'change'),
   };

@@ -167,7 +167,7 @@ function DiffLineView({
         ))}
       </span>
       {anchor?.collapsed && (
-        <button type="button" onClick={anchor.toggle} className={FOLD_BADGE}>
+        <button type="button" onClick={anchor.toggle} title={anchor.kind.replace(/_/g, ' ')} className={FOLD_BADGE}>
           {foldLabel(anchor)}
         </button>
       )}
