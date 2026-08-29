@@ -10,10 +10,12 @@ import { ResizableColumn, type ColumnSize } from './ResizableColumn';
 import { useRegisterColumn } from './columnNav';
 import { commentCountsOf, sortChangedFiles } from './diffSort';
 import { useDiffSort } from './diffSortStore';
+import { DeleteFileModal } from './DeleteFileModal';
 import { commitFilesPath } from './pullPaths';
-import type { ChangedFileSet, ChangeSummary, PullRequestSummary } from './pullRequests';
+import type { ChangedFile, ChangedFileSet, ChangeSummary, PullRequestSummary } from './pullRequests';
 import { ReviewThreadProvider, useReviewTarget } from './reviewThreadStore';
 import { useStickyColumn } from './stickyColumns';
+import { useFileDeletion } from './useFileDeletion';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 import { useCachedJson } from '@/features/sources/useCachedJson';
 import { usePollWhileVisible } from '@/features/sources/usePollWhileVisible';
@@ -42,6 +44,7 @@ export function ReviewWorkspace(props: ReviewWorkspaceProps) {
 function Workspace({
   owner,
   repo,
+  number,
   subjectKey,
   change,
   reloadChange,
@@ -55,6 +58,7 @@ function Workspace({
   const [notice, setNotice] = useState<string | null>(null);
   const [selection, setSelection] = useState<string>(WHOLE_CHANGE);
   const [path, setPath] = useState<string | null>(null);
+  const [deleted, setDeleted] = useState<string[]>([]);
   const [discussionSize, setDiscussionSize] = useStickyColumn('discussion');
   const [fileSize, setFileSize] = useStickyColumn('files');
   const [commitSize, setCommitSize] = useCommitColumnSize(subjectKey, change.commits.length < 2);
@@ -75,6 +79,7 @@ function Workspace({
 
   useEffect(() => {
     if (!fileSet) return;
+    setDeleted((held) => held.filter((filename) => stillLivingIn(fileSet, filename)));
     setPath((held) => (held && fileSet.files.some((file) => file.filename === held) ? held : fileSet.files[0]?.filename ?? null));
   }, [fileSet]);
 
@@ -85,11 +90,24 @@ function Workspace({
   const sort = useDiffSort();
   const { threads } = useReviewTarget();
   const files = useMemo(
-    () => sortChangedFiles(fileSet?.files ?? [], sort, commentCountsOf(threads)),
-    [fileSet, sort, threads],
+    () => sortChangedFiles(remaining(fileSet?.files ?? [], deleted), sort, commentCountsOf(threads)),
+    [fileSet, deleted, sort, threads],
   );
   const fileItems = useMemo(() => files.map((file) => file.filename), [files]);
   const loadedFiles = fileSet === null ? null : files;
+
+  const editableFiles = selection === WHOLE_CHANGE ? editableWhole : null;
+  const deletion = useFileDeletion({
+    owner,
+    repo,
+    number,
+    headRef: fileSet?.headRef ?? null,
+    token,
+    onDeleted: (filename) => {
+      setDeleted((held) => [...held, filename]);
+      return reloadInPlace();
+    },
+  });
 
   const showsDiff = useShowsColumn('diff');
   const showsDiscussion = useShowsColumn('discussion');
@@ -171,7 +189,13 @@ function Workspace({
           size={fileSize}
           onSize={setFileSize}
         >
-          <PullFilesColumn files={loadedFiles} fileError={fileError} path={path} onSelect={revealFile} />
+          <PullFilesColumn
+            files={loadedFiles}
+            fileError={fileError}
+            path={path}
+            onSelect={revealFile}
+            onDelete={editableFiles && fileSet ? deletion.ask : null}
+          />
         </ResizableColumn>
         {!showsDiff ? null : fileSet === null && fileError !== null ? (
           <p className="flex-1 px-2 py-1 text-[11px] text-error-ink">{fileError}</p>
@@ -185,14 +209,32 @@ function Workspace({
               fileSet={fileSet}
               files={files}
               selected={path}
-              editablePull={selection === WHOLE_CHANGE ? editableWhole : null}
+              editablePull={editableFiles}
               onCommitted={reloadInPlace}
             />
           </div>
         )}
       </div>
+      {deletion.asking !== null && (
+        <DeleteFileModal
+          path={deletion.asking}
+          deleting={deletion.deleting}
+          error={deletion.failure}
+          onConfirm={deletion.confirm}
+          onCancel={deletion.cancel}
+        />
+      )}
     </div>
   );
+}
+
+function remaining(files: ChangedFile[], deleted: string[]): ChangedFile[] {
+  return deleted.length === 0 ? files : files.filter((file) => !deleted.includes(file.filename));
+}
+
+// Keeps a deleted row hidden until GitHub agrees, so a racing poll can't flash it back.
+function stillLivingIn(fileSet: ChangedFileSet, filename: string): boolean {
+  return fileSet.files.some((file) => file.filename === filename && file.status !== 'removed');
 }
 
 function useCommitColumnSize(subjectKey: string, single: boolean): [ColumnSize, (next: ColumnSize) => void] {

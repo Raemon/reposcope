@@ -93,6 +93,12 @@ export interface FileEdit {
   message: string;
 }
 
+export interface FileDeletion {
+  path: string;
+  headRef: string;
+  message: string;
+}
+
 export interface EditResult {
   sha: string;
   branch: string;
@@ -301,25 +307,60 @@ export async function commitFileEdit(
   number: number,
   edit: FileEdit,
 ): Promise<EditResult> {
-  requireGithubUser('committing');
-  const pull = await githubJson<GithubPull>(`${API}/repos/${owner}/${name}/pulls/${number}`, true);
-  if (pull.state !== 'open') throw new GithubRequestError(409, `Pull request #${number} is ${pull.state}`);
-  if (pull.head.sha !== edit.headRef) throw new GithubRequestError(409, staleMessage(edit.path));
-  const target = pull.head.repo?.full_name;
-  if (!target) throw new GithubRequestError(422, `The head repository for #${number} is gone`);
-  const changed = await changedFilePages(owner, name, number);
-  if (!changed.some((file) => file.filename === edit.path)) {
-    throw new GithubRequestError(422, `${edit.path} is not among the files this pull request changes`);
-  }
-  const branch = pull.head.ref;
-  const contents = `${API}/repos/${target}/contents/${encodePath(edit.path)}`;
+  const { contents, branch } = await editableFile(owner, name, number, edit.path, edit.headRef);
   const held = await githubJson<GithubFileContents>(`${contents}?ref=${encodeURIComponent(branch)}`, true);
-  const commit = await githubSend<{ commit?: { sha?: string } }>(contents, 'PUT', {
+  return commitContents(owner, name, branch, contents, 'PUT', {
     message: edit.message,
     content: Buffer.from(spliceLines(decodeContents(held), edit), 'utf8').toString('base64'),
     sha: held.sha,
     branch,
   });
+}
+
+export async function commitFileDeletion(
+  owner: string,
+  name: string,
+  number: number,
+  deletion: FileDeletion,
+): Promise<EditResult> {
+  const { contents, branch } = await editableFile(owner, name, number, deletion.path, deletion.headRef);
+  const held = await githubJson<GithubFileContents>(`${contents}?ref=${encodeURIComponent(branch)}`, true);
+  return commitContents(owner, name, branch, contents, 'DELETE', {
+    message: deletion.message,
+    sha: held.sha,
+    branch,
+  });
+}
+
+async function editableFile(
+  owner: string,
+  name: string,
+  number: number,
+  path: string,
+  headRef: string,
+): Promise<{ contents: string; branch: string }> {
+  requireGithubUser('committing');
+  const pull = await githubJson<GithubPull>(`${API}/repos/${owner}/${name}/pulls/${number}`, true);
+  if (pull.state !== 'open') throw new GithubRequestError(409, `Pull request #${number} is ${pull.state}`);
+  if (pull.head.sha !== headRef) throw new GithubRequestError(409, staleMessage(path));
+  const target = pull.head.repo?.full_name;
+  if (!target) throw new GithubRequestError(422, `The head repository for #${number} is gone`);
+  const changed = await changedFilePages(owner, name, number);
+  if (!changed.some((file) => file.filename === path)) {
+    throw new GithubRequestError(422, `${path} is not among the files this pull request changes`);
+  }
+  return { contents: `${API}/repos/${target}/contents/${encodePath(path)}`, branch: pull.head.ref };
+}
+
+async function commitContents(
+  owner: string,
+  name: string,
+  branch: string,
+  contents: string,
+  method: 'PUT' | 'DELETE',
+  body: Record<string, string>,
+): Promise<EditResult> {
+  const commit = await githubSend<{ commit?: { sha?: string } }>(contents, method, body);
   await dropGithubCache(owner, name);
   return { sha: commit.commit?.sha ?? '', branch };
 }

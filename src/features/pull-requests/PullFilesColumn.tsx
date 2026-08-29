@@ -10,11 +10,13 @@ export function PullFilesColumn({
   fileError,
   path,
   onSelect,
+  onDelete,
 }: {
   files: ChangedFile[] | null;
   fileError: string | null;
   path: string | null;
   onSelect: (filename: string) => void;
+  onDelete: ((filename: string) => void) | null;
 }) {
   if (files === null) {
     return (
@@ -23,7 +25,7 @@ export function PullFilesColumn({
       </p>
     );
   }
-  return <ChangedFileTree files={files} selected={path} onSelect={onSelect} />;
+  return <ChangedFileTree files={files} selected={path} onSelect={onSelect} onDelete={onDelete} />;
 }
 
 export function fileTokens(files: ChangedFile[], selected: string | null): PreviewToken[] {
