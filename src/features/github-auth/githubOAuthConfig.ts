@@ -1,3 +1,5 @@
+import { oauthProxy } from './oauthProxy';
+
 export interface OAuthConfig {
   clientId: string;
   clientSecret: string;
@@ -10,5 +12,5 @@ export function oauthConfig(): OAuthConfig | null {
 }
 
 export function oauthConfigured(): boolean {
-  return oauthConfig() !== null;
+  return oauthConfig() !== null || oauthProxy() !== null;
 }
