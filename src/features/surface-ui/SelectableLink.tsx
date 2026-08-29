@@ -11,6 +11,7 @@ export function SelectableLink({
   cursor,
   ref,
   onPointerEnter,
+  onSelect,
   children,
 }: {
   href: string;
@@ -19,9 +20,10 @@ export function SelectableLink({
   cursor?: boolean;
   ref?: Ref<HTMLAnchorElement>;
   onPointerEnter?: () => void;
+  onSelect?: () => void;
   children: ReactNode;
 }) {
-  const linkClick = useSelectableClick<HTMLAnchorElement>();
+  const linkClick = useSelectableClick<HTMLAnchorElement>(onSelect);
   return (
     <Link
       ref={ref}

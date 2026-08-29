@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { closePull } from './closePull';
 import { NavListRow } from './NavListRow';
+import { collapsePullListOnSelect, type PullListColumnName } from './pullListColumn';
 import type { PullTarget } from './pullActionStore';
 import { prefetchPull } from './prefetchPull';
 import { pullRoute } from './pullPaths';
@@ -64,12 +65,14 @@ export function PullListRow({
   href,
   current,
   closable,
+  column,
   children,
 }: {
   target: PullTarget;
   href: string;
   current: boolean;
   closable: boolean;
+  column: PullListColumnName;
   children: ReactNode;
 }) {
   const token = useGithubToken();
@@ -80,6 +83,7 @@ export function PullListRow({
       current={current}
       serif
       onPointerEnter={() => prefetchPull(target.owner, target.repo, target.number, token)}
+      onSelect={() => !current && collapsePullListOnSelect(column)}
       trailing={closable ? <ClosePullIcon target={target} token={token} shown={current} /> : null}
     >
       {children}
