@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { anchorThreads, placeThreads, type PlacedThread } from './commentAnchors';
+import { useCommentColumnWidth } from './commentColumnWidth';
 import { ROW_HEIGHT } from './diffMetrics';
 import type { DiffLine } from './diffLines';
 import type { ReviewThread } from './reviewThreads';
@@ -25,6 +26,7 @@ export function InlineThreads({
   lines: DiffLine[];
   onOverflow: (pixels: number) => void;
 }) {
+  const width = useCommentColumnWidth();
   const anchors = useMemo(() => anchorThreads(threads, rows, lines), [threads, rows, lines]);
   const [heights, setHeights] = useState<Record<number, number>>({});
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
@@ -36,9 +38,8 @@ export function InlineThreads({
 
   useEffect(() => onOverflow(overflow), [overflow, onOverflow]);
 
-  if (cards.length === 0) return null;
   return (
-    <div className="relative w-[40%] shrink-0">
+    <div className="relative shrink-0 border-l border-panel-edge" style={{ width }}>
       {cards.map((card) => (
         <PlacedCard
           key={card.thread.rootId}
@@ -107,7 +108,7 @@ function PlacedCard({
   const clipped = clampTo !== null && !expanded;
   const overlaid = clampTo !== null && expanded;
   return (
-    <div style={{ top }} className={`absolute inset-x-0 max-w-[500px] transition-[top] duration-150 ${overlaid ? 'z-10' : ''}`}>
+    <div style={{ top }} className={`absolute inset-x-0 px-1 transition-[top] duration-150 ${overlaid ? 'z-10' : ''}`}>
       <div className={clipped ? 'overflow-hidden' : undefined} style={clipped ? { maxHeight: clampTo - EXPAND_BAR } : undefined}>
         <div ref={node}>{children}</div>
       </div>
