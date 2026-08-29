@@ -218,6 +218,7 @@ function Workspace({
           navId="files"
           icon="▤"
           title="files"
+          tone="bg-shade"
           preview={<ColumnPreview column="files" tokens={fileTokens(files, path)} />}
           size={fileSize}
           onSize={setFileSize}

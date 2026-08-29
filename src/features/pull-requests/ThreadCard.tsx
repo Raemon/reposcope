@@ -24,7 +24,7 @@ export function ThreadCard({ thread }: { thread: ReviewThread }) {
   const shown = open ? thread.comments : thread.comments.slice(0, 1);
   return (
     <article
-      className={`group relative rounded border border-panel-edge bg-panel shadow-card ${thread.resolved ? 'opacity-70 hover:opacity-100' : ''}`}
+      className={`group relative overflow-hidden rounded border border-panel-edge bg-tip shadow-card ${thread.resolved ? 'opacity-70 hover:opacity-100' : ''}`}
     >
       {shown.map((comment, index) => (
         <ThreadComment
@@ -121,7 +121,7 @@ function ThreadActions({
 }) {
   const first = thread.comments[0];
   return (
-    <div className="absolute bottom-0 right-0 flex items-center gap-0.5 rounded-tl border-l border-t border-panel-edge/60 bg-panel px-1 text-[10px] opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+    <div className="absolute bottom-0 right-0 flex items-center gap-0.5 rounded-tl border-l border-t border-panel-edge/60 bg-tip px-1 text-[10px] opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
       <HoverCardTrigger label="Reply" focusable={false} tooltipStyle>
         <button type="button" aria-label="Reply" onClick={onReply} disabled={busy} className={ACTION}>
           ↩
