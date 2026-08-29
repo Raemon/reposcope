@@ -29,7 +29,7 @@ function editableRowSpan(rows: DiffRow[], index: number, bounds: BlockBounds): {
   return { firstRow, lastRow };
 }
 
-// Blank context lines keep a fold-free whole-file view from making one block of the entire file.
+// Without blank-line stops, a fold-free whole-file view is one block for the whole file.
 function endsBlock(row: DiffRow | undefined, bounds: BlockBounds): boolean {
   return bounds.stopAtBlankLines && row?.kind === 'context' && (row.right?.text ?? '').trim() === '';
 }

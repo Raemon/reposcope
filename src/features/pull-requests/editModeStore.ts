@@ -2,16 +2,18 @@
 
 import { localPref, usePref } from './localPref';
 
-const editModePref = localPref<boolean>('reposcope.diffEditMode', false, decodeEditMode);
+const editModePref = localPref<boolean>('reposcope.diffEditMode', false, (stored) =>
+  typeof stored === 'boolean' ? stored : undefined,
+);
 
-export function toggleDiffEditMode(): void {
-  editModePref.set(!editModePref.read());
+export function setDiffEditMode(on: boolean): void {
+  editModePref.set(on);
+}
+
+export function diffEditModeOn(): boolean {
+  return editModePref.read();
 }
 
 export function useDiffEditMode(): boolean {
   return usePref(editModePref);
-}
-
-function decodeEditMode(stored: unknown): boolean | undefined {
-  return typeof stored === 'boolean' ? stored : undefined;
 }

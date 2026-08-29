@@ -3,6 +3,7 @@
 import { Fragment, type ReactNode } from 'react';
 import { hunkHasEditableLines, type EditableBlock } from './editableBlocks';
 import { codeSegments } from './codeSegments';
+import { diffEditModeOn } from './editModeStore';
 import type { DiffLine } from './diffLines';
 import type { ThemedToken } from './diffHighlight';
 import type { CharRange, IntralineRanges } from './intralineDiff';
@@ -34,7 +35,6 @@ export interface SideProps {
   expand: HunkControl;
   anchors: Map<number, CollapseAnchor>;
   editable?: boolean;
-  editMode?: boolean;
   onEditBlock?: (rowIndex: number) => void;
   editor?: ReactNode;
   editedRows?: EditableBlock | null;
@@ -70,7 +70,6 @@ function DiffLines({
   expand,
   anchors,
   editable,
-  editMode,
   onEditBlock,
   spacer,
 }: SideProps & { from: number; to: number }) {
@@ -92,7 +91,6 @@ function DiffLines({
                 expand={expand}
                 anchor={anchorOf(line, anchors, rowsWithRightLine)}
                 editable={editable}
-                editMode={editMode}
                 onEdit={editStarter(rows, line.row, onEditBlock)}
               />
               {spacerLine === index && <div style={{ height: spacer?.height }} />}
@@ -137,7 +135,6 @@ function DiffLineView({
   expand,
   anchor,
   editable,
-  editMode,
   onEdit,
 }: {
   line: DiffLine;
@@ -147,7 +144,6 @@ function DiffLineView({
   expand: HunkControl;
   anchor: CollapseAnchor | null;
   editable?: boolean;
-  editMode?: boolean;
   onEdit?: () => void;
 }) {
   const { cell, side } = line;
@@ -160,7 +156,7 @@ function DiffLineView({
   return (
     <div
       className={`group ${ROW} ${lineTone(side, changed, line.touched)} ${openable ? 'cursor-text' : ''}`}
-      onClick={openable && onEdit ? (event) => opensEditor(event.detail, editMode) && onEdit() : undefined}
+      onClick={openable && onEdit ? (event) => opensEditor(event.detail) && onEdit() : undefined}
     >
       <GutterCell line={cell.line} anchor={anchor} />
       <span className="diff-code whitespace-pre pr-2 text-[11px]">
@@ -179,9 +175,8 @@ function DiffLineView({
   );
 }
 
-function opensEditor(clickCount: number, editMode = false): boolean {
-  if (clickCount >= 3) return true;
-  return editMode && (window.getSelection()?.toString() ?? '') === '';
+function opensEditor(clickCount: number): boolean {
+  return clickCount >= 3 || (diffEditModeOn() && !window.getSelection()?.toString());
 }
 
 function FoldBadge({ anchor }: { anchor: CollapseAnchor }) {

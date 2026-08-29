@@ -5,7 +5,6 @@ import { CodeBlockEditor } from './CodeBlockEditor';
 import { CommitEditModal } from './CommitEditModal';
 import { DiffSide, type HunkControl } from './DiffSide';
 import { useDiffLayout } from './diffLayoutStore';
-import { useDiffEditMode } from './editModeStore';
 import { columnLines, unifiedLines, visibleLines, type DiffLine } from './diffLines';
 import { langForPath } from './diffHighlight';
 import { ROW_HEIGHT, SAVE_BAR } from './diffMetrics';
@@ -42,15 +41,14 @@ export function FileDiff({
 }) {
   const token = useGithubToken();
   const target = useContext(EditTarget);
-  const editMode = useDiffEditMode();
-  const unified = useDiffLayout() === 'unified' || file.status === WHOLE_FILE_STATUS;
+  const entireFile = file.status === WHOLE_FILE_STATUS;
+  const unified = useDiffLayout() === 'unified' || entireFile;
   const removedSize = { width: useDiffPaneWidth(), open: true };
   const startDrag = useDragWidth(removedSize, setDiffPaneWidth);
   const [wantWholeFile, setWantWholeFile] = useState(wholeFileWanted);
   const [threadOverflow, setThreadOverflow] = useState(0);
   const wholeFile = useWholeFile(owner, repo, file, baseRef, headRef, wantWholeFile);
   const patchRows = useMemo(() => splitDiff(file.patch ?? ''), [file.patch]);
-  const entireFile = file.status === WHOLE_FILE_STATUS;
   const rows = useMemo(() => rowsForDisplay(patchRows, wholeFile.lines, entireFile), [patchRows, wholeFile.lines, entireFile]);
   const showingWholeFile = rows !== patchRows;
   const emphasis = useIntralineEmphasis(rows);
@@ -62,27 +60,24 @@ export function FileDiff({
     pull,
     headRef: target?.headRef ?? '',
     rows,
-    stopAtBlankLines: showingWholeFile,
     filename: file.filename,
-    patch: file.patch ?? '',
     token,
     onCommitted: target?.onCommitted,
   });
   useFoldCommandWholeFile(hunkEdit, setWantWholeFile);
-  const canEdit = pull !== null;
-  const editBlock = canEdit ? hunkEdit.edit?.block ?? null : null;
+  const editBlock = hunkEdit.edit?.block ?? null;
   const threads = useFileThreads(file.filename);
   const collapse = useCodeCollapse(rows, showingWholeFile, file.filename, threads, editBlock);
   const lines = useMemo(() => foldedLines(rows, collapse.hidden), [rows, collapse.hidden]);
   const growing = useHeightTransition(rows, collapse.hidden);
   const expand = expandControl(wholeFile, showingWholeFile, hunkEdit, setWantWholeFile);
   const shared = { rows, tokens, emphasis, expand, anchors: collapse.anchors };
+  const bounds = { hidden: collapse.hidden, stopAtBlankLines: showingWholeFile };
   const editing = {
-    editable: canEdit,
-    editMode,
-    onEditBlock: (rowIndex: number) => hunkEdit.begin(rowIndex, collapse.hidden),
+    editable: pull !== null,
+    onEditBlock: (rowIndex: number) => hunkEdit.begin(rowIndex, bounds),
     editedRows: editBlock,
-    editor: canEdit && hunkEdit.edit ? hunkEditor(file.filename, hunkEdit, unified ? lines.unified : lines.right) : null,
+    editor: hunkEditor(file.filename, hunkEdit, unified ? lines.unified : lines.right),
   };
   return (
     <div ref={growing} className="flex" style={{ paddingBottom: threadOverflow }}>
@@ -92,7 +87,7 @@ export function FileDiff({
         ) : (
           <div className="flex">
             <section className="relative flex shrink-0 flex-col border-r border-panel-edge" style={{ width: removedSize.width }}>
-              <DiffSide {...shared} lines={lines.left} labels spacer={canEdit ? spacerFor(hunkEdit.edit, lines.right) : null} />
+              <DiffSide {...shared} lines={lines.left} labels spacer={spacerFor(hunkEdit.edit, lines.right)} />
               <DragHandle onPointerDown={startDrag} />
             </section>
             <section className="flex min-w-0 flex-1 flex-col">
@@ -107,7 +102,7 @@ export function FileDiff({
         lines={unified ? lines.unified : lines.right}
         onOverflow={setThreadOverflow}
       />
-      {canEdit && hunkEdit.message !== null && hunkEdit.edit !== null && (
+      {hunkEdit.message !== null && hunkEdit.edit !== null && (
         <CommitEditModal
           path={file.filename}
           message={hunkEdit.message}
@@ -192,7 +187,7 @@ function hunkEditor(filename: string, hunkEdit: HunkEditControls, shown: DiffLin
   );
 }
 
-// Counts rendered lines, not rows: a unified change row draws both its before and after line.
+// Rendered lines, not rows: a unified change row draws its before and after line.
 function coveredHeight(shown: DiffLine[], block: EditableBlock): number {
   return shown.filter((line) => line.row >= block.firstRow && line.row <= block.lastRow).length * ROW_HEIGHT;
 }

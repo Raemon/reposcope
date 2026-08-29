@@ -3,7 +3,7 @@
 import { useContext } from 'react';
 import { setDiffLayout, useDiffLayout, type DiffLayout } from './diffLayoutStore';
 import { EditTarget } from './editTarget';
-import { toggleDiffEditMode, useDiffEditMode } from './editModeStore';
+import { setDiffEditMode, useDiffEditMode } from './editModeStore';
 import { DiffSortMenu } from './DiffSortMenu';
 import { FoldModeButtons } from './FoldModeButtons';
 import { ChoiceButton } from '@/features/surface-ui/ChoiceButton';
@@ -49,7 +49,7 @@ function EditModeToggle() {
       label="Edit mode — click any line to edit it; triple-click works either way"
       labelled
       active={editMode}
-      onSelect={toggleDiffEditMode}
+      onSelect={() => setDiffEditMode(!editMode)}
       className="h-4 w-5 text-[11px] leading-4"
     >
       ✎
