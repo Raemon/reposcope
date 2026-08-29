@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { CentralTabBar, useShowsColumn } from './centralLayout';
 import { ColumnPreview } from './ColumnPreview';
 import { DiffPanes, type DiffPanesHandle } from './DiffPanes';
@@ -57,7 +57,7 @@ function Workspace({
   const [path, setPath] = useState<string | null>(null);
   const [discussionSize, setDiscussionSize] = useStickyColumn('discussion');
   const [fileSize, setFileSize] = useStickyColumn('files');
-  const [commitSize, setCommitSize] = useStickyColumn('commits', change.commits.length > 1);
+  const [commitSize, setCommitSize] = useCommitColumnSize(subjectKey, change.commits.length < 2);
   const diffPanes = useRef<DiffPanesHandle>(null);
   const fileRoute = selection === WHOLE_CHANGE ? wholeFilesPath : commitFilesPath(owner, repo, selection);
   const showing = useRef(fileRoute);
@@ -193,6 +193,21 @@ function Workspace({
       </div>
     </div>
   );
+}
+
+function useCommitColumnSize(subjectKey: string, single: boolean): [ColumnSize, Dispatch<SetStateAction<ColumnSize>>] {
+  const [stored, setStored] = useStickyColumn('commits');
+  const [expandedSubject, setExpandedSubject] = useState<string | null>(null);
+  const size = single ? { ...stored, open: expandedSubject === subjectKey } : stored;
+  const setSize = useCallback<Dispatch<SetStateAction<ColumnSize>>>(
+    (next) => {
+      const asked = typeof next === 'function' ? next(size) : next;
+      if (single) setExpandedSubject(asked.open ? subjectKey : null);
+      setStored({ ...asked, open: single ? stored.open : asked.open });
+    },
+    [single, subjectKey, size, stored.open, setStored],
+  );
+  return [size, setSize];
 }
 
 function collapsibleColumn(size: ColumnSize, onSize: (next: (held: ColumnSize) => ColumnSize) => void) {
