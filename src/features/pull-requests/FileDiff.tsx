@@ -48,7 +48,8 @@ export function FileDiff({
   const [threadOverflow, setThreadOverflow] = useState(0);
   const wholeFile = useWholeFile(owner, repo, file, baseRef, headRef, wantWholeFile);
   const patchRows = useMemo(() => splitDiff(file.patch ?? ''), [file.patch]);
-  const rows = useMemo(() => rowsForDisplay(patchRows, wholeFile.lines), [patchRows, wholeFile.lines]);
+  const entireFile = file.status === WHOLE_FILE_STATUS;
+  const rows = useMemo(() => rowsForDisplay(patchRows, wholeFile.lines, entireFile), [patchRows, wholeFile.lines, entireFile]);
   const emphasis = useIntralineEmphasis(rows);
   const tokens = useDiffTokens(rows, file.filename);
   const pull = target?.pull ?? null;
@@ -133,8 +134,9 @@ function useFoldCommandWholeFile(hunkEdit: HunkEditControls, setWantWholeFile: (
   }, [command]);
 }
 
-function rowsForDisplay(patchRows: DiffRow[], lines: WholeFile['lines']): DiffRow[] {
-  return lines ? expandDiff(patchRows, lines.base, lines.head) : patchRows;
+function rowsForDisplay(patchRows: DiffRow[], lines: WholeFile['lines'], entireFile: boolean): DiffRow[] {
+  if (lines) return expandDiff(patchRows, lines.base, lines.head);
+  return entireFile ? patchRows.filter((row) => row.kind !== 'hunk') : patchRows;
 }
 
 function foldedLines(rows: DiffRow[], hidden: Set<number>) {
