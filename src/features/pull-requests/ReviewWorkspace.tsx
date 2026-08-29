@@ -77,11 +77,12 @@ function Workspace({
     setNotice(null);
   }, [subjectKey]);
 
+  const showingWhole = selection === WHOLE_CHANGE;
   useEffect(() => {
     if (!fileSet) return;
-    setDeleted((held) => held.filter((filename) => stillLivingIn(fileSet, filename)));
+    if (showingWhole) setDeleted((held) => held.filter((filename) => stillLivingIn(fileSet, filename)));
     setPath((held) => (held && fileSet.files.some((file) => file.filename === held) ? held : fileSet.files[0]?.filename ?? null));
-  }, [fileSet]);
+  }, [fileSet, showingWhole]);
 
   const revealFile = useCallback((filename: string) => {
     setPath(filename);
@@ -90,13 +91,13 @@ function Workspace({
   const sort = useDiffSort();
   const { threads } = useReviewTarget();
   const files = useMemo(
-    () => sortChangedFiles(remaining(fileSet?.files ?? [], deleted), sort, commentCountsOf(threads)),
-    [fileSet, deleted, sort, threads],
+    () => sortChangedFiles(remaining(fileSet?.files ?? [], showingWhole ? deleted : []), sort, commentCountsOf(threads)),
+    [fileSet, deleted, showingWhole, sort, threads],
   );
   const fileItems = useMemo(() => files.map((file) => file.filename), [files]);
   const loadedFiles = fileSet === null ? null : files;
 
-  const editableFiles = selection === WHOLE_CHANGE ? editableWhole : null;
+  const editableFiles = showingWhole ? editableWhole : null;
   const deletion = useFileDeletion({
     owner,
     repo,
@@ -105,6 +106,7 @@ function Workspace({
     token,
     onDeleted: (filename) => {
       setDeleted((held) => [...held, filename]);
+      setPath((held) => (held === filename ? neighborOf(files, filename) : held));
       return reloadInPlace();
     },
   });
@@ -194,7 +196,7 @@ function Workspace({
             fileError={fileError}
             path={path}
             onSelect={revealFile}
-            onDelete={editableFiles && fileSet ? deletion.ask : null}
+            onDelete={editableFiles !== null && fileSet !== null ? deletion.ask : null}
           />
         </ResizableColumn>
         {!showsDiff ? null : fileSet === null && fileError !== null ? (
@@ -230,6 +232,12 @@ function Workspace({
 
 function remaining(files: ChangedFile[], deleted: string[]): ChangedFile[] {
   return deleted.length === 0 ? files : files.filter((file) => !deleted.includes(file.filename));
+}
+
+function neighborOf(files: ChangedFile[], filename: string): string | null {
+  const rest = files.filter((file) => file.filename !== filename);
+  const at = files.findIndex((file) => file.filename === filename);
+  return (rest[at] ?? rest[at - 1])?.filename ?? null;
 }
 
 // Keeps a deleted row hidden until GitHub agrees, so a racing poll can't flash it back.
