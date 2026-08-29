@@ -1,9 +1,9 @@
 import { isImagePath } from './imageFiles';
 import type { ChangedFile } from './pullRequests';
 
-export interface FolderGroup {
+export interface FolderGroup<T> {
   folder: string;
-  files: ChangedFile[];
+  items: T[];
 }
 
 export function folderOf(path: string): string {
@@ -14,31 +14,28 @@ export function baseName(path: string): string {
   return path.slice(path.lastIndexOf('/') + 1);
 }
 
-export function groupByFolder(files: ChangedFile[]): FolderGroup[] {
-  const groups = new Map<string, ChangedFile[]>();
-  for (const file of files) {
-    const folder = folderOf(file.filename);
+export function groupByFolder<T>(items: T[], pathOf: (item: T) => string): FolderGroup<T>[] {
+  const groups = new Map<string, T[]>();
+  for (const item of items) {
+    const folder = folderOf(pathOf(item));
     const existing = groups.get(folder);
-    if (existing) existing.push(file);
-    else groups.set(folder, [file]);
+    if (existing) existing.push(item);
+    else groups.set(folder, [item]);
   }
   return [...groups]
     .map(([folder, group]) => ({
       folder,
-      files: [...group].sort((a, b) => baseName(a.filename).localeCompare(baseName(b.filename))),
+      items: [...group].sort((a, b) => baseName(pathOf(a)).localeCompare(baseName(pathOf(b)))),
     }))
-    .sort(byImageOnlyLast);
+    .sort(byImageOnlyLast(pathOf));
 }
 
-function holdsOnlyImages(group: FolderGroup): boolean {
-  return group.files.every((file) => isImagePath(file.filename));
-}
-
-function byImageOnlyLast(a: FolderGroup, b: FolderGroup): number {
-  const rank = Number(holdsOnlyImages(a)) - Number(holdsOnlyImages(b));
-  return rank || a.folder.localeCompare(b.folder);
+function byImageOnlyLast<T>(pathOf: (item: T) => string) {
+  const holdsOnlyImages = (group: FolderGroup<T>) => group.items.every((item) => isImagePath(pathOf(item)));
+  return (a: FolderGroup<T>, b: FolderGroup<T>) =>
+    Number(holdsOnlyImages(a)) - Number(holdsOnlyImages(b)) || a.folder.localeCompare(b.folder);
 }
 
 export function sortByFolder(files: ChangedFile[]): ChangedFile[] {
-  return groupByFolder(files).flatMap((group) => group.files);
+  return groupByFolder(files, (file) => file.filename).flatMap((group) => group.items);
 }
