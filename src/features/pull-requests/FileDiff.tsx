@@ -11,7 +11,7 @@ import { ROW_HEIGHT, SAVE_BAR } from './diffMetrics';
 import { EditTarget } from './editTarget';
 import { type EditableBlock } from './editableBlocks';
 import { expandDiff } from './expandDiff';
-import { currentFoldMode, setsWholeFile, useFoldCommand, wholeFileMode, type FoldMode } from './foldModeStore';
+import { useFoldCommand, wholeFileFor, wholeFileWanted, type FoldMode } from './foldModeStore';
 import { InlineThreads } from './InlineThreads';
 import { setDiffPaneWidth, useDiffPaneWidth } from './diffPaneWidth';
 import { DragHandle, useDragWidth } from './ResizableColumn';
@@ -43,7 +43,7 @@ export function FileDiff({
   const unified = useDiffLayout() === 'unified';
   const removedSize = { width: useDiffPaneWidth(), open: true };
   const startDrag = useDragWidth(removedSize, setDiffPaneWidth);
-  const [wantWholeFile, setWantWholeFile] = useState(() => wholeFileMode(currentFoldMode()));
+  const [wantWholeFile, setWantWholeFile] = useState(wholeFileWanted);
   const [threadOverflow, setThreadOverflow] = useState(0);
   const wholeFile = useWholeFile(owner, repo, file, baseRef, headRef, wantWholeFile);
   const patchRows = useMemo(() => splitDiff(file.patch ?? ''), [file.patch]);
@@ -122,8 +122,8 @@ function useFoldCommandWholeFile(hunkEdit: HunkEditControls, setWantWholeFile: (
   const applied = useRef(command.epoch);
   const apply = useRef<(mode: FoldMode) => void>(() => {});
   apply.current = (mode) => {
-    if (!setsWholeFile(mode)) return;
-    if (leaveEdit(hunkEdit)) setWantWholeFile(wholeFileMode(mode));
+    const want = wholeFileFor(mode);
+    if (want !== null && leaveEdit(hunkEdit)) setWantWholeFile(want);
   };
   useEffect(() => {
     if (applied.current === command.epoch) return;
