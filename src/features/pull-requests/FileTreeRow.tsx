@@ -7,13 +7,14 @@ import { baseName, folderOf } from './fileTree';
 import { rowShowsAccent, rowStateClass } from '@/features/surface-ui/rowState';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 
-const ROW = 'flex w-full items-baseline gap-1.5 py-[1px] pl-1.5 pr-1.5 text-left text-[11px] leading-4';
+const ROW = 'flex w-full items-baseline gap-1.5 py-[1px] pr-1.5 text-left text-[11px] leading-4';
 
 export function FileTreeRow({
   path,
   navKey = path,
   selected,
   onSelect,
+  indented = false,
   action = null,
   children,
 }: {
@@ -21,6 +22,7 @@ export function FileTreeRow({
   navKey?: string;
   selected: boolean;
   onSelect: () => void;
+  indented?: boolean;
   action?: ReactNode;
   children?: ReactNode;
 }) {
@@ -29,10 +31,10 @@ export function FileTreeRow({
     <SelectableRow
       {...row.props}
       onActivate={onSelect}
-      className={`${ROW} ${action === null ? rowStateClass(row.state) : ''}`}
+      className={`${ROW} ${indented ? 'pl-4' : 'pl-1.5'} ${action === null ? rowStateClass(row.state) : ''}`}
     >
       <span className="min-w-0 flex-1 truncate filename-text">
-        <ParentFolder path={path} />
+        {!indented && <ParentFolder path={path} />}
         <FileName path={path} tinted={!rowShowsAccent(row.state)} />
       </span>
       {children}
