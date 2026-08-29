@@ -16,6 +16,10 @@ export interface ColumnSize {
   open: boolean;
 }
 
+export function collapsibleColumn(size: ColumnSize, onSize: (next: ColumnSize) => void) {
+  return { open: size.open, collapsible: true, setOpen: (open: boolean) => onSize({ ...size, open }) };
+}
+
 export function useDragWidth(size: ColumnSize, onSize: (next: ColumnSize) => void) {
   return useCallback(
     (event: ReactPointerEvent<HTMLElement>) => {

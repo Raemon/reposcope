@@ -1,4 +1,5 @@
 import type { ChangedFile } from './pullRequests';
+import { WHOLE_FILE_STATUS } from './wholeFileEntry';
 
 export interface ImageSource {
   ref: string;
@@ -30,7 +31,7 @@ export function imageSides(
 }
 
 function beforeSide(file: ChangedFile, baseRef: string): ImageSource | null {
-  if (file.status === 'added') return null;
+  if (file.status === 'added' || file.status === WHOLE_FILE_STATUS) return null;
   return { ref: baseRef, path: file.previousFilename ?? file.filename };
 }
 

@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { splitLines } from './expandDiff';
+import { fileTextPath } from './pullPaths';
 import type { ChangedFile, FileText } from './pullRequests';
 import { apiJson } from '@/features/sources/apiClient';
 import { useGithubToken } from '@/features/sources/sourceStore';
+
+const TWO_SIDED = new Set(['modified', 'renamed', 'copied', 'changed', 'unchanged']);
 
 export interface WholeFile {
   available: boolean;
@@ -32,7 +35,7 @@ export function useWholeFile(
   const identity = `${baseRef}\0${headRef}\0${file.previousFilename ?? file.filename}\0${file.filename}`;
   const [held, setHeld] = useState<{ identity: string; lines: { base: string[]; head: string[] } } | null>(null);
   const [failure, setFailure] = useState<{ identity: string; message: string } | null>(null);
-  const available = file.status !== 'added' && file.status !== 'removed';
+  const available = TWO_SIDED.has(file.status);
   const lines = held?.identity === identity ? held.lines : null;
   const error = failure?.identity === identity ? failure.message : null;
 
@@ -77,6 +80,5 @@ function readText(
   token: string | null,
   signal: AbortSignal,
 ): Promise<FileText> {
-  const query = `owner=${encodeURIComponent(owner)}&name=${encodeURIComponent(repo)}&ref=${encodeURIComponent(ref)}&path=${encodeURIComponent(path)}`;
-  return apiJson<FileText>(`/api/github/file?${query}`, token, signal);
+  return apiJson<FileText>(fileTextPath(owner, repo, ref, path), token, signal);
 }

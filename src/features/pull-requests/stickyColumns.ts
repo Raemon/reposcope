@@ -11,6 +11,8 @@ const DEFAULTS: Record<string, ColumnSize> = {
   discussion: { width: 320, open: false },
   commits: { width: 260, open: true },
   files: { width: 280, open: true },
+  'all-files': { width: 280, open: false },
+  'repo-files': { width: 320, open: true },
 };
 
 const columnsPref = localPref<Partial<Record<string, ColumnSize>>>('reposcope.columns', {}, decodeColumns);
