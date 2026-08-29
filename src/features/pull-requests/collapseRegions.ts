@@ -10,7 +10,8 @@ export interface CollapseRegion {
   kind: string;
   depth: number;
   imports: boolean;
-  hasChanges: boolean;
+  addedLines: number;
+  deletedLines: number;
 }
 
 export function collapseRegions(rows: DiffRow[], contiguous: boolean, filename: string): CollapseRegion[] {
@@ -491,10 +492,12 @@ function preferredSpan(held: Span | undefined, candidate: Span): Span {
 
 function regionOf(rows: DiffRow[], span: Span, depth: number): CollapseRegion {
   const anchor = rows[span.start];
+  const hidden = rows.slice(span.start + 1, span.end + 1);
   return {
     ...span,
     depth,
     key: `${anchor?.left?.line ?? 'x'}:${anchor?.right?.line ?? 'x'}`,
-    hasChanges: rows.slice(span.start, span.end + 1).some((row) => row.kind === 'change'),
+    addedLines: hidden.filter((row) => row.kind === 'change' && row.right).length,
+    deletedLines: hidden.filter((row) => row.kind === 'change' && row.left).length,
   };
 }

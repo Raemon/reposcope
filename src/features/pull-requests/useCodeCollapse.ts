@@ -12,6 +12,8 @@ export interface CollapseAnchor {
   collapsed: boolean;
   hiddenLines: number;
   hiddenThreads: number;
+  addedLines: number;
+  deletedLines: number;
   kind: string;
   depth: number;
   toggle: () => void;
@@ -99,6 +101,8 @@ function anchorFor(region: CollapseRegion, collapsed: boolean, hiddenThreads: nu
     collapsed,
     hiddenLines: region.end - region.start,
     hiddenThreads,
+    addedLines: region.addedLines,
+    deletedLines: region.deletedLines,
     kind: region.kind,
     depth: region.depth,
     toggle: () => setOverrides((held) => ({ ...held, [region.key]: !collapsed })),
@@ -106,7 +110,7 @@ function anchorFor(region: CollapseRegion, collapsed: boolean, hiddenThreads: nu
 }
 
 function defaultCollapsed(region: CollapseRegion, threadRows: Set<number>): boolean {
-  return region.imports && !region.hasChanges && hiddenThreadCount(region, threadRows) === 0;
+  return region.imports && hiddenThreadCount(region, threadRows) === 0;
 }
 
 function hiddenThreadCount(region: CollapseRegion, threadRows: Set<number>): number {

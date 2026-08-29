@@ -18,7 +18,7 @@ const TOUCHED_MARK = 'bg-add-bg/60 shadow-[inset_2px_0_0_var(--add-emph)]';
 const EDIT_BTN =
   'sticky right-0 shrink-0 rounded bg-procgen px-1 uppercase tracking-[0.14em] hover:bg-btn-hover hover:text-ink';
 const FOLD_BADGE =
-  'mr-2 shrink-0 rounded bg-procgen px-1 text-[9px] italic text-ink-dim hover:bg-btn-hover hover:text-ink';
+  'sticky right-0 ml-1 shrink-0 rounded bg-procgen px-1 text-[9px] italic text-ink-dim hover:bg-btn-hover hover:text-ink';
 
 export interface HunkControl {
   expanded: boolean;
@@ -169,6 +169,8 @@ function DiffLineView({
       {anchor?.collapsed && (
         <button type="button" onClick={anchor.toggle} title={anchor.kind.replace(/_/g, ' ')} className={FOLD_BADGE}>
           {foldLabel(anchor)}
+          {anchor.addedLines > 0 && <span className="not-italic text-add-ink"> +{anchor.addedLines}</span>}
+          {anchor.deletedLines > 0 && <span className="not-italic text-del-ink"> −{anchor.deletedLines}</span>}
         </button>
       )}
     </div>
