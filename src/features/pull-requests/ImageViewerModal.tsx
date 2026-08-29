@@ -95,8 +95,8 @@ function ViewerCaption({ file, index, count, onClose }: { file: ChangedFile; ind
 
 function CaptionName({ path }: { path: string }) {
   return (
-    <HoverCardTrigger label={path} className="min-w-0 flex-1" focusable={false} tooltipStyle>
-      <span className="truncate text-ink">{baseName(path)}</span>
+    <HoverCardTrigger label={path} serifLabel className="min-w-0 flex-1" focusable={false} tooltipStyle>
+      <span className="filename-text truncate text-ink">{baseName(path)}</span>
     </HoverCardTrigger>
   );
 }

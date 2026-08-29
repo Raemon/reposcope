@@ -10,6 +10,7 @@ export interface PreviewToken {
   label: string;
   title: string;
   accent?: boolean;
+  serif?: boolean;
 }
 
 const CHIP_TONE: Record<RowState, string> = {
@@ -25,7 +26,7 @@ export function ColumnPreview({ tokens, column }: { tokens: PreviewToken[]; colu
   const nav = useColumnNav(column);
   if (tokens.length === 0) return null;
   return (
-    <span className="flex min-h-0 flex-1 flex-col items-center gap-[3px] overflow-y-auto [mask-image:linear-gradient(to_bottom,black_calc(100%-20px),transparent)]">
+    <span className="flex min-h-0 flex-1 items-center justify-end gap-[3px] overflow-auto md:flex-col md:justify-start md:[mask-image:linear-gradient(to_bottom,black_calc(100%-20px),transparent)]">
       {tokens.map((token) => (
         <PreviewChip key={token.key} token={token} row={nav.row(token.key, token.accent ?? false)} />
       ))}
@@ -35,7 +36,7 @@ export function ColumnPreview({ tokens, column }: { tokens: PreviewToken[]; colu
 
 function PreviewChip({ token, row }: { token: PreviewToken; row: ColumnRow }) {
   return (
-    <HoverCardTrigger label={token.title} focusable={false} tooltipStyle>
+    <HoverCardTrigger label={token.title} focusable={false} tooltipStyle serifLabel={token.serif ?? false}>
       <span
         data-nav-cursor={row.props.cursor || undefined}
         onPointerEnter={row.props.onPointerEnter}

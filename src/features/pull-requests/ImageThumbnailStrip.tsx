@@ -59,6 +59,7 @@ function ImageThumb({
   return (
     <HoverCardTrigger
       label={file.filename}
+      serifLabel
       placement="below"
       width="wide"
       interactive={false}

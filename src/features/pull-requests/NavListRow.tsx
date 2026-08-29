@@ -6,7 +6,7 @@ import { rowStateClass } from '@/features/surface-ui/rowState';
 import { SelectableLink } from '@/features/surface-ui/SelectableLink';
 
 const ROW = 'flex min-w-0 flex-1 items-baseline gap-1.5 px-2 py-[1px] text-[11px] leading-4';
-const SERIF_ROW = 'flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1 font-serif text-[12px] leading-[1.15]';
+const SERIF_ROW = 'flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1.5 font-serif text-[14px] leading-[1.2]';
 
 export function NavListRow({
   route,

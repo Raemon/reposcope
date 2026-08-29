@@ -1,6 +1,7 @@
 'use client';
 
 import { localPref, usePref } from './localPref';
+import { useNarrowViewport } from './narrowViewport';
 
 export type DiffLayout = 'split' | 'unified';
 
@@ -11,7 +12,8 @@ export function setDiffLayout(layout: DiffLayout): void {
 }
 
 export function useDiffLayout(): DiffLayout {
-  return usePref(layoutPref);
+  const stored = usePref(layoutPref);
+  return useNarrowViewport() ? 'unified' : stored;
 }
 
 function decodeLayout(stored: unknown): DiffLayout | undefined {

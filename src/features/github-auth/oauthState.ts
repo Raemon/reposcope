@@ -6,8 +6,9 @@ const STATE_COOKIE = 'reposcope-oauth-state';
 const STATE_PATH = '/api/github';
 const MAX_AGE = 10 * 60;
 
-export async function issueOauthState(access: GithubAccess): Promise<string> {
-  const state = `${access}.${randomBytes(16).toString('hex')}`;
+export async function issueOauthState(access: GithubAccess, returnOrigin: string | null): Promise<string> {
+  const encoded = returnOrigin ? `.${Buffer.from(returnOrigin).toString('base64url')}` : '';
+  const state = `${access}.${randomBytes(16).toString('hex')}${encoded}`;
   (await cookies()).set(STATE_COOKIE, state, {
     httpOnly: true,
     sameSite: 'lax',
@@ -27,4 +28,9 @@ export async function consumeOauthState(): Promise<string | null> {
 
 export function accessFromState(state: string): GithubAccess {
   return parseGithubAccess(state.split('.')[0]);
+}
+
+export function returnFromState(state: string): string | null {
+  const encoded = state.split('.')[2];
+  return encoded ? Buffer.from(encoded, 'base64url').toString() : null;
 }

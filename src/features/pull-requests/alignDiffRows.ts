@@ -1,27 +1,31 @@
 import type { DiffCell, DiffRow } from './splitDiff';
 
 const MAX_ALIGN_CELLS = 250000;
+const MAX_SCORE_CELLS = 10000;
+const MIN_PAIR_MATCH_SHARE = 0.5;
+const TOKEN = /[A-Za-z0-9_$]+|[^\s]/gu;
 
 interface Anchor {
   left: number;
   right: number;
 }
 
-/**
- * Pairs the removed/added lines of a change block. Lines that are equal after
- * trimming become anchors (so unwrapping/reindenting shows as indent-only
- * changes plus pure deletes), and the gaps between anchors zip by index.
- */
+/** Anchors trim-equal lines so reindents pair cleanly; gaps zip unless too dissimilar. */
 export function alignedChangeRows(removed: DiffCell[], added: DiffCell[]): DiffRow[] {
   const rows: DiffRow[] = [];
   let gapStart: Anchor = { left: 0, right: 0 };
   for (const anchor of trimEqualAnchors(removed, added)) {
-    zipRows(rows, removed.slice(gapStart.left, anchor.left), added.slice(gapStart.right, anchor.right));
+    gapRows(rows, removed.slice(gapStart.left, anchor.left), added.slice(gapStart.right, anchor.right));
     rows.push(changeRow(removed[anchor.left] ?? null, added[anchor.right] ?? null));
     gapStart = { left: anchor.left + 1, right: anchor.right + 1 };
   }
-  zipRows(rows, removed.slice(gapStart.left), added.slice(gapStart.right));
+  gapRows(rows, removed.slice(gapStart.left), added.slice(gapStart.right));
   return rows;
+}
+
+function gapRows(rows: DiffRow[], removed: DiffCell[], added: DiffCell[]): void {
+  if (pairsShareEnough(removed, added)) zipRows(rows, removed, added);
+  else unpairedRows(rows, removed, added);
 }
 
 function zipRows(rows: DiffRow[], removed: DiffCell[], added: DiffCell[]): void {
@@ -30,8 +34,38 @@ function zipRows(rows: DiffRow[], removed: DiffCell[], added: DiffCell[]): void 
   }
 }
 
+function unpairedRows(rows: DiffRow[], removed: DiffCell[], added: DiffCell[]): void {
+  for (const cell of removed) rows.push(changeRow(cell, null));
+  for (const cell of added) rows.push(changeRow(null, cell));
+}
+
 function changeRow(left: DiffCell | null, right: DiffCell | null): DiffRow {
   return { kind: 'change', label: '', left, right };
+}
+
+function pairsShareEnough(removed: DiffCell[], added: DiffCell[]): boolean {
+  let shared = 0;
+  let bothSides = 0;
+  for (let index = 0; index < Math.min(removed.length, added.length); index += 1) {
+    const before = removed[index]?.text ?? '';
+    const after = added[index]?.text ?? '';
+    shared += sharedContentChars(before, after);
+    bothSides += contentChars(before) + contentChars(after);
+  }
+  return shared * 2 >= bothSides * MIN_PAIR_MATCH_SHARE;
+}
+
+function contentChars(line: string): number {
+  return line.replace(/\s+/gu, '').length;
+}
+
+/** Non-whitespace chars the two lines share, by token-level weighted LCS. */
+function sharedContentChars(before: string, after: string): number {
+  const beforeTokens = before.match(TOKEN) ?? [];
+  const afterTokens = after.match(TOKEN) ?? [];
+  if (beforeTokens.length * afterTokens.length > MAX_SCORE_CELLS) return 0;
+  const { table } = weightTable(beforeTokens, afterTokens);
+  return table[0] ?? 0;
 }
 
 function trimEqualAnchors(removed: DiffCell[], added: DiffCell[]): Anchor[] {

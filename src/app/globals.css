@@ -44,6 +44,11 @@
   box-shadow: var(--shadow-card);
 }
 
+@utility filename-text {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
 :root {
   --bg: #eef1f5;
   --panel: #ffffff;
@@ -195,6 +200,18 @@
   color-scheme: dark;
 }
 
+.markdown-body {
+  font-family: var(--font-serif);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.markdown-body code,
+.markdown-body pre {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
 .markdown-body > :first-child {
   margin-top: 0;
 }
@@ -210,7 +227,7 @@
 .markdown-body blockquote,
 .markdown-body table,
 .markdown-body details {
-  margin: 0.35rem 0;
+  margin: 0.8rem 0;
 }
 
 .markdown-body h1,
@@ -219,7 +236,7 @@
 .markdown-body h4,
 .markdown-body h5,
 .markdown-body h6 {
-  margin: 0.6rem 0 0.3rem;
+  margin: 1.2rem 0 0.55rem;
   font-weight: 600;
   line-height: 1.25;
 }
@@ -274,7 +291,7 @@
 }
 
 .markdown-body li {
-  margin: 0.1rem 0;
+  margin: 0.35rem 0;
 }
 
 .markdown-body li > input[type='checkbox'] {

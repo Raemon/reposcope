@@ -43,7 +43,7 @@ export function DiffFileSection({
         <span aria-hidden className="w-3 shrink-0 text-[11px] text-ink-dim">
           {open ? '▾' : '▸'}
         </span>
-        <span className="min-w-0 flex-1 truncate">
+        <span className="min-w-0 flex-1 truncate filename-text">
           {file.previousFilename && <span className="text-ink-dim">{file.previousFilename} → </span>}
           {file.filename}
         </span>

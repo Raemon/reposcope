@@ -18,8 +18,14 @@ type TipWidth = keyof typeof CARD_WIDTHS;
 const POPPER_BASE = 'fixed z-50 w-max overflow-hidden';
 const CARD_POPPER = 'min-w-64 rounded-md bg-tip shadow-card';
 const TOOLTIP_POPPER = 'bg-black/85 text-white pointer-events-none';
-const CARD_LABEL = 'truncate border-b border-btn-edge px-3 py-2 font-mono text-[11px] text-accent';
-const TOOLTIP_LABEL = 'truncate px-2 py-1 font-mono text-[10px] text-white';
+const CARD_LABEL = 'truncate border-b border-btn-edge px-3 py-2 text-accent';
+const TOOLTIP_LABEL = 'truncate px-2 py-1 text-white';
+
+function labelClass(tooltipStyle: boolean, serif: boolean): string {
+  const shell = tooltipStyle ? TOOLTIP_LABEL : CARD_LABEL;
+  if (serif) return `${shell} font-serif ${tooltipStyle ? 'text-[11px]' : 'text-[12px]'}`;
+  return `${shell} font-mono ${tooltipStyle ? 'text-[10px]' : 'text-[11px]'}`;
+}
 
 const OFFSCREEN: TipPosition = { left: -9999, top: -9999 };
 const HOVER_INTENT_MS = 500;
@@ -36,6 +42,7 @@ export function HoverCardTrigger({
   width = 'default',
   focusable = true,
   tooltipStyle = false,
+  serifLabel = false,
 }: {
   label: string;
   card?: ReactNode;
@@ -46,6 +53,7 @@ export function HoverCardTrigger({
   width?: TipWidth;
   focusable?: boolean;
   tooltipStyle?: boolean;
+  serifLabel?: boolean;
 }) {
   const id = useId();
   const [anchor, setAnchor] = useState<DOMRect | null>(null);
@@ -123,6 +131,7 @@ export function HoverCardTrigger({
           placement={placement}
           width={width}
           tooltipStyle={tooltipStyle}
+          serifLabel={serifLabel}
           reachable={reachable && interactive}
           onEnter={clearTimers}
           onLeave={leave}
@@ -190,6 +199,7 @@ function HoverCardPopper({
   placement,
   width,
   tooltipStyle,
+  serifLabel = false,
   reachable,
   onEnter,
   onLeave,
@@ -202,6 +212,7 @@ function HoverCardPopper({
   placement: TipPlacement;
   width: TipWidth;
   tooltipStyle: boolean;
+  serifLabel?: boolean;
   reachable: boolean;
   onEnter: () => void;
   onLeave: () => void;
@@ -223,7 +234,7 @@ function HoverCardPopper({
       onMouseLeave={onLeave}
       className={`${POPPER_BASE} ${CARD_WIDTHS[width]} ${tooltipStyle ? TOOLTIP_POPPER : `${CARD_POPPER} ${reachable ? '' : 'pointer-events-none'}`}`}
     >
-      <div className={tooltipStyle ? TOOLTIP_LABEL : CARD_LABEL}>{label}</div>
+      <div className={labelClass(tooltipStyle, serifLabel)}>{label}</div>
       {children !== undefined ? <div className="max-h-[65vh] overflow-y-auto px-3 py-2">{children}</div> : null}
     </div>,
     document.body,
