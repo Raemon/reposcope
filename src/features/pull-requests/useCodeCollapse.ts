@@ -122,10 +122,9 @@ function regionOverlapsEdit(region: CollapseRegion, edit: EditableBlock | null):
 }
 
 function modeCollapsed(region: CollapseRegion, hiddenThreads: number, mode: FoldMode): boolean {
-  if (mode === 'expandAll') return false;
+  if (mode === 'expandAll' || mode === 'gitDefault') return false;
   if (mode === 'collapseAll') return true;
-  if (mode === 'collapseUnchanged' && unchangedRegion(region) && hiddenThreads === 0) return true;
-  return region.imports && hiddenThreads === 0;
+  return hiddenThreads === 0 && (region.imports || unchangedRegion(region));
 }
 
 function unchangedRegion(region: CollapseRegion): boolean {
