@@ -7,24 +7,13 @@ import { browseKey, browsedPath, listedPaths, RepoFileList } from './RepoFileLis
 import { RepoFileReader } from './RepoFileReader';
 import { useRepoFiles } from './repoFileStore';
 import { ResizableColumn, collapsibleColumn } from './ResizableColumn';
-import { ReviewThreadProvider } from './reviewThreadStore';
 import { useStickyColumn } from './stickyColumns';
 
 export function RepoFilesBrowser({ owner, repo, children }: { owner: string; repo: string; children: ReactNode }) {
-  return (
-    <ReviewThreadProvider owner={owner} repo={repo} number={null}>
-      <FilesBrowser owner={owner} repo={repo}>
-        {children}
-      </FilesBrowser>
-    </ReviewThreadProvider>
-  );
-}
-
-function FilesBrowser({ owner, repo, children }: { owner: string; repo: string; children: ReactNode }) {
-  const [fileSize, setFileSize] = useStickyColumn('files');
+  const [fileSize, setFileSize] = useStickyColumn('repo-files');
   const [path, setPath] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-  const repoFiles = useRepoFiles(owner, repo, true);
+  const repoFiles = useRepoFiles(owner, repo, fileSize.open || path !== null);
   const items = useMemo(() => listedPaths(repoFiles, query).shown.map(browseKey), [repoFiles, query]);
   useRegisterColumn(
     'files',

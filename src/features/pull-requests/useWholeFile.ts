@@ -7,7 +7,7 @@ import type { ChangedFile, FileText } from './pullRequests';
 import { apiJson } from '@/features/sources/apiClient';
 import { useGithubToken } from '@/features/sources/sourceStore';
 
-const TWO_SIDED = new Set(['modified', 'renamed', 'copied', 'changed']);
+const TWO_SIDED = new Set(['modified', 'renamed', 'copied', 'changed', 'unchanged']);
 
 export interface WholeFile {
   available: boolean;

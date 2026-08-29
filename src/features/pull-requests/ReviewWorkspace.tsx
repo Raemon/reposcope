@@ -61,6 +61,7 @@ function Workspace({
   const [path, setPath] = useState<string | null>(null);
   const [browsePath, setBrowsePath] = useState<string | null>(null);
   const [fileQuery, setFileQuery] = useState('');
+  const [scrollWanted, setScrollWanted] = useState<string | null>(null);
   const [allFilesOpen, setAllFilesOpen] = useStickyOpen('all-files');
   const [discussionSize, setDiscussionSize] = useStickyColumn('discussion');
   const [fileSize, setFileSize] = useStickyColumn('files');
@@ -84,6 +85,12 @@ function Workspace({
   }, [subjectKey]);
 
   useEffect(() => {
+    if (scrollWanted === null || browsePath !== null) return;
+    diffPanes.current?.scrollToFile(scrollWanted);
+    setScrollWanted(null);
+  }, [scrollWanted, browsePath]);
+
+  useEffect(() => {
     if (!fileSet) return;
     setPath((held) => (held && fileSet.files.some((file) => file.filename === held) ? held : fileSet.files[0]?.filename ?? null));
   }, [fileSet]);
@@ -91,7 +98,7 @@ function Workspace({
   const revealFile = useCallback((filename: string) => {
     setBrowsePath(null);
     setPath(filename);
-    diffPanes.current?.scrollToFile(filename);
+    setScrollWanted(filename);
   }, []);
   const selectFileItem = useCallback(
     (item: string) => {
