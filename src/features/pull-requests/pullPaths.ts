@@ -14,6 +14,10 @@ export function commitFilesPath(owner: string, repo: string, sha: string): strin
   return `/api/github/commit?${repoParams(owner, repo)}&sha=${encodeURIComponent(sha)}`;
 }
 
+export function deleteFilePath(owner: string, repo: string, number: number): string {
+  return `/api/github/delete-file?${repoParams(owner, repo)}&number=${number}`;
+}
+
 export function pullCommentsPath(owner: string, repo: string, number: number): string {
   return `/api/github/pull-comments?${repoParams(owner, repo)}&number=${number}`;
 }

@@ -14,20 +14,22 @@ export function FileTreeRow({
   navKey = path,
   selected,
   onSelect,
+  action = null,
   children,
 }: {
   path: string;
   navKey?: string;
   selected: boolean;
   onSelect: () => void;
+  action?: ReactNode;
   children?: ReactNode;
 }) {
   const row = useColumnNav('files').row(navKey, selected);
-  return (
+  const button = (
     <SelectableRow
       {...row.props}
       onActivate={onSelect}
-      className={`${ROW} ${rowStateClass(row.state)}`}
+      className={`${ROW} ${action === null ? rowStateClass(row.state) : ''}`}
     >
       <span className="min-w-0 flex-1 truncate filename-text">
         <ParentFolder path={path} />
@@ -35,6 +37,13 @@ export function FileTreeRow({
       </span>
       {children}
     </SelectableRow>
+  );
+  if (action === null) return button;
+  return (
+    <div className={`group relative ${rowStateClass(row.state)}`}>
+      {button}
+      {action}
+    </div>
   );
 }
 
