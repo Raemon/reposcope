@@ -12,7 +12,7 @@ const FIELD =
 const BUTTON =
   'shrink-0 rounded bg-btn px-2.5 py-1 text-[11px] text-ink hover:bg-btn-hover active:bg-btn-active';
 
-export function SourceControls({ compact = false, oauthConfigured }: { compact?: boolean; oauthConfigured: boolean }) {
+export function SourceControls({ compact = false, signInAvailable }: { compact?: boolean; signInAvailable: boolean }) {
   const router = useRouter();
   const [repoError, setRepoError] = useState<string | null>(null);
   const [ownerError, setOwnerError] = useState<string | null>(null);
@@ -69,38 +69,38 @@ export function SourceControls({ compact = false, oauthConfigured }: { compact?:
         compact={compact}
         title="Only the public repositories you can see on GitHub"
         note={
-          oauthConfigured
+          signInAvailable
             ? 'Asks GitHub for access to public repositories only; your private repositories stay out of reposcope.'
             : 'Set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET to enable this.'
         }
       >
-        <ConnectButton oauthConfigured={oauthConfigured} access="public" label="Connect GitHub (public only)" />
+        <ConnectButton signInAvailable={signInAvailable} access="public" label="Connect GitHub (public only)" />
       </SourceCard>
       <SourceCard
         compact={compact}
         title="Everything you can see on GitHub, public and private"
         note={
-          oauthConfigured
+          signInAvailable
             ? 'Opens GitHub\u2019s authorization page; reposcope asks for read access to your repositories and keeps the token only in your browser\u2019s localStorage.'
             : 'Set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET to enable this.'
         }
       >
-        <ConnectButton oauthConfigured={oauthConfigured} access="all" label="Connect GitHub" />
+        <ConnectButton signInAvailable={signInAvailable} access="all" label="Connect GitHub" />
       </SourceCard>
     </div>
   );
 }
 
 function ConnectButton({
-  oauthConfigured,
+  signInAvailable,
   access,
   label,
 }: {
-  oauthConfigured: boolean;
+  signInAvailable: boolean;
   access: GithubAccess;
   label: string;
 }) {
-  if (!oauthConfigured) {
+  if (!signInAvailable) {
     return (
       <button type="button" disabled className={`${BUTTON} cursor-not-allowed opacity-50`}>
         {label}

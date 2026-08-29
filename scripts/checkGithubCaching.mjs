@@ -6,6 +6,7 @@ const ROOT = 'src';
 const ALLOWED = new Map([
   ['src/features/codebases/githubRequest.ts', 'the cached GitHub transport'],
   ['src/features/github-auth/githubOAuthTokens.ts', 'the OAuth token exchange, which carries no repository data'],
+  ['src/features/github-auth/oauthProxy.ts', 'forwarding a token refresh to the deployment that holds the OAuth secret'],
   ['src/features/sources/apiClient.ts', 'browser calls to this app of its own API routes'],
   ['src/features/sources/githubSession.ts', 'the browser renewing its GitHub sign-in against this app'],
 ]);
