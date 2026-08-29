@@ -34,7 +34,7 @@ export function PullRowFields({ pull }: { pull: PullRowSummary }) {
   const isOwnAuthor = useIsOwnAuthor();
   return (
     <>
-      <span className={ROW_META}>#{pull.number}</span>
+      <span className={ROW_META}>{pull.number}</span>
       <span className="min-w-0 flex-1 break-words">
         <span ref={title}>{pull.title}</span>
       </span>
