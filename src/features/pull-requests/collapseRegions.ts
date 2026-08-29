@@ -12,6 +12,7 @@ export interface CollapseRegion {
   imports: boolean;
   addedLines: number;
   deletedLines: number;
+  anchorChanged: boolean;
 }
 
 export function collapseRegions(rows: DiffRow[], contiguous: boolean, filename: string): CollapseRegion[] {
@@ -497,5 +498,6 @@ function regionOf(rows: DiffRow[], span: Span, depth: number): CollapseRegion {
     key: `${anchor?.left?.line ?? 'x'}:${anchor?.right?.line ?? 'x'}`,
     addedLines: changedLineCount(hidden, 'right'),
     deletedLines: changedLineCount(hidden, 'left'),
+    anchorChanged: anchor?.kind === 'change',
   };
 }
