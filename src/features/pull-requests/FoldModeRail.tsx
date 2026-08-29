@@ -1,8 +1,7 @@
 'use client';
 
 import { applyFoldMode, useFoldCommand, type FoldMode } from './foldModeStore';
-import { BUTTON } from '@/features/surface-ui/buttonStyles';
-import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
+import { ChoiceButton } from '@/features/surface-ui/ChoiceButton';
 
 const CHOICES: { mode: FoldMode; icon: string; label: string }[] = [
   { mode: 'expandAll', icon: '⊞', label: 'Expand all code sections' },
@@ -16,17 +15,16 @@ export function FoldModeRail() {
   return (
     <div className="flex w-6 shrink-0 flex-col items-center gap-1 border-r border-panel-edge bg-panel py-1.5">
       {CHOICES.map(({ mode, icon, label }) => (
-        <HoverCardTrigger key={mode} label={label} focusable={false} tooltipStyle>
-          <button
-            type="button"
-            onClick={() => applyFoldMode(mode)}
-            aria-pressed={command.mode === mode}
-            aria-label={label}
-            className={`${BUTTON} h-5 w-5 text-[13px] leading-5 ${command.mode === mode ? 'bg-btn-active text-ink' : ''}`}
-          >
-            {icon}
-          </button>
-        </HoverCardTrigger>
+        <ChoiceButton
+          key={mode}
+          label={label}
+          labelled
+          active={command.mode === mode}
+          onSelect={() => applyFoldMode(mode)}
+          className="h-5 w-5 text-[13px] leading-5"
+        >
+          {icon}
+        </ChoiceButton>
       ))}
     </div>
   );

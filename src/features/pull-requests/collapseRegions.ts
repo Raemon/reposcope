@@ -1,6 +1,6 @@
 import { extensionOf, foldDialect, type FoldDialect } from './foldDialects';
 import { indentSpans, lineRuleSpans, markdownSpans } from './foldLineSpans';
-import { pushSpan, scanRows, scanSide, textOf, type Side, type Span } from './foldSpan';
+import { addRowRange, pushSpan, scanRows, scanRowsFlushing, scanSide, textOf, type Side, type Span } from './foldSpan';
 import type { DiffRow } from './splitDiff';
 
 export interface CollapseRegion {
@@ -53,14 +53,7 @@ interface ScanState {
   heredoc: string | null;
   heredocNext: string | null;
   deadBranch: number;
-  markup: boolean;
-  heredocs: boolean;
-  triples: boolean;
-  hashComments: boolean;
-  slashComments: boolean;
-  dashComments: boolean;
-  regexLiterals: boolean;
-  preprocessor: boolean;
+  dialect: FoldDialect;
 }
 
 interface OpenBracket {
@@ -112,12 +105,14 @@ function emptyTokenScan(): TokenScan {
 
 function tokenSpans(rows: DiffRow[], side: Side, contiguous: boolean, dialect: FoldDialect): TokenScan {
   const result = emptyTokenScan();
-  const scan = newScan(dialect);
+  let scan = newScan(dialect);
   scanRows(
     rows,
     side,
     contiguous,
-    () => Object.assign(scan, newScan(dialect)),
+    () => {
+      scan = newScan(dialect);
+    },
     (text, index) => {
       for (const token of tokensIn(text, scan.state)) applyToken(token, index, scan, result);
     },
@@ -127,23 +122,7 @@ function tokenSpans(rows: DiffRow[], side: Side, contiguous: boolean, dialect: F
 
 function newScan(dialect: FoldDialect): Scan {
   return {
-    state: {
-      blockClose: null,
-      inTemplate: false,
-      interpolation: 0,
-      triple: null,
-      heredoc: null,
-      heredocNext: null,
-      deadBranch: 0,
-      markup: dialect.markup,
-      heredocs: dialect.heredocs,
-      triples: dialect.triples,
-      hashComments: dialect.hashComments,
-      slashComments: dialect.slashComments,
-      dashComments: dialect.dashComments,
-      regexLiterals: dialect.regexLiterals,
-      preprocessor: dialect.preprocessor,
-    },
+    state: { blockClose: null, inTemplate: false, interpolation: 0, triple: null, heredoc: null, heredocNext: null, deadBranch: 0, dialect },
     brackets: [],
     tags: [],
     pendings: [],
@@ -174,7 +153,7 @@ function endOpenedSpan(kind: SpanKind, row: number, scan: Scan, result: TokenSca
   delete scan.opened[kind];
   if (start === undefined) return;
   pushSpan(result.spans, start, row, kind);
-  for (let inside = start + 1; inside <= row; inside += 1) result.covered.add(inside);
+  addRowRange(result.covered, start + 1, row);
 }
 
 function trackPendingDepth(scan: Scan, char: string) {
@@ -224,7 +203,7 @@ function closeTag(name: string, row: number, tags: OpenTag[], spans: Span[]) {
 function tokensIn(text: string, state: ScanState): Token[] {
   const found: Token[] = [];
   if (state.heredoc) return heredocLine(text, state, found);
-  if (state.preprocessor && deadBranchLine(text, state)) return found;
+  if (state.dialect.preprocessor && deadBranchLine(text, state)) return found;
   let at = 0;
   while (at < text.length) {
     if (state.blockClose) at = pastBlockComment(text, at, state, found);
@@ -299,23 +278,21 @@ function pastTemplate(text: string, at: number, state: ScanState, found: Token[]
 function plainCode(text: string, at: number, state: ScanState, found: Token[]): number {
   const char = text[at] ?? '';
   const pair = char + (text[at + 1] ?? '');
-  if (state.slashComments && pair === '//') return text.length;
-  if (state.dashComments && pair === '--') return text.length;
-  if (state.hashComments && lineCommentHash(text, at)) return text.length;
+  if (lineCommentStarts(text, at, pair, state)) return text.length;
   if (pair === '/*') return startBlockComment(state, found, '*/', at + 2);
-  if (state.markup && text.startsWith('<!--', at)) return startBlockComment(state, found, '-->', at + 4);
-  if (state.regexLiterals && char === '/' && pair !== '/>') {
+  if (state.dialect.markup && text.startsWith('<!--', at)) return startBlockComment(state, found, '-->', at + 4);
+  if (state.dialect.regexLiterals && char === '/' && pair !== '/>') {
     const past = regexToken(text, at);
     if (past !== null) return past;
   }
-  if (state.triples && (char === '"' || char === "'") && text.startsWith(char.repeat(3), at)) {
+  if (state.dialect.triples && (char === '"' || char === "'") && text.startsWith(char.repeat(3), at)) {
     return startTriple(text, at, char, state, found);
   }
-  if (state.heredocs && pair === '<<') return startHeredoc(text, at, state, found);
+  if (state.dialect.heredocs && pair === '<<') return startHeredoc(text, at, state, found);
   if (char === "'" || char === '"') return endOfSpan(text, at + 1, char) ?? at + 1;
   if (char === '`') return startTemplate(text, at, state, found);
   if ('()[]{}'.includes(char)) return bracketChar(char, at, state, found);
-  if (state.markup) return markupCode(text, at, pair, found);
+  if (state.dialect.markup) return markupCode(text, at, pair, found);
   return at + 1;
 }
 
@@ -411,6 +388,19 @@ function tagToken(text: string, at: number, found: Token[]): number {
   return at + (name === undefined ? 1 : name.length + 1);
 }
 
+function lineCommentStarts(text: string, at: number, pair: string, state: ScanState): boolean {
+  const { slashComments, dashComments, hashComments } = state.dialect;
+  return (
+    (slashComments && pair === '//' && notUrlScheme(text, at)) ||
+    (dashComments && pair === '--') ||
+    (hashComments && lineCommentHash(text, at))
+  );
+}
+
+function notUrlScheme(text: string, at: number): boolean {
+  return text[at - 1] !== ':';
+}
+
 function lineCommentHash(text: string, at: number): boolean {
   return text[at] === '#' && (at === 0 || /\s/.test(text[at - 1] ?? ''));
 }
@@ -427,7 +417,7 @@ function importCoveredRows(rows: DiffRow[], side: Side, spans: Span[], importLin
   const covered = new Set<number>();
   for (const span of spans) {
     if (!importLine.test(textOf(rows[span.start], side) ?? '')) continue;
-    for (let row = span.start; row <= span.end; row += 1) covered.add(row);
+    addRowRange(covered, span.start, span.end);
   }
   return covered;
 }
@@ -440,14 +430,13 @@ interface ImportRun {
 function importRuns(rows: DiffRow[], side: Side, importCovered: Set<number>, importLine: RegExp, contiguous: boolean): Span[] {
   const runs: Span[] = [];
   const run: ImportRun = { start: -1, last: -1 };
-  scanRows(
+  scanRowsFlushing(
     rows,
     side,
     contiguous,
     () => flushImportRun(run, runs),
     (text, index) => importRunStep(text, index, importCovered, importLine, run, runs),
   );
-  flushImportRun(run, runs);
   return runs;
 }
 
@@ -467,13 +456,18 @@ function flushImportRun(run: ImportRun, runs: Span[]) {
 }
 
 function finalize(rows: DiffRow[], spans: Span[]): CollapseRegion[] {
-  const byStart = new Map<number, Span>();
-  for (const span of spans) byStart.set(span.start, preferredSpan(byStart.get(span.start), span));
+  const ordered = [...bestSpanByStart(spans).values()].sort((a, b) => a.start - b.start);
   const openEnds: number[] = [];
-  return [...byStart.values()].sort((a, b) => a.start - b.start).map((span) => regionOf(rows, span, depthOf(openEnds, span)));
+  return ordered.map((span) => regionOf(rows, span, enterDepth(openEnds, span)));
 }
 
-function depthOf(openEnds: number[], span: Span): number {
+function bestSpanByStart(spans: Span[]): Map<number, Span> {
+  const byStart = new Map<number, Span>();
+  for (const span of spans) byStart.set(span.start, preferredSpan(byStart.get(span.start), span));
+  return byStart;
+}
+
+function enterDepth(openEnds: number[], span: Span): number {
   while (openEnds.length > 0 && (openEnds[openEnds.length - 1] ?? 0) < span.start) openEnds.pop();
   const depth = openEnds.length;
   openEnds.push(span.end);
@@ -481,6 +475,10 @@ function depthOf(openEnds: number[], span: Span): number {
 }
 
 const GENERIC_KINDS = new Set(['block', 'statement_block', 'compound_statement', 'body_statement', 'declaration_list', 'class_body', 'do_block', 'field_declaration_list']);
+
+function changedLineCount(rows: DiffRow[], side: Side): number {
+  return rows.filter((row) => row.kind === 'change' && row[side]).length;
+}
 
 function preferredSpan(held: Span | undefined, candidate: Span): Span {
   if (!held) return candidate;
@@ -497,7 +495,7 @@ function regionOf(rows: DiffRow[], span: Span, depth: number): CollapseRegion {
     ...span,
     depth,
     key: `${anchor?.left?.line ?? 'x'}:${anchor?.right?.line ?? 'x'}`,
-    addedLines: hidden.filter((row) => row.kind === 'change' && row.right).length,
-    deletedLines: hidden.filter((row) => row.kind === 'change' && row.left).length,
+    addedLines: changedLineCount(hidden, 'right'),
+    deletedLines: changedLineCount(hidden, 'left'),
   };
 }

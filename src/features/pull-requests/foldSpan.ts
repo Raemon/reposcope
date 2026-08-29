@@ -38,6 +38,27 @@ export function scanRows(
   });
 }
 
+export function scanRowsFlushing(
+  rows: DiffRow[],
+  side: Side,
+  contiguous: boolean,
+  flush: () => void,
+  onLine: (text: string, index: number) => void,
+) {
+  scanRows(rows, side, contiguous, flush, onLine);
+  flush();
+}
+
+export function addRowRange(covered: Set<number>, start: number, end: number) {
+  for (let row = start; row <= end; row += 1) covered.add(row);
+}
+
+export function innerRows(span: { start: number; end: number }): number[] {
+  const rows: number[] = [];
+  for (let row = span.start + 1; row <= span.end; row += 1) rows.push(row);
+  return rows;
+}
+
 export interface ScanSegment {
   lineRows: number[];
   text: string;
@@ -52,10 +73,9 @@ export function scanSegments(rows: DiffRow[], side: Side, contiguous: boolean): 
     lineRows = [];
     lines = [];
   };
-  scanRows(rows, side, contiguous, close, (text, index) => {
+  scanRowsFlushing(rows, side, contiguous, close, (text, index) => {
     lineRows.push(index);
     lines.push(text);
   });
-  close();
   return segments;
 }

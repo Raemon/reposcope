@@ -13,7 +13,8 @@
     "typecheck": "tsc --noEmit",
     "check:caching": "node scripts/checkGithubCaching.mjs",
     "predev": "node scripts/copyTreeSitterWasm.mjs",
-    "prebuild": "node scripts/copyTreeSitterWasm.mjs"
+    "prebuild": "node scripts/copyTreeSitterWasm.mjs",
+    "check:folds": "tsx scripts/checkFolds.mjs"
   },
   "dependencies": {
     "@tailwindcss/postcss": "4.3.3",
@@ -29,6 +30,7 @@
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.4",
     "tailwindcss": "4.3.3",
+    "tsx": "^4.23.12",
     "typescript": "5.9.3"
   }
 }

@@ -20,7 +20,7 @@ import { splitDiff, type DiffRow } from './splitDiff';
 import { useCodeCollapse } from './useCodeCollapse';
 import { useDiffTokens, useIntralineEmphasis } from './useDiffSideHighlight';
 import { useHeightTransition } from './useHeightTransition';
-import { useHunkEdit, type HunkEdit } from './useHunkEdit';
+import { useHunkEdit, type HunkEdit, type HunkEditControls } from './useHunkEdit';
 import { hunkHint, useWholeFile, type WholeFile } from './useWholeFile';
 import type { ChangedFile } from './pullRequests';
 import { useGithubToken } from '@/features/sources/sourceStore';
@@ -117,17 +117,18 @@ export function FileDiff({
   );
 }
 
-function useFoldCommandWholeFile(hunkEdit: ReturnType<typeof useHunkEdit>, setWantWholeFile: (next: boolean) => void) {
+function useFoldCommandWholeFile(hunkEdit: HunkEditControls, setWantWholeFile: (next: boolean) => void) {
   const command = useFoldCommand();
+  const applied = useRef(command.epoch);
   const apply = useRef<(mode: FoldMode) => void>(() => {});
   apply.current = (mode) => {
     if (mode !== 'collapseUnchanged' && mode !== 'default') return;
-    if (hunkEdit.edit && hunkEdit.edit.draft !== hunkEdit.edit.block.text) return;
-    hunkEdit.close();
-    setWantWholeFile(mode === 'collapseUnchanged');
+    if (leaveEdit(hunkEdit)) setWantWholeFile(mode === 'collapseUnchanged');
   };
   useEffect(() => {
-    if (command.epoch > 0) apply.current(command.mode);
+    if (applied.current === command.epoch) return;
+    applied.current = command.epoch;
+    apply.current(command.mode);
   }, [command]);
 }
 
@@ -146,7 +147,7 @@ function foldedLines(rows: DiffRow[], hidden: Set<number>) {
 function expandControl(
   wholeFile: WholeFile,
   showingWholeFile: boolean,
-  hunkEdit: ReturnType<typeof useHunkEdit>,
+  hunkEdit: HunkEditControls,
   setWantWholeFile: (update: (was: boolean) => boolean) => void,
 ): HunkControl {
   return {
@@ -156,13 +157,17 @@ function expandControl(
   };
 }
 
-function toggleWholeFile(hunkEdit: ReturnType<typeof useHunkEdit>, setWantWholeFile: (update: (was: boolean) => boolean) => void) {
-  if (hunkEdit.edit && hunkEdit.edit.draft !== hunkEdit.edit.block.text) return;
-  hunkEdit.close();
-  setWantWholeFile((was) => !was);
+function toggleWholeFile(hunkEdit: HunkEditControls, setWantWholeFile: (update: (was: boolean) => boolean) => void) {
+  if (leaveEdit(hunkEdit)) setWantWholeFile((was) => !was);
 }
 
-function hunkEditor(filename: string, hunkEdit: ReturnType<typeof useHunkEdit>) {
+function leaveEdit(hunkEdit: HunkEditControls): boolean {
+  if (hunkEdit.edit && hunkEdit.edit.draft !== hunkEdit.edit.block.text) return false;
+  hunkEdit.close();
+  return true;
+}
+
+function hunkEditor(filename: string, hunkEdit: HunkEditControls) {
   const edit = hunkEdit.edit;
   if (!edit) return null;
   return (

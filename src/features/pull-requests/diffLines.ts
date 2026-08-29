@@ -23,7 +23,8 @@ export function unifiedLines(rows: DiffRow[]): DiffLine[] {
 }
 
 export function visibleLines(lines: DiffLine[], hidden: Set<number>): DiffLine[] {
-  return hidden.size === 0 ? lines : lines.filter((line) => !hidden.has(line.row));
+  if (hidden.size === 0) return lines;
+  return lines.filter((line) => line.kind === 'hunk' || !hidden.has(line.row));
 }
 
 function changeRuns(rows: DiffRow[]): PlacedRow[][] {

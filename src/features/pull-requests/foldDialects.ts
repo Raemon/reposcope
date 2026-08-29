@@ -27,6 +27,7 @@ export interface FoldDialect {
 }
 
 const JS_IMPORT = /^\s*(import[\s({"']|export\s.*\sfrom\s|require\s*\(|\w[\w.]*\s*=\s*require\s*\()/;
+const PY_IMPORT = /^\s*(import\s|from\s+\S+\s+import[\s(])/;
 const C_INCLUDE = /^\s*#\s*include[\s<"]/;
 const PLAIN_IMPORT = /^\s*import\s/;
 
@@ -41,8 +42,8 @@ const IMPORT_BY_EXTENSION: Record<string, RegExp> = {
   cts: JS_IMPORT,
   vue: JS_IMPORT,
   svelte: JS_IMPORT,
-  py: /^\s*(import\s|from\s+\S+\s+import[\s(])/,
-  pyi: /^\s*(import\s|from\s+\S+\s+import[\s(])/,
+  py: PY_IMPORT,
+  pyi: PY_IMPORT,
   go: /^\s*import[\s(]/,
   java: PLAIN_IMPORT,
   kt: PLAIN_IMPORT,
@@ -62,30 +63,33 @@ const IMPORT_BY_EXTENSION: Record<string, RegExp> = {
   rb: /^\s*require/,
 };
 
+const HASH_SKIP = /^\s*#/;
+const DASH_SKIP = /^\s*--/;
+
 const RUBY_BLOCK: LineRule = {
   kind: 'block',
   open: /^\s*(def|class|module|case|begin|if|unless|while|until)\b(?!:)|\bdo(\s*\|[^|]*\|)?\s*$/,
   close: /^\s*end\b/,
   selfClosed: /\bend\s*$/,
-  skip: /^\s*#/,
+  skip: HASH_SKIP,
 };
-const ELIXIR_BLOCK: LineRule = { kind: 'block', open: /\bdo\s*$/, close: /^\s*end\b/, skip: /^\s*#/ };
+const ELIXIR_BLOCK: LineRule = { kind: 'block', open: /\bdo\s*$/, close: /^\s*end\b/, skip: HASH_SKIP };
 const LUA_BLOCK: LineRule = {
   kind: 'block',
   open: /^\s*(local\s+)?function\b|^\s*(if|for|while|repeat)\b|[=(,{]\s*function\s*[(\s]/,
   close: /^\s*(end|until)\b/,
   selfClosed: /\bend\s*$/,
-  skip: /^\s*--/,
+  skip: DASH_SKIP,
 };
-const SHELL_IF: LineRule = { kind: 'block', open: /^\s*if\b/, close: /^\s*fi\b/, selfClosed: /\bfi;?\s*$/, skip: /^\s*#/ };
-const SHELL_LOOP: LineRule = { kind: 'block', open: /^\s*(for|while|until|select)\b/, close: /^\s*done\b/, selfClosed: /\bdone;?\s*$/, skip: /^\s*#/ };
-const SHELL_CASE: LineRule = { kind: 'block', open: /^\s*case\b/, close: /^\s*esac\b/, selfClosed: /\besac;?\s*$/, skip: /^\s*#/ };
+const SHELL_IF: LineRule = { kind: 'block', open: /^\s*if\b/, close: /^\s*fi\b/, selfClosed: /\bfi;?\s*$/, skip: HASH_SKIP };
+const SHELL_LOOP: LineRule = { kind: 'block', open: /^\s*(for|while|until|select)\b/, close: /^\s*done\b/, selfClosed: /\bdone;?\s*$/, skip: HASH_SKIP };
+const SHELL_CASE: LineRule = { kind: 'block', open: /^\s*case\b/, close: /^\s*esac\b/, selfClosed: /\besac;?\s*$/, skip: HASH_SKIP };
 const SQL_BLOCK: LineRule = {
   kind: 'block',
   open: /^\s*begin\b|\bcase\s+when\b|\bcase\s*$/i,
   close: /^\s*end(\s+case)?\s*;?\s*$/i,
   selfClosed: /\bend\b(\s+as\s+\w+)?\s*[,;)]*\s*$/i,
-  skip: /^\s*--/,
+  skip: DASH_SKIP,
 };
 const REGION_MARKER: LineRule = {
   kind: 'region',

@@ -15,10 +15,9 @@ import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 const ROW = 'flex h-[15px] items-center gap-1 leading-[15px]';
 const GUTTER = 'flex w-[46px] shrink-0 select-none items-center text-[9px] text-ink-dim';
 const TOUCHED_MARK = 'bg-add-bg/60 shadow-[inset_2px_0_0_var(--add-emph)]';
-const EDIT_BTN =
-  'sticky right-0 shrink-0 rounded bg-procgen px-1 uppercase tracking-[0.14em] hover:bg-btn-hover hover:text-ink';
-const FOLD_BADGE =
-  'sticky right-0 ml-1 shrink-0 rounded bg-procgen px-1 text-[9px] italic text-ink-dim hover:bg-btn-hover hover:text-ink';
+const STICKY_CHIP = 'sticky right-0 shrink-0 rounded bg-procgen px-1 hover:bg-btn-hover hover:text-ink';
+const EDIT_BTN = `${STICKY_CHIP} uppercase tracking-[0.14em]`;
+const FOLD_BADGE = `${STICKY_CHIP} ml-1 text-[9px] italic text-ink-dim`;
 
 export interface HunkControl {
   expanded: boolean;
@@ -75,7 +74,7 @@ function DiffLines({
 }: SideProps & { from: number; to: number }) {
   if (from >= to) return null;
   const spacerLine = spacer ? lastLineOfRow(lines, spacer.afterRow) : -1;
-  const rowsWithRightLine = new Set(lines.flatMap((line) => (line.side === 'right' ? [line.row] : [])));
+  const rowsWithRightLine = rowsShownOnRight(lines);
   return (
     <div className="min-w-0 flex-1 overflow-x-auto">
       <div className="w-max min-w-full">
@@ -109,6 +108,10 @@ function lastLineOfRow(lines: DiffLine[], row: number): number {
 
 function rangesFor(emphasis: IntralineRanges | null | undefined, side: 'left' | 'right'): CharRange[] | null {
   return (side === 'left' ? emphasis?.before : emphasis?.after) ?? null;
+}
+
+function rowsShownOnRight(lines: DiffLine[]): Set<number> {
+  return new Set(lines.filter((line) => line.side === 'right').map((line) => line.row));
 }
 
 function anchorOf(line: DiffLine, anchors: Map<number, CollapseAnchor>, rowsWithRightLine: Set<number>): CollapseAnchor | null {
@@ -166,21 +169,29 @@ function DiffLineView({
           </span>
         ))}
       </span>
-      {anchor?.collapsed && (
-        <button type="button" onClick={anchor.toggle} title={anchor.kind.replace(/_/g, ' ')} className={FOLD_BADGE}>
-          {foldLabel(anchor)}
-          {anchor.addedLines > 0 && <span className="not-italic text-add-ink"> +{anchor.addedLines}</span>}
-          {anchor.deletedLines > 0 && <span className="not-italic text-del-ink"> −{anchor.deletedLines}</span>}
-        </button>
-      )}
+      {anchor?.collapsed && <FoldBadge anchor={anchor} />}
     </div>
   );
 }
 
+function FoldBadge({ anchor }: { anchor: CollapseAnchor }) {
+  const { addedLines, deletedLines, kind } = anchor.region;
+  return (
+    <button type="button" onClick={anchor.toggle} title={kind.replace(/_/g, ' ')} className={FOLD_BADGE}>
+      {foldLabel(anchor)}
+      {addedLines > 0 && <span className="not-italic text-add-ink"> +{addedLines}</span>}
+      {deletedLines > 0 && <span className="not-italic text-del-ink"> −{deletedLines}</span>}
+    </button>
+  );
+}
+
 function foldLabel(anchor: CollapseAnchor): string {
-  const folded = `⋯ ${anchor.hiddenLines} ${anchor.hiddenLines === 1 ? 'line' : 'lines'}`;
-  if (anchor.hiddenThreads === 0) return folded;
-  return `${folded} · ${anchor.hiddenThreads} ${anchor.hiddenThreads === 1 ? 'thread' : 'threads'}`;
+  const folded = `⋯ ${plural(anchor.region.end - anchor.region.start, 'line')}`;
+  return anchor.hiddenThreads === 0 ? folded : `${folded} · ${plural(anchor.hiddenThreads, 'thread')}`;
+}
+
+function plural(count: number, word: string): string {
+  return `${count} ${word}${count === 1 ? '' : 's'}`;
 }
 
 function GutterCell({ line, anchor }: { line: number; anchor: CollapseAnchor | null }) {

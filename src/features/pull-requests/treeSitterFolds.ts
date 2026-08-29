@@ -89,13 +89,20 @@ let parserPromise: Promise<Parser> | null = null;
 const languages = new Map<string, Promise<Language | null>>();
 
 function sharedModule(): Promise<TreeSitterModule> {
-  modulePromise ??= wasmSource.module();
+  modulePromise ??= retryable(wasmSource.module(), () => (modulePromise = null));
   return modulePromise;
 }
 
 function sharedParser(): Promise<Parser> {
-  parserPromise ??= startParser();
+  parserPromise ??= retryable(startParser(), () => (parserPromise = null));
   return parserPromise;
+}
+
+function retryable<T>(pending: Promise<T>, forget: () => void): Promise<T> {
+  return pending.catch((error) => {
+    forget();
+    throw error;
+  });
 }
 
 async function startParser(): Promise<Parser> {

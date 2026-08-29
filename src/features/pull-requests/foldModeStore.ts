@@ -1,6 +1,6 @@
 'use client';
 
-import { useSyncExternalStore } from 'react';
+import { memoryPref, usePref } from './localPref';
 
 export type FoldMode = 'default' | 'expandAll' | 'collapseAll' | 'collapseUnchanged';
 
@@ -9,25 +9,12 @@ export interface FoldCommand {
   epoch: number;
 }
 
-let command: FoldCommand = { mode: 'default', epoch: 0 };
-const listeners = new Set<() => void>();
+const foldCommand = memoryPref<FoldCommand>({ mode: 'default', epoch: 0 });
 
 export function applyFoldMode(mode: FoldMode): void {
-  command = { mode, epoch: command.epoch + 1 };
-  for (const listener of listeners) listener();
-}
-
-function subscribe(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-function read(): FoldCommand {
-  return command;
+  foldCommand.set({ mode, epoch: foldCommand.read().epoch + 1 });
 }
 
 export function useFoldCommand(): FoldCommand {
-  return useSyncExternalStore(subscribe, read, read);
+  return usePref(foldCommand);
 }

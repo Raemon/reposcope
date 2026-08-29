@@ -5,18 +5,15 @@ import { collapseRegions, type CollapseRegion } from './collapseRegions';
 import { rowOf } from './commentAnchors';
 import type { EditableBlock } from './editableBlocks';
 import { useFoldCommand, type FoldMode } from './foldModeStore';
+import { innerRows } from './foldSpan';
 import type { ReviewThread } from './reviewThreads';
 import type { DiffRow } from './splitDiff';
 import { treeCollapseRegions } from './treeSitterFolds';
 
 export interface CollapseAnchor {
+  region: CollapseRegion;
   collapsed: boolean;
-  hiddenLines: number;
   hiddenThreads: number;
-  addedLines: number;
-  deletedLines: number;
-  kind: string;
-  depth: number;
   toggle: () => void;
 }
 
@@ -27,6 +24,8 @@ export interface CodeCollapse {
 
 type Overrides = Record<string, boolean>;
 type SetOverride = (key: string, collapsed: boolean) => void;
+
+const NO_OVERRIDES: Overrides = {};
 
 export function useCodeCollapse(
   rows: DiffRow[],
@@ -40,21 +39,29 @@ export function useCodeCollapse(
   const regions = parsed ?? heuristic;
   const threadRows = useMemo(() => threadRowIndexes(threads, rows), [threads, rows]);
   const command = useFoldCommand();
-  const [held, setHeld] = useState<{ epoch: number; overrides: Overrides }>({ epoch: 0, overrides: {} });
-  const setOverride = useCallback<SetOverride>(
-    (key, collapsed) => {
-      setHeld((was) => ({
-        epoch: command.epoch,
-        overrides: { ...(was.epoch === command.epoch ? was.overrides : {}), [key]: collapsed },
-      }));
-    },
-    [command.epoch],
-  );
-  const overrides = held.epoch === command.epoch ? held.overrides : {};
+  const [overrides, setOverride] = useFoldOverrides(command.epoch);
   return useMemo(
     () => buildCollapse(regions, threadRows, edit, command.mode, overrides, setOverride),
     [regions, threadRows, edit, command.mode, overrides, setOverride],
   );
+}
+
+interface HeldOverrides {
+  epoch: number;
+  overrides: Overrides;
+}
+
+function overridesAt(held: HeldOverrides, epoch: number): Overrides {
+  return held.epoch === epoch ? held.overrides : NO_OVERRIDES;
+}
+
+function useFoldOverrides(epoch: number): [Overrides, SetOverride] {
+  const [held, setHeld] = useState<HeldOverrides>({ epoch, overrides: NO_OVERRIDES });
+  const setOverride = useCallback<SetOverride>(
+    (key, collapsed) => setHeld((was) => ({ epoch, overrides: { ...overridesAt(was, epoch), [key]: collapsed } })),
+    [epoch],
+  );
+  return [overridesAt(held, epoch), setOverride];
 }
 
 interface TreeRegionsHeld {
@@ -101,44 +108,26 @@ function buildCollapse(
   const anchors = new Map<number, CollapseAnchor>();
   const hidden = new Set<number>();
   for (const region of regions) {
-    if (edit && region.start <= edit.lastRow && region.end >= edit.firstRow) continue;
-    const collapsed = overrides[region.key] ?? modeCollapsed(region, threadRows, mode);
-    anchors.set(region.start, anchorFor(region, collapsed, hiddenThreadCount(region, threadRows), setOverride));
-    if (collapsed) for (let row = region.start + 1; row <= region.end; row += 1) hidden.add(row);
+    if (regionOverlapsEdit(region, edit)) continue;
+    const hiddenThreads = innerRows(region).filter((row) => threadRows.has(row)).length;
+    const collapsed = overrides[region.key] ?? modeCollapsed(region, hiddenThreads, mode);
+    anchors.set(region.start, { region, collapsed, hiddenThreads, toggle: () => setOverride(region.key, !collapsed) });
+    if (collapsed) for (const row of innerRows(region)) hidden.add(row);
   }
   return { anchors, hidden };
 }
 
-function modeCollapsed(region: CollapseRegion, threadRows: Set<number>, mode: FoldMode): boolean {
+function regionOverlapsEdit(region: CollapseRegion, edit: EditableBlock | null): boolean {
+  return edit !== null && region.start <= edit.lastRow && region.end >= edit.firstRow;
+}
+
+function modeCollapsed(region: CollapseRegion, hiddenThreads: number, mode: FoldMode): boolean {
   if (mode === 'expandAll') return false;
   if (mode === 'collapseAll') return true;
-  if (mode === 'collapseUnchanged' && unchangedRegion(region) && hiddenThreadCount(region, threadRows) === 0) return true;
-  return defaultCollapsed(region, threadRows);
+  if (mode === 'collapseUnchanged' && unchangedRegion(region) && hiddenThreads === 0) return true;
+  return region.imports && hiddenThreads === 0;
 }
 
 function unchangedRegion(region: CollapseRegion): boolean {
   return region.addedLines === 0 && region.deletedLines === 0;
-}
-
-function anchorFor(region: CollapseRegion, collapsed: boolean, hiddenThreads: number, setOverride: SetOverride): CollapseAnchor {
-  return {
-    collapsed,
-    hiddenLines: region.end - region.start,
-    hiddenThreads,
-    addedLines: region.addedLines,
-    deletedLines: region.deletedLines,
-    kind: region.kind,
-    depth: region.depth,
-    toggle: () => setOverride(region.key, !collapsed),
-  };
-}
-
-function defaultCollapsed(region: CollapseRegion, threadRows: Set<number>): boolean {
-  return region.imports && hiddenThreadCount(region, threadRows) === 0;
-}
-
-function hiddenThreadCount(region: CollapseRegion, threadRows: Set<number>): number {
-  let count = 0;
-  for (let row = region.start + 1; row <= region.end; row += 1) if (threadRows.has(row)) count += 1;
-  return count;
 }
