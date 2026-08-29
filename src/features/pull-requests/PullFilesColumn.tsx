@@ -32,5 +32,6 @@ export function fileTokens(files: ChangedFile[], selected: string | null): Previ
     label: baseName(file.filename).slice(0, 2),
     title: file.filename,
     accent: file.filename === selected,
+    serif: true,
   }));
 }
