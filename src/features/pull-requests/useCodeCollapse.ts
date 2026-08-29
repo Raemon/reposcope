@@ -117,8 +117,9 @@ function buildCollapse(
   return { anchors, hidden };
 }
 
+// Compares against the region's inner rows: its anchor row bounds the block and must keep its chevron.
 function regionOverlapsEdit(region: CollapseRegion, edit: EditableBlock | null): boolean {
-  return edit !== null && region.start <= edit.lastRow && region.end >= edit.firstRow;
+  return edit !== null && region.start + 1 <= edit.lastRow && region.end >= edit.firstRow;
 }
 
 function modeCollapsed(region: CollapseRegion, hiddenThreads: number, mode: FoldMode): boolean {

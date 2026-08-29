@@ -16,7 +16,7 @@ export interface HunkEditControls {
   message: string | null;
   committing: boolean;
   failure: string | null;
-  begin: (rowIndex: number) => void;
+  begin: (rowIndex: number, hidden: Set<number>) => void;
   askToCommit: () => void;
   commit: () => void;
   close: () => void;
@@ -31,6 +31,7 @@ export function useHunkEdit({
   pull,
   headRef,
   rows,
+  stopAtBlankLines,
   filename,
   patch,
   token,
@@ -41,6 +42,7 @@ export function useHunkEdit({
   pull: PullRequestSummary | null;
   headRef: string;
   rows: DiffRow[];
+  stopAtBlankLines: boolean;
   filename: string;
   patch: string;
   token: string | null;
@@ -61,11 +63,11 @@ export function useHunkEdit({
     dismissModal();
   };
 
-  useEffect(close, [patch, filename]);
+  useEffect(close, [rows, patch, filename]);
 
-  function begin(rowIndex: number) {
+  function begin(rowIndex: number, hidden: Set<number>) {
     if (!pull || committing || (edit && edit.draft !== edit.block.text)) return;
-    const block = editableBlockAt(rows, rowIndex);
+    const block = editableBlockAt(rows, rowIndex, { hidden, stopAtBlankLines });
     if (block) setEdit({ block, draft: block.text });
   }
 

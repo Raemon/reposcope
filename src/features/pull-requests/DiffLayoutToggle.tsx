@@ -1,6 +1,9 @@
 'use client';
 
+import { useContext } from 'react';
 import { setDiffLayout, useDiffLayout, type DiffLayout } from './diffLayoutStore';
+import { EditTarget } from './editTarget';
+import { toggleDiffEditMode, useDiffEditMode } from './editModeStore';
 import { DiffSortMenu } from './DiffSortMenu';
 import { FoldModeButtons } from './FoldModeButtons';
 import { ChoiceButton } from '@/features/surface-ui/ChoiceButton';
@@ -30,8 +33,26 @@ export function DiffLayoutToggle() {
             </ChoiceButton>
           ))}
         </span>
+        <EditModeToggle />
         <DiffSortMenu />
       </span>
     </div>
+  );
+}
+
+function EditModeToggle() {
+  const editMode = useDiffEditMode();
+  const target = useContext(EditTarget);
+  if (!target?.pull) return null;
+  return (
+    <ChoiceButton
+      label="Edit mode — click any line to edit it; triple-click works either way"
+      labelled
+      active={editMode}
+      onSelect={toggleDiffEditMode}
+      className="h-4 w-5 text-[11px] leading-4"
+    >
+      ✎
+    </ChoiceButton>
   );
 }
