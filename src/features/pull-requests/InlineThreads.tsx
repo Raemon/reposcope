@@ -4,7 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import { anchorThreads, placeThreads, type PlacedThread } from './commentAnchors';
 import { ROW_HEIGHT } from './diffMetrics';
 import type { DiffLine } from './diffLines';
-import { useFileThreads } from './reviewThreadStore';
+import type { ReviewThread } from './reviewThreads';
 import type { DiffRow } from './splitDiff';
 import { ThreadCard } from './ThreadCard';
 
@@ -15,17 +15,16 @@ const CARD_HEADER = 22;
 const MIN_SLOT = CARD_HEADER + EXPAND_BAR;
 
 export function InlineThreads({
-  path,
+  threads,
   rows,
   lines,
   onOverflow,
 }: {
-  path: string;
+  threads: ReviewThread[];
   rows: DiffRow[];
   lines: DiffLine[];
   onOverflow: (pixels: number) => void;
 }) {
-  const threads = useFileThreads(path);
   const anchors = useMemo(() => anchorThreads(threads, rows, lines), [threads, rows, lines]);
   const [heights, setHeights] = useState<Record<number, number>>({});
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});

@@ -18,10 +18,29 @@ export function codeSegments(
   return splitColoredByRanges(colored, ranges);
 }
 
+const DECLARATION_WORDS = new Set([
+  'export', 'import', 'default', 'function', 'interface', 'type', 'class', 'enum', 'namespace',
+  'abstract', 'async', 'const', 'let', 'var', 'static', 'public', 'private', 'protected', 'readonly',
+  'declare', 'extends', 'implements', 'def', 'fn', 'func', 'struct', 'impl', 'trait', 'module',
+  'defmodule', 'defp', 'package', 'using', 'from',
+]);
+
+interface ShikiVarStyle extends CSSProperties {
+  '--shiki-light'?: string;
+  '--shiki-dark'?: string;
+}
+
+const DECLARATION_STYLE: ShikiVarStyle = { '--shiki-light': 'var(--ink-dim)', '--shiki-dark': 'var(--ink-dim)' };
+
 function coloredPieces(text: string, lineTokens: ThemedToken[] | null): { content: string; style?: CSSProperties }[] {
   return lineTokens?.length
-    ? lineTokens.map((token) => ({ content: token.content, style: token.htmlStyle as CSSProperties }))
+    ? lineTokens.map((token) => ({ content: token.content, style: tokenStyle(token) }))
     : [{ content: text }];
+}
+
+function tokenStyle(token: ThemedToken): CSSProperties {
+  if (DECLARATION_WORDS.has(token.content.trim())) return DECLARATION_STYLE;
+  return token.htmlStyle as CSSProperties;
 }
 
 function splitColoredByRanges(

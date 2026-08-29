@@ -36,6 +36,25 @@ export function localPref<T>(key: string, fallback: T, decode: (stored: unknown)
   };
 }
 
+export function memoryPref<T>(initial: T): LocalPref<T> {
+  const listeners = new Set<() => void>();
+  let value = initial;
+  return {
+    fallback: initial,
+    read: () => value,
+    set(next: T) {
+      value = next;
+      for (const listener of listeners) listener();
+    },
+    subscribe(listener: () => void) {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+  };
+}
+
 export function usePref<T>(pref: LocalPref<T>): T {
   return useSyncExternalStore(pref.subscribe, pref.read, () => pref.fallback);
 }

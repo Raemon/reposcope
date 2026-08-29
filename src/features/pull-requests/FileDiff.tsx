@@ -1,23 +1,26 @@
 'use client';
 
-import { useContext, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { CodeBlockEditor } from './CodeBlockEditor';
 import { CommitEditModal } from './CommitEditModal';
 import { DiffSide, type HunkControl } from './DiffSide';
 import { useDiffLayout } from './diffLayoutStore';
-import { columnLines, unifiedLines } from './diffLines';
+import { columnLines, unifiedLines, visibleLines } from './diffLines';
 import { langForPath } from './diffHighlight';
 import { ROW_HEIGHT, SAVE_BAR } from './diffMetrics';
 import { EditTarget } from './editTarget';
 import { type EditableBlock } from './editableBlocks';
 import { expandDiff } from './expandDiff';
+import { useFoldCommand, type FoldMode } from './foldModeStore';
 import { InlineThreads } from './InlineThreads';
 import { setDiffPaneWidth, useDiffPaneWidth } from './diffPaneWidth';
 import { DragHandle, useDragWidth } from './ResizableColumn';
+import { useFileThreads } from './reviewThreadStore';
 import { splitDiff, type DiffRow } from './splitDiff';
+import { useCodeCollapse } from './useCodeCollapse';
 import { useDiffTokens, useIntralineEmphasis } from './useDiffSideHighlight';
 import { useHeightTransition } from './useHeightTransition';
-import { useHunkEdit, type HunkEdit } from './useHunkEdit';
+import { useHunkEdit, type HunkEdit, type HunkEditControls } from './useHunkEdit';
 import { hunkHint, useWholeFile, type WholeFile } from './useWholeFile';
 import type { ChangedFile } from './pullRequests';
 import { useGithubToken } from '@/features/sources/sourceStore';
@@ -45,11 +48,8 @@ export function FileDiff({
   const wholeFile = useWholeFile(owner, repo, file, baseRef, headRef, wantWholeFile);
   const patchRows = useMemo(() => splitDiff(file.patch ?? ''), [file.patch]);
   const rows = useMemo(() => rowsForDisplay(patchRows, wholeFile.lines), [patchRows, wholeFile.lines]);
-  const columns = useMemo(() => ({ left: columnLines(rows, 'left'), right: columnLines(rows, 'right') }), [rows]);
-  const merged = useMemo(() => unifiedLines(rows), [rows]);
   const emphasis = useIntralineEmphasis(rows);
   const tokens = useDiffTokens(rows, file.filename);
-  const growing = useHeightTransition(rows);
   const pull = target?.pull ?? null;
   const hunkEdit = useHunkEdit({
     owner,
@@ -62,37 +62,43 @@ export function FileDiff({
     token,
     onCommitted: target?.onCommitted,
   });
+  useFoldCommandWholeFile(hunkEdit, setWantWholeFile);
   const showingWholeFile = rows !== patchRows;
   const canEdit = pull !== null && !wantWholeFile;
+  const editBlock = canEdit ? hunkEdit.edit?.block ?? null : null;
+  const threads = useFileThreads(file.filename);
+  const collapse = useCodeCollapse(rows, showingWholeFile, file.filename, threads, editBlock);
+  const lines = useMemo(() => foldedLines(rows, collapse.hidden), [rows, collapse.hidden]);
+  const growing = useHeightTransition(rows, collapse.hidden);
   const expand = expandControl(wholeFile, showingWholeFile, hunkEdit, setWantWholeFile);
-  const shared = { rows, tokens, emphasis, expand };
+  const shared = { rows, tokens, emphasis, expand, anchors: collapse.anchors };
   const editing = {
     editable: canEdit,
     onEditBlock: hunkEdit.begin,
-    editedRows: canEdit ? hunkEdit.edit?.block ?? null : null,
+    editedRows: editBlock,
     editor: canEdit && hunkEdit.edit ? hunkEditor(file.filename, hunkEdit) : null,
   };
   return (
     <div ref={growing} className="flex" style={{ paddingBottom: threadOverflow }}>
       <div className="min-w-0 flex-1">
         {unified ? (
-          <DiffSide {...shared} lines={merged} labels {...editing} />
+          <DiffSide {...shared} lines={lines.unified} labels {...editing} />
         ) : (
           <div className="flex">
             <section className="relative flex shrink-0 flex-col border-r border-panel-edge" style={{ width: removedSize.width }}>
-              <DiffSide {...shared} lines={columns.left} labels spacer={canEdit ? spacerFor(hunkEdit.edit) : null} />
+              <DiffSide {...shared} lines={lines.left} labels spacer={canEdit ? spacerFor(hunkEdit.edit) : null} />
               <DragHandle onPointerDown={startDrag} />
             </section>
             <section className="flex min-w-0 flex-1 flex-col">
-              <DiffSide {...shared} lines={columns.right} labels={false} {...editing} />
+              <DiffSide {...shared} lines={lines.right} labels={false} {...editing} />
             </section>
           </div>
         )}
       </div>
       <InlineThreads
-        path={file.filename}
+        threads={threads}
         rows={rows}
-        lines={unified ? merged : columns.right}
+        lines={unified ? lines.unified : lines.right}
         onOverflow={setThreadOverflow}
       />
       {canEdit && hunkEdit.message !== null && hunkEdit.edit !== null && (
@@ -111,14 +117,37 @@ export function FileDiff({
   );
 }
 
+function useFoldCommandWholeFile(hunkEdit: HunkEditControls, setWantWholeFile: (next: boolean) => void) {
+  const command = useFoldCommand();
+  const applied = useRef(command.epoch);
+  const apply = useRef<(mode: FoldMode) => void>(() => {});
+  apply.current = (mode) => {
+    if (mode !== 'collapseUnchanged' && mode !== 'default') return;
+    if (leaveEdit(hunkEdit)) setWantWholeFile(mode === 'collapseUnchanged');
+  };
+  useEffect(() => {
+    if (applied.current === command.epoch) return;
+    applied.current = command.epoch;
+    apply.current(command.mode);
+  }, [command]);
+}
+
 function rowsForDisplay(patchRows: DiffRow[], lines: WholeFile['lines']): DiffRow[] {
   return lines ? expandDiff(patchRows, lines.base, lines.head) : patchRows;
+}
+
+function foldedLines(rows: DiffRow[], hidden: Set<number>) {
+  return {
+    left: visibleLines(columnLines(rows, 'left'), hidden),
+    right: visibleLines(columnLines(rows, 'right'), hidden),
+    unified: visibleLines(unifiedLines(rows), hidden),
+  };
 }
 
 function expandControl(
   wholeFile: WholeFile,
   showingWholeFile: boolean,
-  hunkEdit: ReturnType<typeof useHunkEdit>,
+  hunkEdit: HunkEditControls,
   setWantWholeFile: (update: (was: boolean) => boolean) => void,
 ): HunkControl {
   return {
@@ -128,13 +157,17 @@ function expandControl(
   };
 }
 
-function toggleWholeFile(hunkEdit: ReturnType<typeof useHunkEdit>, setWantWholeFile: (update: (was: boolean) => boolean) => void) {
-  if (hunkEdit.edit && hunkEdit.edit.draft !== hunkEdit.edit.block.text) return;
-  hunkEdit.close();
-  setWantWholeFile((was) => !was);
+function toggleWholeFile(hunkEdit: HunkEditControls, setWantWholeFile: (update: (was: boolean) => boolean) => void) {
+  if (leaveEdit(hunkEdit)) setWantWholeFile((was) => !was);
 }
 
-function hunkEditor(filename: string, hunkEdit: ReturnType<typeof useHunkEdit>) {
+function leaveEdit(hunkEdit: HunkEditControls): boolean {
+  if (hunkEdit.edit && hunkEdit.edit.draft !== hunkEdit.edit.block.text) return false;
+  hunkEdit.close();
+  return true;
+}
+
+function hunkEditor(filename: string, hunkEdit: HunkEditControls) {
   const edit = hunkEdit.edit;
   if (!edit) return null;
   return (

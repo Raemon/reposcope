@@ -46,7 +46,7 @@ function anchorTopOf(thread: ReviewThread, rows: DiffRow[], lines: DiffLine[]): 
   return index < 0 ? null : index * ROW_HEIGHT;
 }
 
-function rowOf(thread: ReviewThread, rows: DiffRow[]): number {
+export function rowOf(thread: ReviewThread, rows: DiffRow[]): number {
   if (thread.line === null) return -1;
   return rows.findIndex((row) => row[thread.side]?.line === thread.line);
 }

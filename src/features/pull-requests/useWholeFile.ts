@@ -15,9 +15,9 @@ export interface WholeFile {
 
 export function hunkHint(wholeFile: WholeFile, expanded: boolean): string {
   if (!wholeFile.available) return '';
-  if (wholeFile.error) return `▸ ${wholeFile.error}`;
-  if (wholeFile.loading) return '▾ loading whole file…';
-  return expanded ? '▾ whole file — click to show changed lines only' : '▸ click to show whole file';
+  if (wholeFile.error) return wholeFile.error;
+  if (wholeFile.loading) return 'loading whole file…';
+  return expanded ? 'whole file — click to show changed lines only' : 'click to show whole file';
 }
 
 export function useWholeFile(

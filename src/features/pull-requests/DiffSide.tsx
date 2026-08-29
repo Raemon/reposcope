@@ -7,15 +7,17 @@ import type { DiffLine } from './diffLines';
 import type { ThemedToken } from './diffHighlight';
 import type { CharRange, IntralineRanges } from './intralineDiff';
 import type { DiffRow } from './splitDiff';
+import type { CollapseAnchor } from './useCodeCollapse';
 import type { SideTokens } from './useDiffSideHighlight';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 
 const ROW = 'flex h-[15px] items-center gap-1 leading-[15px]';
-const GUTTER = 'w-[38px] shrink-0 select-none pr-1 text-right text-[9px] text-ink-dim';
+const GUTTER = 'flex w-[46px] shrink-0 select-none items-center text-[9px] text-ink-dim';
 const TOUCHED_MARK = 'bg-add-bg/60 shadow-[inset_2px_0_0_var(--add-emph)]';
-const EDIT_BTN =
-  'sticky right-0 shrink-0 rounded bg-procgen px-1 uppercase tracking-[0.14em] hover:bg-btn-hover hover:text-ink';
+const STICKY_CHIP = 'sticky right-0 shrink-0 rounded bg-procgen px-1 hover:bg-btn-hover hover:text-ink';
+const EDIT_BTN = `${STICKY_CHIP} uppercase tracking-[0.14em]`;
+const FOLD_BADGE = `${STICKY_CHIP} ml-1 text-[9px] italic text-ink-dim`;
 
 export interface HunkControl {
   expanded: boolean;
@@ -30,6 +32,7 @@ export interface SideProps {
   tokens: SideTokens | null;
   emphasis: (IntralineRanges | null)[];
   expand: HunkControl;
+  anchors: Map<number, CollapseAnchor>;
   editable?: boolean;
   onEditBlock?: (rowIndex: number) => void;
   editor?: ReactNode;
@@ -64,12 +67,14 @@ function DiffLines({
   tokens,
   emphasis,
   expand,
+  anchors,
   editable,
   onEditBlock,
   spacer,
 }: SideProps & { from: number; to: number }) {
   if (from >= to) return null;
   const spacerLine = spacer ? lastLineOfRow(lines, spacer.afterRow) : -1;
+  const rowsWithRightLine = rowsShownOnRight(lines);
   return (
     <div className="min-w-0 flex-1 overflow-x-auto">
       <div className="w-max min-w-full">
@@ -83,6 +88,7 @@ function DiffLines({
                 lineTokens={tokens?.[line.side][line.row] ?? null}
                 ranges={rangesFor(emphasis[line.row], line.side)}
                 expand={expand}
+                anchor={anchorOf(line, anchors, rowsWithRightLine)}
                 editable={editable}
                 onEdit={editStarter(rows, line.row, onEditBlock)}
               />
@@ -104,6 +110,15 @@ function rangesFor(emphasis: IntralineRanges | null | undefined, side: 'left' | 
   return (side === 'left' ? emphasis?.before : emphasis?.after) ?? null;
 }
 
+function rowsShownOnRight(lines: DiffLine[]): Set<number> {
+  return new Set(lines.filter((line) => line.side === 'right').map((line) => line.row));
+}
+
+function anchorOf(line: DiffLine, anchors: Map<number, CollapseAnchor>, rowsWithRightLine: Set<number>): CollapseAnchor | null {
+  if (line.side === 'left' && rowsWithRightLine.has(line.row)) return null;
+  return anchors.get(line.row) ?? null;
+}
+
 function editStarter(rows: DiffRow[], index: number, onEditBlock?: (rowIndex: number) => void) {
   if (!onEditBlock) return undefined;
   const hunk = rows[index]?.kind === 'hunk';
@@ -117,6 +132,7 @@ function DiffLineView({
   lineTokens,
   ranges,
   expand,
+  anchor,
   editable,
   onEdit,
 }: {
@@ -125,6 +141,7 @@ function DiffLineView({
   lineTokens: ThemedToken[] | null;
   ranges: CharRange[] | null;
   expand: HunkControl;
+  anchor: CollapseAnchor | null;
   editable?: boolean;
   onEdit?: () => void;
 }) {
@@ -137,10 +154,10 @@ function DiffLineView({
   const openable = Boolean(editable && side === 'right');
   return (
     <div
-      className={`${ROW} ${lineTone(side, changed, line.touched)} ${openable ? 'cursor-text' : ''}`}
+      className={`group ${ROW} ${lineTone(side, changed, line.touched)} ${openable ? 'cursor-text' : ''}`}
       onClick={openable && onEdit ? (event) => event.detail >= 3 && onEdit() : undefined}
     >
-      <span className={GUTTER}>{cell.line}</span>
+      <GutterCell line={cell.line} anchor={anchor} />
       <span className="diff-code whitespace-pre pr-2 text-[11px]">
         {codeSegments(cell.text, lineTokens, changed ? ranges : null).map((segment, index) => (
           <span
@@ -152,7 +169,52 @@ function DiffLineView({
           </span>
         ))}
       </span>
+      {anchor?.collapsed && <FoldBadge anchor={anchor} />}
     </div>
+  );
+}
+
+function FoldBadge({ anchor }: { anchor: CollapseAnchor }) {
+  const { addedLines, deletedLines, kind } = anchor.region;
+  return (
+    <button type="button" onClick={anchor.toggle} title={kind.replace(/_/g, ' ')} className={FOLD_BADGE}>
+      {foldLabel(anchor)}
+      {addedLines > 0 && <span className="not-italic text-add-ink"> +{addedLines}</span>}
+      {deletedLines > 0 && <span className="not-italic text-del-ink"> −{deletedLines}</span>}
+    </button>
+  );
+}
+
+function foldLabel(anchor: CollapseAnchor): string {
+  const folded = `⋯ ${plural(anchor.region.end - anchor.region.start, 'line')}`;
+  return anchor.hiddenThreads === 0 ? folded : `${folded} · ${plural(anchor.hiddenThreads, 'thread')}`;
+}
+
+function plural(count: number, word: string): string {
+  return `${count} ${word}${count === 1 ? '' : 's'}`;
+}
+
+function GutterCell({ line, anchor }: { line: number; anchor: CollapseAnchor | null }) {
+  return (
+    <span className={GUTTER}>
+      <span className="min-w-0 flex-1 text-right">{line}</span>
+      <span className="w-3 shrink-0 text-center">{anchor && <CollapseChevron anchor={anchor} />}</span>
+    </span>
+  );
+}
+
+function CollapseChevron({ anchor }: { anchor: CollapseAnchor }) {
+  return (
+    <button
+      type="button"
+      onClick={anchor.toggle}
+      aria-label={anchor.collapsed ? 'Expand code block' : 'Collapse code block'}
+      className={`shrink-0 text-[11px] leading-[15px] text-ink-dim hover:text-ink ${
+        anchor.collapsed ? '' : 'opacity-40 group-hover:opacity-100'
+      }`}
+    >
+      {anchor.collapsed ? '▸' : '▾'}
+    </button>
   );
 }
 
@@ -176,7 +238,12 @@ function HunkLine({ label, expand, onEdit }: { label: string; expand: HunkContro
   const body = (
     <>
       <span className="min-w-0 flex-1 truncate">{label}</span>
-      {expand.hint && <span className="shrink-0 text-ink-dim/80">{expand.hint}</span>}
+      {expand.hint && (
+        <span className="flex shrink-0 items-center gap-1 text-ink-dim/80">
+          <span aria-hidden className="text-[11px]">{expand.expanded ? '▾' : '▸'}</span>
+          {expand.hint}
+        </span>
+      )}
     </>
   );
   const line = `${ROW} w-full bg-procgen px-1 text-left text-[9px] text-ink-dim`;

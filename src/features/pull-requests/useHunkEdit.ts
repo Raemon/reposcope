@@ -11,6 +11,20 @@ export interface HunkEdit {
   draft: string;
 }
 
+export interface HunkEditControls {
+  edit: HunkEdit | null;
+  message: string | null;
+  committing: boolean;
+  failure: string | null;
+  begin: (rowIndex: number) => void;
+  askToCommit: () => void;
+  commit: () => void;
+  close: () => void;
+  dismissModal: () => void;
+  setDraft: (draft: string) => void;
+  setMessage: (message: string) => void;
+}
+
 export function useHunkEdit({
   owner,
   repo,
@@ -31,7 +45,7 @@ export function useHunkEdit({
   patch: string;
   token: string | null;
   onCommitted?: () => void | Promise<void>;
-}) {
+}): HunkEditControls {
   const [edit, setEdit] = useState<HunkEdit | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [committing, setCommitting] = useState(false);

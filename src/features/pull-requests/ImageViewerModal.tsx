@@ -9,7 +9,7 @@ import type { ImageGallery } from './imageView';
 import { holdClick, useFocusOnIndex, useViewerKeys, wrapImageIndex } from './viewerKeys';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 
-const SHIFT = 'shrink-0 px-2 py-8 text-[18px] leading-none text-ink-dim hover:bg-btn-hover hover:text-ink';
+const SHIFT = 'shrink-0 px-2 py-8 text-[22px] leading-none text-ink-dim hover:bg-btn-hover hover:text-ink';
 
 interface ViewerProps {
   gallery: ImageGallery;

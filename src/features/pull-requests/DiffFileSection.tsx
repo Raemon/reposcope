@@ -40,7 +40,7 @@ export function DiffFileSection({
         expanded={open}
         className={`sticky top-0 z-20 flex w-full items-baseline gap-2 border-b border-panel-edge px-2 py-[2px] text-left text-[11px] leading-4 ${sectionTone(row.state)}`}
       >
-        <span aria-hidden className="w-2 shrink-0 text-[9px] text-ink-dim">
+        <span aria-hidden className="w-3 shrink-0 text-[11px] text-ink-dim">
           {open ? '▾' : '▸'}
         </span>
         <span className="min-w-0 flex-1 truncate filename-text">
