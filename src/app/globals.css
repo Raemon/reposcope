@@ -5,6 +5,7 @@
   --font-serif: 'Iowan Old Style', Palatino, 'Palatino Linotype', 'Book Antiqua', Georgia, serif;
 
   --color-bg: var(--bg);
+  --color-code: var(--code);
   --color-panel: var(--panel);
   --color-panel-edge: var(--panel-edge);
   --color-ink: var(--ink);
@@ -50,8 +51,9 @@
 }
 
 :root {
-  --bg: #eef1f5;
-  --panel: #ffffff;
+  --bg: #e6eaf1;
+  --code: #ffffff;
+  --panel: #eef1f5;
   --panel-edge: #7f8a99;
   --ink: #0a0e14;
   --ink-dim: #45505f;
@@ -93,6 +95,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
     --bg: #0f0e0d;
+    --code: #0f0e0d;
     --panel: #1a1917;
     --panel-edge: #6f675c;
     --ink: #f8f4ec;
@@ -161,6 +164,7 @@
 
 :root[data-theme='dark'] {
   --bg: #0f0e0d;
+  --code: #0f0e0d;
   --panel: #1a1917;
   --panel-edge: #6f675c;
   --ink: #f8f4ec;

@@ -39,7 +39,7 @@ export function InlineThreads({
   useEffect(() => onOverflow(overflow), [overflow, onOverflow]);
 
   return (
-    <div className="relative shrink-0 border-l border-panel-edge" style={{ width }}>
+    <div className="relative shrink-0 border-l border-panel-edge bg-panel" style={{ width }}>
       {cards.map((card) => (
         <PlacedCard
           key={card.thread.rootId}
@@ -117,7 +117,7 @@ function PlacedCard({
           type="button"
           onClick={onToggle}
           style={{ height: EXPAND_BAR }}
-          className="block w-full rounded-b border border-t-0 border-panel-edge bg-panel px-1.5 text-left text-[9px] italic leading-[13px] text-ink-dim hover:text-ink"
+          className="block w-full rounded-b border border-t-0 border-panel-edge bg-tip px-1.5 text-left text-[9px] italic leading-[13px] text-ink-dim hover:text-ink"
         >
           {expanded ? 'Collapse' : 'Expand'}
         </button>

@@ -57,7 +57,7 @@ export function DiffPanes({
     <EditTarget value={editablePull && { pull: editablePull, headRef: fileSet.headRef, onCommitted }}>
       <div className="flex min-h-0 flex-1 flex-col">
         <DiffLayoutToggle />
-        <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
+        <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto bg-code">
           <ImageStrip
             key={`${fileSet.baseRef}:${fileSet.headRef}`}
             owner={owner}
