@@ -1,4 +1,4 @@
-import { oauthProxyConfigured } from './oauthProxy';
+import { oauthProxy } from './oauthProxy';
 
 export interface OAuthConfig {
   clientId: string;
@@ -11,6 +11,6 @@ export function oauthConfig(): OAuthConfig | null {
   return clientId && clientSecret ? { clientId, clientSecret } : null;
 }
 
-export function githubSignInAvailable(): boolean {
-  return oauthConfig() !== null || oauthProxyConfigured() !== null;
+export function oauthConfigured(): boolean {
+  return oauthConfig() !== null || oauthProxy() !== null;
 }

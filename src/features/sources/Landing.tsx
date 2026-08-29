@@ -7,7 +7,7 @@ import { CodebaseList } from '@/features/codebases/CodebaseList';
 import { sidebarGroups } from '@/features/codebases/sidebarGroups';
 import { useSourceResults } from '@/features/codebases/useSourceResults';
 
-export function Landing({ error, signInAvailable }: { error: string | null; signInAvailable: boolean }) {
+export function Landing({ error, oauthConfigured }: { error: string | null; oauthConfigured: boolean }) {
   const ready = useStoreReady();
   const sources = useSources();
   const token = useGithubToken();
@@ -38,7 +38,7 @@ export function Landing({ error, signInAvailable }: { error: string | null; sign
           <p className="mt-5 text-[10px] uppercase tracking-[0.18em] text-ink-dim">Add more</p>
         </>
       )}
-      <SourceControls compact={!onboarding} signInAvailable={signInAvailable} />
+      <SourceControls compact={!onboarding} oauthConfigured={oauthConfigured} />
     </section>
   );
 }

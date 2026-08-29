@@ -1,13 +1,13 @@
 import { oauthConfig } from '@/features/github-auth/githubOAuthConfig';
 import { GrantRejectedError, refreshGrant } from '@/features/github-auth/githubOAuthTokens';
-import { forwardRefresh, oauthProxyFor } from '@/features/github-auth/oauthProxy';
+import { forwardRefresh, oauthProxy } from '@/features/github-auth/oauthProxy';
 
 export async function POST(request: Request) {
   const refreshToken = (((await request.json().catch(() => null)) as { refreshToken?: unknown } | null)?.refreshToken) ?? null;
   if (typeof refreshToken !== 'string' || !refreshToken) {
     return Response.json({ error: 'Missing refreshToken' }, { status: 400 });
   }
-  const proxy = oauthProxyFor(request);
+  const proxy = oauthProxy(request);
   if (proxy) return forwardRefresh(proxy, refreshToken);
   const config = oauthConfig();
   if (!config) return Response.json({ error: 'GitHub sign-in is not configured' }, { status: 500 });

@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 import { Landing } from './Landing';
 import { useSources, useStoreReady } from './sourceStore';
 
-export function HomeLanding({ error, signInAvailable }: { error: string | null; signInAvailable: boolean }) {
+export function HomeLanding({ error, oauthConfigured }: { error: string | null; oauthConfigured: boolean }) {
   const ready = useStoreReady();
   const sources = useSources();
   const router = useRouter();
@@ -14,5 +14,5 @@ export function HomeLanding({ error, signInAvailable }: { error: string | null; 
     if (connected) router.replace('/pulls');
   }, [connected, router]);
   if (connected) return null;
-  return <Landing error={error} signInAvailable={signInAvailable} />;
+  return <Landing error={error} oauthConfigured={oauthConfigured} />;
 }
