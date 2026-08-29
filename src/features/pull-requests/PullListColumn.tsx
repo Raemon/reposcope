@@ -9,7 +9,7 @@ import { ColumnPreview, type PreviewToken } from './ColumnPreview';
 import { useRegisterColumn } from './columnNav';
 import { PullFilterMenu } from './PullFilterMenu';
 import { PullRequestList } from './PullRequestList';
-import { collapsePullListOnSelect, type PullListColumnName } from './pullListColumn';
+import { collapsePullList, type PullListColumnName } from './collapsePullList';
 import { ResizableColumn, type ColumnSize } from './ResizableColumn';
 import { branchRoute, allPullsRoute, pullRoute } from './pullPaths';
 import type { PullRequestSummary } from './pullRequests';
@@ -81,6 +81,12 @@ function PullsColumn({
   const pathname = usePathname();
   const router = useRouter();
   const selected = targets.some((target) => target.route === pathname) ? pathname : null;
+  const openTarget = (route: string) => {
+    const target = targets.find((held) => held.route === route);
+    if (!target) return;
+    router.push(target.href);
+    if (target.pull && route !== selected) collapsePullList(column);
+  };
   useRegisterColumn(
     'pulls',
     {
@@ -89,7 +95,7 @@ function PullsColumn({
       open: size.open,
       collapsible: true,
       setOpen: (open) => onSize({ ...size, open }),
-      onActivate: (route) => selectTarget(router, targets, route, column),
+      onActivate: openTarget,
     },
     useShowsColumn('pulls'),
   );
@@ -135,16 +141,4 @@ function branchTarget(owner: string, repo: string, branch: BranchSummary): PullN
 
 function pullToken(target: PullNavTarget, accent: boolean): PreviewToken {
   return { key: target.route, label: target.label, title: target.title, accent };
-}
-
-function selectTarget(
-  router: { push: (href: string) => void },
-  targets: PullNavTarget[],
-  route: string,
-  column: PullListColumnName,
-) {
-  const target = targets.find((held) => held.route === route);
-  if (!target) return;
-  router.push(target.href);
-  if (target.pull) collapsePullListOnSelect(column);
 }

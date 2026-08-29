@@ -23,6 +23,10 @@ export function useSelectableClick<T extends HTMLElement>(activate?: (event: Rea
   };
 }
 
+export function opensAnotherTab<T extends HTMLElement>(event: ReactMouseEvent<T>): boolean {
+  return event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
+}
+
 function selectedTextInside<T extends HTMLElement>(
   row: T,
   pressedAt: { x: number; y: number } | null,

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import type { ReactNode, Ref } from 'react';
+import type { MouseEvent as ReactMouseEvent, ReactNode, Ref } from 'react';
 import { SELECTABLE_TEXT, useSelectableClick } from './selectableClick';
 
 export function SelectableLink({
@@ -20,7 +20,7 @@ export function SelectableLink({
   cursor?: boolean;
   ref?: Ref<HTMLAnchorElement>;
   onPointerEnter?: () => void;
-  onSelect?: () => void;
+  onSelect?: (event: ReactMouseEvent<HTMLAnchorElement>) => void;
   children: ReactNode;
 }) {
   const linkClick = useSelectableClick<HTMLAnchorElement>(onSelect);
