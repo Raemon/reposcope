@@ -92,7 +92,7 @@ function ThreadComment({
       </header>
       {showBody && (
         <HoverCardHtml
-          className="markdown-body break-words pr-6 text-[13px] leading-[1.5] text-ink"
+          className="markdown-body break-words pr-6 text-ink"
           html={renderMarkdown(comment.body, repo)}
           tooltipStyle
         />

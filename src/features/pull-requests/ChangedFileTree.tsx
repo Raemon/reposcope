@@ -2,7 +2,7 @@
 
 import { ChangeCounts } from './ChangeCounts';
 import { useColumnNav } from './columnNav';
-import { FILENAME_TEXT, fileKindColor, splitExtension } from './fileKind';
+import { fileKindColor, splitExtension } from './fileKind';
 import { baseName, folderOf } from './fileTree';
 import type { ChangedFile } from './pullRequests';
 import { rowShowsAccent, rowStateClass } from '@/features/surface-ui/rowState';
@@ -44,7 +44,7 @@ function FileRow({
       onActivate={() => onSelect(file.filename)}
       className={`${ROW} ${rowStateClass(row.state)}`}
     >
-      <span className={`min-w-0 flex-1 truncate ${FILENAME_TEXT}`}>
+      <span className="min-w-0 flex-1 truncate filename-text">
         <ParentFolder path={file.filename} />
         <FileName path={file.filename} tinted={!rowShowsAccent(row.state)} />
       </span>

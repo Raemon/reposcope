@@ -46,7 +46,7 @@ export function CommitEditModal({
     >
       <div className="p-3">
         <h2 className="text-[12px] text-ink">Make new commit?</h2>
-        <p className="mt-1 truncate font-serif text-[11px] text-ink-dim">{path}</p>
+        <p className="filename-text mt-1 truncate text-ink-dim">{path}</p>
         <textarea
           value={message}
           rows={3}
