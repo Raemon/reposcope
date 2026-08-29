@@ -39,7 +39,7 @@ export function InlineThreads({
   useEffect(() => onOverflow(overflow), [overflow, onOverflow]);
 
   return (
-    <div className="relative shrink-0 border-l border-panel-edge bg-panel" style={{ width }}>
+    <div className="relative shrink-0 border-l border-panel-edge bg-shade" style={{ width }}>
       {cards.map((card) => (
         <PlacedCard
           key={card.thread.rootId}

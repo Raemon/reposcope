@@ -173,11 +173,12 @@ interface ColumnProps {
   onSize: (next: ColumnSize) => void;
   action?: ReactNode;
   footer?: ReactNode;
+  tone?: string;
   children: ReactNode;
 }
 
 export function ResizableColumn(props: ColumnProps) {
-  const { navId, title, icon, note, preview, size, onSize, action, footer, children } = props;
+  const { navId, title, icon, note, preview, size, onSize, action, footer, tone = 'bg-panel', children } = props;
   const nav = useColumnNav(navId);
   const startDrag = useDragWidth(size, onSize);
   const pane = usePaneMode(navId);
@@ -207,7 +208,7 @@ export function ResizableColumn(props: ColumnProps) {
     <section
       onPointerDown={nav.focus}
       onPointerLeave={nav.clearHover}
-      className={`relative flex w-full shrink-0 flex-col border-b bg-panel md:w-[var(--col-w)] md:min-h-0 md:border-b-0 md:border-r ${columnEdge(nav.focused)}`}
+      className={`relative flex w-full shrink-0 flex-col border-b md:w-[var(--col-w)] md:min-h-0 md:border-b-0 md:border-r ${columnEdge(nav.focused, tone)}`}
       style={{ '--col-w': `${size.width}px` } as CSSProperties}
     >
       <ColumnHeader
@@ -226,8 +227,8 @@ export function ResizableColumn(props: ColumnProps) {
   );
 }
 
-function columnEdge(focused: boolean): string {
-  return focused ? 'border-accent bg-btn' : 'border-panel-edge bg-panel';
+function columnEdge(focused: boolean, tone = 'bg-panel'): string {
+  return focused ? 'border-accent bg-btn' : `border-panel-edge ${tone}`;
 }
 
 function headerTone(row: ColumnRow, focused: boolean): string {
