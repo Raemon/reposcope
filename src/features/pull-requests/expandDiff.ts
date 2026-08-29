@@ -28,7 +28,6 @@ export function expandDiff(rows: DiffRow[], baseLines: string[], headLines: stri
     if (row.kind === 'hunk') {
       const start = hunkStart(row.label);
       if (start) fillUntil(start.old, start.new);
-      expanded.push(row);
       continue;
     }
     expanded.push(row);
