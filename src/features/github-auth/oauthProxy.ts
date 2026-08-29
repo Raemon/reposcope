@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { requestOrigin } from './requestOrigin';
 
 export function oauthProxy(request?: Request): string | null {
@@ -5,10 +6,14 @@ export function oauthProxy(request?: Request): string | null {
   return proxy && request && proxy === requestOrigin(request) ? null : proxy;
 }
 
-export function allowedReturn(raw: string | null): string | null {
-  const suffixes = (process.env.GITHUB_OAUTH_RETURN_HOSTS ?? '').split(',').filter(Boolean);
-  const url = raw?.startsWith('https://') ? URL.parse(raw) : null;
-  return url?.origin === raw && suffixes.some((suffix) => url.host.endsWith(suffix)) ? raw : null;
+export function signReturn(origin: string): string {
+  return createHmac('sha256', process.env.GITHUB_OAUTH_RELAY_SECRET ?? '').update(origin).digest('base64url');
+}
+
+export function verifiedReturn(origin: string | null, signature: string | null): string | null {
+  if (!process.env.GITHUB_OAUTH_RELAY_SECRET || !origin || !signature) return null;
+  const [expected, given] = [Buffer.from(signReturn(origin)), Buffer.from(signature)];
+  return expected.length === given.length && timingSafeEqual(expected, given) ? origin : null;
 }
 
 export function forwardRefresh(proxy: string, refreshToken: string): Promise<Response> {
