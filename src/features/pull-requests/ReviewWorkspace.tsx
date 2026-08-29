@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { CentralTabBar, useShowsColumn } from './centralLayout';
 import { ColumnPreview } from './ColumnPreview';
 import { DiffPanes, type DiffPanesHandle } from './DiffPanes';
@@ -195,23 +195,19 @@ function Workspace({
   );
 }
 
-function useCommitColumnSize(subjectKey: string, single: boolean): [ColumnSize, Dispatch<SetStateAction<ColumnSize>>] {
+function useCommitColumnSize(subjectKey: string, single: boolean): [ColumnSize, (next: ColumnSize) => void] {
   const [stored, setStored] = useStickyColumn('commits');
   const [expandedSubject, setExpandedSubject] = useState<string | null>(null);
   const size = single ? { ...stored, open: expandedSubject === subjectKey } : stored;
-  const setSize = useCallback<Dispatch<SetStateAction<ColumnSize>>>(
-    (next) => {
-      const asked = typeof next === 'function' ? next(size) : next;
-      if (single) setExpandedSubject(asked.open ? subjectKey : null);
-      setStored({ ...asked, open: single ? stored.open : asked.open });
-    },
-    [single, subjectKey, size, stored.open, setStored],
-  );
+  const setSize = (next: ColumnSize) => {
+    if (single) setExpandedSubject(next.open ? subjectKey : null);
+    setStored(single ? { ...next, open: stored.open } : next);
+  };
   return [size, setSize];
 }
 
-function collapsibleColumn(size: ColumnSize, onSize: (next: (held: ColumnSize) => ColumnSize) => void) {
-  return { open: size.open, collapsible: true, setOpen: (open: boolean) => onSize((held) => ({ ...held, open })) };
+function collapsibleColumn(size: ColumnSize, onSize: (next: ColumnSize) => void) {
+  return { open: size.open, collapsible: true, setOpen: (open: boolean) => onSize({ ...size, open }) };
 }
 
 function reloadFailure(issue: unknown): string {
