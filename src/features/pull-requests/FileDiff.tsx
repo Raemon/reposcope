@@ -23,6 +23,7 @@ import { useHeightTransition } from './useHeightTransition';
 import { useHunkEdit, type HunkEdit, type HunkEditControls } from './useHunkEdit';
 import { hunkHint, useWholeFile, type WholeFile } from './useWholeFile';
 import type { ChangedFile } from './pullRequests';
+import { WHOLE_FILE_STATUS } from './wholeFileEntry';
 import { useGithubToken } from '@/features/sources/sourceStore';
 
 export function FileDiff({
@@ -40,7 +41,7 @@ export function FileDiff({
 }) {
   const token = useGithubToken();
   const target = useContext(EditTarget);
-  const unified = useDiffLayout() === 'unified';
+  const unified = useDiffLayout() === 'unified' || file.status === WHOLE_FILE_STATUS;
   const removedSize = { width: useDiffPaneWidth(), open: true };
   const startDrag = useDragWidth(removedSize, setDiffPaneWidth);
   const [wantWholeFile, setWantWholeFile] = useState(false);

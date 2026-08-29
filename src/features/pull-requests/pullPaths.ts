@@ -46,6 +46,14 @@ export function branchFilesPath(owner: string, repo: string, branch: string): st
   return `/api/github/branch-files?${repoParams(owner, repo)}&branch=${encodeURIComponent(branch)}`;
 }
 
+export function repoFilesPath(owner: string, repo: string): string {
+  return `/api/github/repo-files?${repoParams(owner, repo)}`;
+}
+
+export function fileTextPath(owner: string, repo: string, ref: string, path: string): string {
+  return `/api/github/file?${repoParams(owner, repo)}&ref=${encodeURIComponent(ref)}&path=${encodeURIComponent(path)}`;
+}
+
 export function repoPullsPath(owner: string, repo: string, state: PullState = 'open'): string {
   return `/api/github/pulls?${repoParams(owner, repo)}&state=${state}`;
 }
