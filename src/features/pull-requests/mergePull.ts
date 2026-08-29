@@ -1,5 +1,6 @@
 'use client';
 
+import { collapsePullList } from './collapsePullList';
 import { nextPullAfter, pullListRoute, viewingAcrossRepos } from './nextPull';
 import { prefetchPull } from './prefetchPull';
 import { trackPullAction, type PullTarget } from './pullActionStore';
@@ -10,10 +11,14 @@ import { apiPost } from '@/features/sources/apiClient';
 
 export function mergePull(target: PullTarget, token: string | null, navigate: (href: string) => void): void {
   const acrossRepos = viewingAcrossRepos();
+  const list = acrossRepos ? 'all-pulls' : 'pulls';
   const next = nextPullAfter(target, token, acrossRepos);
-  setStickyColumn(acrossRepos ? 'all-pulls' : 'pulls', (size) => ({ ...size, open: true }));
   trackPullAction(target, 'merge', requestMerge(target, token));
-  if (!next) return navigate(pullListRoute(target, acrossRepos));
+  if (!next) {
+    setStickyColumn(list, (size) => ({ ...size, open: true }));
+    return navigate(pullListRoute(target, acrossRepos));
+  }
+  collapsePullList(list);
   prefetchPull(next.owner, next.repo, next.number, token);
   navigate(next.href);
 }

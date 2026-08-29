@@ -20,6 +20,7 @@ interface NavValue {
   hover: Hover | null;
   setHover: (hover: Hover | null) => void;
   focus: (column: ColumnId) => void;
+  activate: (column: ColumnId, item: string) => void;
   register: (id: ColumnId, column: NavColumn | null) => void;
   registerBody: (id: ColumnId, node: HTMLElement | null) => void;
 }
@@ -30,6 +31,7 @@ const INERT: NavValue = {
   hover: null,
   setHover: () => {},
   focus: () => {},
+  activate: () => {},
   register: () => {},
   registerBody: () => {},
 };
@@ -68,12 +70,17 @@ export function ColumnNavProvider({ children }: { children: ReactNode }) {
     [focused, cursors, moveCursor, setCursor],
   );
 
+  const activate = useCallback((id: ColumnId, item: string) => {
+    const column = columns.current.get(id);
+    (column?.onActivate ?? column?.onSelect)?.(item);
+  }, []);
+
   useEffect(() => listenForNavKeys(apply), [apply]);
   useEffect(() => {
     document.querySelector('[data-nav-cursor]')?.scrollIntoView({ block: 'nearest' });
   }, [focused, cursors]);
 
-  const value = { focused, cursors, hover, setHover, focus: setFocused, register, registerBody };
+  const value = { focused, cursors, hover, setHover, focus: setFocused, activate, register, registerBody };
   return <ColumnNavContext.Provider value={value}>{children}</ColumnNavContext.Provider>;
 }
 
@@ -107,6 +114,7 @@ export function useColumnNav(id: ColumnId) {
     focused,
     cursor,
     focus: () => nav.focus(id),
+    activate: (item: string) => nav.activate(id, item),
     clearHover: () => nav.setHover(null),
     bodyRef,
     row: (item: string, selected = false): ColumnRow => ({
