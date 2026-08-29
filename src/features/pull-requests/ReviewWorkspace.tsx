@@ -146,7 +146,7 @@ function Workspace({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <CentralTabBar />
-      <div className="flex min-h-0 flex-1">
+      <div className="flex min-h-0 flex-1 max-md:flex-col max-md:overflow-y-auto">
         {listColumn}
         {discussion !== null && (
           <ResizableColumn navId="discussion" icon="❝" title="discussion" size={discussionSize} onSize={setDiscussionSize}>
@@ -176,7 +176,7 @@ function Workspace({
         {!showsDiff ? null : fileSet === null && fileError !== null ? (
           <p className="flex-1 px-2 py-1 text-[11px] text-error-ink">{fileError}</p>
         ) : (
-          <div className="flex min-w-0 flex-1 flex-col">
+          <div className="flex min-w-0 flex-1 flex-col max-md:h-[80vh] max-md:flex-none">
             {notice !== null && <p className="shrink-0 px-2 py-1 text-[11px] text-error-ink">{notice}</p>}
             <DiffPanes
               ref={diffPanes}
