@@ -13,6 +13,7 @@ export function commentCountsOf(threads: ReviewThread[]): Map<string, number> {
 
 export function sortChangedFiles(files: ChangedFile[], sort: DiffSort, comments: Map<string, number>): ChangedFile[] {
   const base = sortByFolder(files);
+  if (sort === 'folder') return base;
   if (sort === 'diffAll') return byDescending(base, allDiffCount);
   if (sort === 'diff') return byDescending(base, nonImportDiffCount);
   return byDescending(base, (file) => comments.get(file.filename) ?? 0, nonImportDiffCount);

@@ -2,6 +2,8 @@
 
 import { useMemo } from 'react';
 import { FileTreeRow } from './FileTreeRow';
+import { groupByFolder } from './fileTree';
+import { FolderGroupedRows } from './FolderGroupedRows';
 import type { RepoFiles } from './repoFileStore';
 
 const NOTE = 'px-1.5 py-[1px] text-[11px] leading-4';
@@ -22,7 +24,8 @@ export function listedPaths(repoFiles: RepoFiles, query: string): { shown: strin
   const paths = repoFiles.fileSet?.files ?? [];
   const wanted = query.trim().toLowerCase();
   const matching = wanted ? paths.filter((path) => path.toLowerCase().includes(wanted)) : paths;
-  return { shown: matching.slice(0, SHOWN_LIMIT), total: matching.length };
+  const byFolder = groupByFolder(matching, (path) => path).flatMap((group) => group.items);
+  return { shown: byFolder.slice(0, SHOWN_LIMIT), total: matching.length };
 }
 
 export function RepoFileList({
@@ -68,15 +71,18 @@ function FileRows({
   if (!fileSet) return <p className={`${NOTE} ${error ? 'text-error-ink' : 'text-ink-dim'}`}>{error ?? 'Loading…'}</p>;
   return (
     <>
-      {listed.shown.map((path) => (
-        <FileTreeRow
-          key={path}
-          path={path}
-          navKey={browseKey(path)}
-          selected={path === selected}
-          onSelect={() => onSelect(path)}
-        />
-      ))}
+      <FolderGroupedRows items={listed.shown} pathOf={(path) => path}>
+        {(path, indented) => (
+          <FileTreeRow
+            key={path}
+            path={path}
+            navKey={browseKey(path)}
+            selected={path === selected}
+            onSelect={() => onSelect(path)}
+            indented={indented}
+          />
+        )}
+      </FolderGroupedRows>
       <ListFoot shown={listed.shown.length} total={listed.total} truncated={fileSet.truncated} />
     </>
   );
