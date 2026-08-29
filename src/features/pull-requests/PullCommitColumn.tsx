@@ -11,7 +11,7 @@ import { rowStateClass } from '@/features/surface-ui/rowState';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 import { useWrappedText } from '@/features/surface-ui/useWrappedText';
 
-const ROW = 'flex w-full items-center gap-1.5 px-1.5 py-1 text-left font-serif text-[12px] leading-[1.15]';
+const ROW = 'flex w-full items-center gap-1.5 px-1.5 py-1.5 text-left font-serif text-[14px] leading-[1.2]';
 const HASH = 'ml-1.5 w-[3ch] shrink-0 font-mono text-[9px]';
 const HASH_CHARS = 3;
 const META = 'grid shrink-0 items-center justify-items-end gap-x-1.5 font-mono text-[9px] leading-4 text-ink-dim';

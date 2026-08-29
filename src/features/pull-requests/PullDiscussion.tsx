@@ -36,7 +36,6 @@ export function PullDiscussion({
         owner={owner}
         repo={repo}
         author={author}
-        note="description"
         body={body?.trim() ? body : 'No description.'}
       />
       {comments === null ? (
@@ -73,7 +72,7 @@ function DiscussionEntry({
   owner: string;
   repo: string;
   author: string;
-  note: string;
+  note?: string;
   path?: string | null;
   body: string;
 }) {
@@ -82,7 +81,7 @@ function DiscussionEntry({
     <article className="border-b border-panel-edge px-1.5 py-1">
       <header className="flex items-baseline gap-1.5 text-[9px] text-ink-dim">
         {!isOwnAuthor(author) && <span className="shrink-0 text-ink">{author}</span>}
-        <span className="shrink-0">{note}</span>
+        {note && <span className="shrink-0">{note}</span>}
         {path && <span className="min-w-0 flex-1 truncate font-serif text-[10px]">{path}</span>}
       </header>
       <HoverCardHtml
