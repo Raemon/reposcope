@@ -322,6 +322,18 @@ check("element in attribute keeps outer fold", spansOf([
   '</Button>',
 ], 'x.tsx', true), [[0,5,"br"]]);
 
+function changedOpenerRows() {
+  const rows = rowsOf(['<div>', '  <span className="a">', '    {hash}', '  </span>', '</div>']);
+  rows[1] = { ...rows[1], kind: 'change', left: { line: 2, text: '  <span className="a b">' } };
+  return rows;
+}
+
+check(
+  'a region whose opening line changed is marked anchorChanged',
+  collapseRegions(changedOpenerRows(), true, 'x.tsx').map((r) => [r.start, r.end, r.addedLines, r.anchorChanged]),
+  [[0, 4, 1, false], [1, 3, 0, true]],
+);
+
 check(
   'deletion-only rows keep the enclosing fold',
   collapseRegions(mixedRows(), true, 'a.ts').map((r) => [r.start, r.end, r.addedLines, r.deletedLines]),
