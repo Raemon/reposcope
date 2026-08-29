@@ -89,6 +89,7 @@ function PullRow({
       href={allPullsRoute(pull.owner, pull.repo, pull.number)}
       current={pathname === pullRoute(pull.owner, pull.repo, pull.number)}
       closable={pull.state === 'open'}
+      column="all-pulls"
     >
       <span className={`${ROW_META} truncate`} style={{ width: `${repoColumnCh}ch` }}>
         {pull.repo}

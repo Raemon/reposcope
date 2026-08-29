@@ -4,12 +4,14 @@ import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { closePull } from './closePull';
 import { NavListRow } from './NavListRow';
+import { collapsePullList, type PullListColumnName } from './collapsePullList';
 import type { PullTarget } from './pullActionStore';
 import { prefetchPull } from './prefetchPull';
 import { pullRoute } from './pullPaths';
 import { useIsOwnAuthor } from '@/features/github-auth/useViewerLogin';
 import { useGithubToken } from '@/features/sources/sourceStore';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
+import { opensAnotherTab } from '@/features/surface-ui/selectableClick';
 import { RelativeTime } from '@/features/surface-ui/RelativeTime';
 import { useWrappedText } from '@/features/surface-ui/useWrappedText';
 
@@ -32,7 +34,7 @@ export function PullRowFields({ pull }: { pull: PullRowSummary }) {
   const isOwnAuthor = useIsOwnAuthor();
   return (
     <>
-      <span className={ROW_META}>#{pull.number}</span>
+      <span className={ROW_META}>{pull.number}</span>
       <span className="min-w-0 flex-1 break-words">
         <span ref={title}>{pull.title}</span>
       </span>
@@ -64,12 +66,14 @@ export function PullListRow({
   href,
   current,
   closable,
+  column,
   children,
 }: {
   target: PullTarget;
   href: string;
   current: boolean;
   closable: boolean;
+  column: PullListColumnName;
   children: ReactNode;
 }) {
   const token = useGithubToken();
@@ -80,6 +84,9 @@ export function PullListRow({
       current={current}
       serif
       onPointerEnter={() => prefetchPull(target.owner, target.repo, target.number, token)}
+      onSelect={(event) => {
+        if (!current && !opensAnotherTab(event)) collapsePullList(column);
+      }}
       trailing={closable ? <ClosePullIcon target={target} token={token} shown={current} /> : null}
     >
       {children}

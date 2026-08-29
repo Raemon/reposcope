@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import { AllPullRequestList } from './AllPullRequestList';
 import { PullRequestList } from './PullRequestList';
+import { RepoFilesBrowser } from './RepoFilesBrowser';
 
 export function AllPullsSurface() {
   return (
@@ -15,7 +16,9 @@ export function AllPullsSurface() {
 export function RepoPullsSurface({ owner, repo }: { owner: string; repo: string }) {
   return (
     <PullsSurface heading="Pull requests" note="open in this codebase, most recently updated first">
-      <PullRequestList repo={{ owner, name: repo }} />
+      <RepoFilesBrowser owner={owner} repo={repo}>
+        <PullRequestList repo={{ owner, name: repo }} />
+      </RepoFilesBrowser>
     </PullsSurface>
   );
 }

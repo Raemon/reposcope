@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 import { useColumnNav } from './columnNav';
 import { rowStateClass } from '@/features/surface-ui/rowState';
 import { SelectableLink } from '@/features/surface-ui/SelectableLink';
@@ -15,6 +15,7 @@ export function NavListRow({
   dimmed = false,
   serif = false,
   onPointerEnter,
+  onSelect,
   trailing,
   children,
 }: {
@@ -24,6 +25,7 @@ export function NavListRow({
   dimmed?: boolean;
   serif?: boolean;
   onPointerEnter?: () => void;
+  onSelect?: (event: ReactMouseEvent<HTMLAnchorElement>) => void;
   trailing?: ReactNode;
   children: ReactNode;
 }) {
@@ -34,7 +36,7 @@ export function NavListRow({
       onPointerEnter={row.props.onPointerEnter}
       className={`group flex border-b border-ink/15 ${serif ? 'items-center' : 'items-baseline'} ${rowStateClass(row.state)} ${dimmed ? 'opacity-50' : ''}`}
     >
-      <SelectableLink href={href} current={current} onPointerEnter={onPointerEnter} className={serif ? SERIF_ROW : ROW}>
+      <SelectableLink href={href} current={current} onPointerEnter={onPointerEnter} onSelect={onSelect} className={serif ? SERIF_ROW : ROW}>
         {children}
       </SelectableLink>
       {trailing}

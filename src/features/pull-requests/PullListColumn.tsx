@@ -9,6 +9,7 @@ import { ColumnPreview, type PreviewToken } from './ColumnPreview';
 import { useRegisterColumn } from './columnNav';
 import { PullFilterMenu } from './PullFilterMenu';
 import { PullRequestList } from './PullRequestList';
+import { collapsePullList, type PullListColumnName } from './collapsePullList';
 import { ResizableColumn, type ColumnSize } from './ResizableColumn';
 import { branchRoute, allPullsRoute, pullRoute } from './pullPaths';
 import type { PullRequestSummary } from './pullRequests';
@@ -30,6 +31,7 @@ interface PullNavTarget {
   href: string;
   label: string;
   title: string;
+  pull: boolean;
 }
 
 export function RepoPullsColumn({ owner, repo, size, onSize }: PullColumn) {
@@ -39,6 +41,7 @@ export function RepoPullsColumn({ owner, repo, size, onSize }: PullColumn) {
   const branches = useBranches(owner, repo, listingBranches);
   return (
     <PullsColumn
+      column="pulls"
       targets={repoTargets(owner, repo, listed, listingBranches ? branches : [])}
       size={size}
       onSize={onSize}
@@ -54,19 +57,21 @@ export function RepoPullsColumn({ owner, repo, size, onSize }: PullColumn) {
 export function AllPullsColumn({ size, onSize }: Pick<PullColumn, 'size' | 'onSize'>) {
   const { listed } = useAllPullList();
   return (
-    <PullsColumn targets={listed.map((pull) => pullTarget(pull.owner, pull.repo, pull, true))} size={size} onSize={onSize}>
+    <PullsColumn column="all-pulls" targets={listed.map((pull) => pullTarget(pull.owner, pull.repo, pull, true))} size={size} onSize={onSize}>
       <AllPullRequestList />
     </PullsColumn>
   );
 }
 
 function PullsColumn({
+  column,
   targets,
   size,
   onSize,
   footer,
   children,
 }: {
+  column: PullListColumnName;
   targets: PullNavTarget[];
   size: ColumnSize;
   onSize: (next: ColumnSize) => void;
@@ -76,6 +81,12 @@ function PullsColumn({
   const pathname = usePathname();
   const router = useRouter();
   const selected = targets.some((target) => target.route === pathname) ? pathname : null;
+  const openTarget = (route: string) => {
+    const target = targets.find((held) => held.route === route);
+    if (!target) return;
+    router.push(target.href);
+    if (target.pull && route !== selected) collapsePullList(column);
+  };
   useRegisterColumn(
     'pulls',
     {
@@ -84,7 +95,7 @@ function PullsColumn({
       open: size.open,
       collapsible: true,
       setOpen: (open) => onSize({ ...size, open }),
-      onActivate: (route) => visitTarget(router, targets, route),
+      onActivate: openTarget,
     },
     useShowsColumn('pulls'),
   );
@@ -111,6 +122,7 @@ function pullTarget(owner: string, repo: string, pull: PullRequestSummary, acros
     href: acrossRepos ? allPullsRoute(owner, repo, pull.number) : route,
     label: String(pull.number).slice(-2),
     title: `${owner}/${repo} #${pull.number} · ${pull.title}`,
+    pull: true,
   };
 }
 
@@ -124,14 +136,9 @@ function repoTargets(owner: string, repo: string, pulls: PullRequestSummary[], b
 function branchTarget(owner: string, repo: string, branch: BranchSummary): PullNavTarget {
   const route = branchRoute(owner, repo, branch.name);
   const leaf = branch.name.split('/').pop() ?? branch.name;
-  return { route, href: route, label: leaf.slice(0, 2), title: `${owner}/${repo} · ${branch.name}` };
+  return { route, href: route, label: leaf.slice(0, 2), title: `${owner}/${repo} · ${branch.name}`, pull: false };
 }
 
 function pullToken(target: PullNavTarget, accent: boolean): PreviewToken {
   return { key: target.route, label: target.label, title: target.title, accent };
-}
-
-function visitTarget(router: { push: (href: string) => void }, targets: PullNavTarget[], route: string) {
-  const target = targets.find((held) => held.route === route);
-  if (target) router.push(target.href);
 }

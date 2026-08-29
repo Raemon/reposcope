@@ -11,7 +11,7 @@ import { ROW_HEIGHT, SAVE_BAR } from './diffMetrics';
 import { EditTarget } from './editTarget';
 import { type EditableBlock } from './editableBlocks';
 import { expandDiff } from './expandDiff';
-import { useFoldCommand, type FoldMode } from './foldModeStore';
+import { useFoldCommand, wholeFileFor, wholeFileWanted, type FoldMode } from './foldModeStore';
 import { InlineThreads } from './InlineThreads';
 import { setDiffPaneWidth, useDiffPaneWidth } from './diffPaneWidth';
 import { DragHandle, useDragWidth } from './ResizableColumn';
@@ -23,6 +23,7 @@ import { useHeightTransition } from './useHeightTransition';
 import { useHunkEdit, type HunkEdit, type HunkEditControls } from './useHunkEdit';
 import { hunkHint, useWholeFile, type WholeFile } from './useWholeFile';
 import type { ChangedFile } from './pullRequests';
+import { WHOLE_FILE_STATUS } from './wholeFileEntry';
 import { useGithubToken } from '@/features/sources/sourceStore';
 
 export function FileDiff({
@@ -40,10 +41,10 @@ export function FileDiff({
 }) {
   const token = useGithubToken();
   const target = useContext(EditTarget);
-  const unified = useDiffLayout() === 'unified';
+  const unified = useDiffLayout() === 'unified' || file.status === WHOLE_FILE_STATUS;
   const removedSize = { width: useDiffPaneWidth(), open: true };
   const startDrag = useDragWidth(removedSize, setDiffPaneWidth);
-  const [wantWholeFile, setWantWholeFile] = useState(false);
+  const [wantWholeFile, setWantWholeFile] = useState(wholeFileWanted);
   const [threadOverflow, setThreadOverflow] = useState(0);
   const wholeFile = useWholeFile(owner, repo, file, baseRef, headRef, wantWholeFile);
   const patchRows = useMemo(() => splitDiff(file.patch ?? ''), [file.patch]);
@@ -122,8 +123,8 @@ function useFoldCommandWholeFile(hunkEdit: HunkEditControls, setWantWholeFile: (
   const applied = useRef(command.epoch);
   const apply = useRef<(mode: FoldMode) => void>(() => {});
   apply.current = (mode) => {
-    if (mode !== 'collapseUnchanged' && mode !== 'default') return;
-    if (leaveEdit(hunkEdit)) setWantWholeFile(mode === 'collapseUnchanged');
+    const want = wholeFileFor(mode);
+    if (want !== null && leaveEdit(hunkEdit)) setWantWholeFile(want);
   };
   useEffect(() => {
     if (applied.current === command.epoch) return;

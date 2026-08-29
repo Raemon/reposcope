@@ -1,12 +1,16 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { AllFilesSection } from './AllFilesSection';
 import { CentralTabBar, useShowsColumn } from './centralLayout';
 import { ColumnPreview } from './ColumnPreview';
 import { DiffPanes, type DiffPanesHandle } from './DiffPanes';
 import { PullCommitColumn, WHOLE_CHANGE, commitItems, commitTokens } from './PullCommitColumn';
 import { PullFilesColumn, fileTokens } from './PullFilesColumn';
-import { ResizableColumn, type ColumnSize } from './ResizableColumn';
+import { browseKey, browsedPath, listedPaths } from './RepoFileList';
+import { RepoFileReader } from './RepoFileReader';
+import { useRepoFiles } from './repoFileStore';
+import { ResizableColumn, collapsibleColumn, type ColumnSize } from './ResizableColumn';
 import { useRegisterColumn } from './columnNav';
 import { commentCountsOf, sortChangedFiles } from './diffSort';
 import { useDiffSort } from './diffSortStore';
@@ -14,7 +18,7 @@ import { DeleteFileModal } from './DeleteFileModal';
 import { commitFilesPath } from './pullPaths';
 import type { ChangedFile, ChangedFileSet, ChangeSummary, PullRequestSummary } from './pullRequests';
 import { ReviewThreadProvider, useReviewTarget } from './reviewThreadStore';
-import { useStickyColumn } from './stickyColumns';
+import { useStickyColumn, useStickyOpen } from './stickyColumns';
 import { useFileDeletion } from './useFileDeletion';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 import { useCachedJson } from '@/features/sources/useCachedJson';
@@ -59,6 +63,10 @@ function Workspace({
   const [selection, setSelection] = useState<string>(WHOLE_CHANGE);
   const [path, setPath] = useState<string | null>(null);
   const [deleted, setDeleted] = useState<string[]>([]);
+  const [browsePath, setBrowsePath] = useState<string | null>(null);
+  const [fileQuery, setFileQuery] = useState('');
+  const [scrollWanted, setScrollWanted] = useState<string | null>(null);
+  const [allFilesOpen, setAllFilesOpen] = useStickyOpen('all-files');
   const [discussionSize, setDiscussionSize] = useStickyColumn('discussion');
   const [fileSize, setFileSize] = useStickyColumn('files');
   const [commitSize, setCommitSize] = useCommitColumnSize(subjectKey, change.commits.length < 2);
@@ -70,14 +78,23 @@ function Workspace({
   const fileSet = fileState.data;
   const fileError = fileState.error;
 
+  const repoFiles = useRepoFiles(owner, repo, (fileSize.open && allFilesOpen) || browsePath !== null);
+
   usePollWhileVisible(fileState.reload, ready);
 
   useEffect(() => {
     setSelection(WHOLE_CHANGE);
     setNotice(null);
+    setBrowsePath(null);
   }, [subjectKey]);
 
   const showingWhole = selection === WHOLE_CHANGE;
+  useEffect(() => {
+    if (scrollWanted === null || browsePath !== null) return;
+    diffPanes.current?.scrollToFile(scrollWanted);
+    setScrollWanted(null);
+  }, [scrollWanted, browsePath]);
+
   useEffect(() => {
     if (!fileSet) return;
     if (showingWhole) setDeleted((held) => held.filter((filename) => stillLivingIn(fileSet, filename)));
@@ -85,9 +102,18 @@ function Workspace({
   }, [fileSet, showingWhole]);
 
   const revealFile = useCallback((filename: string) => {
+    setBrowsePath(null);
     setPath(filename);
-    diffPanes.current?.scrollToFile(filename);
+    setScrollWanted(filename);
   }, []);
+  const selectFileItem = useCallback(
+    (item: string) => {
+      const browsed = browsedPath(item);
+      if (browsed === null) revealFile(item);
+      else setBrowsePath(browsed);
+    },
+    [revealFile],
+  );
   const sort = useDiffSort();
   const { threads } = useReviewTarget();
   const files = useMemo(
@@ -95,6 +121,11 @@ function Workspace({
     [fileSet, deleted, showingWhole, sort, threads],
   );
   const fileItems = useMemo(() => files.map((file) => file.filename), [files]);
+  const browseItems = useMemo(
+    () => (allFilesOpen ? listedPaths(repoFiles, fileQuery).shown.map(browseKey) : []),
+    [allFilesOpen, repoFiles, fileQuery],
+  );
+  const browsing = browsePath !== null && repoFiles.fileSet ? { ref: repoFiles.fileSet.ref, path: browsePath } : null;
   const loadedFiles = fileSet === null ? null : files;
 
   const editableFiles = showingWhole ? editableWhole : null;
@@ -134,9 +165,9 @@ function Workspace({
     'files',
     {
       ...collapsibleColumn(fileSize, setFileSize),
-      items: fileItems,
-      selected: path,
-      onSelect: revealFile,
+      items: [...fileItems, ...browseItems],
+      selected: browsePath === null ? path : browseKey(browsePath),
+      onSelect: selectFileItem,
     },
     showsFiles,
   );
@@ -190,6 +221,17 @@ function Workspace({
           preview={<ColumnPreview column="files" tokens={fileTokens(files, path)} />}
           size={fileSize}
           onSize={setFileSize}
+          footer={
+            <AllFilesSection
+              repoFiles={repoFiles}
+              expanded={allFilesOpen}
+              onExpanded={setAllFilesOpen}
+              selected={browsePath}
+              onSelect={setBrowsePath}
+              query={fileQuery}
+              onQuery={setFileQuery}
+            />
+          }
         >
           <PullFilesColumn
             files={loadedFiles}
@@ -199,7 +241,11 @@ function Workspace({
             onDelete={editableFiles !== null && fileSet !== null ? deletion.ask : null}
           />
         </ResizableColumn>
-        {!showsDiff ? null : fileSet === null && fileError !== null ? (
+        {!showsDiff ? null : browsing !== null ? (
+          <div className="flex min-w-0 flex-1 flex-col max-md:h-[80vh] max-md:flex-none">
+            <RepoFileReader owner={owner} repo={repo} refName={browsing.ref} path={browsing.path} />
+          </div>
+        ) : fileSet === null && fileError !== null ? (
           <p className="flex-1 px-2 py-1 text-[11px] text-error-ink">{fileError}</p>
         ) : (
           <div className="flex min-w-0 flex-1 flex-col max-md:h-[80vh] max-md:flex-none">
@@ -254,10 +300,6 @@ function useCommitColumnSize(subjectKey: string, single: boolean): [ColumnSize, 
     setStored(single ? { ...next, open: stored.open } : next);
   };
   return [size, setSize];
-}
-
-function collapsibleColumn(size: ColumnSize, onSize: (next: ColumnSize) => void) {
-  return { open: size.open, collapsible: true, setOpen: (open: boolean) => onSize({ ...size, open }) };
 }
 
 function reloadFailure(issue: unknown): string {
