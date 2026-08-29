@@ -4,6 +4,7 @@ import { useCallback, useImperativeHandle, useRef, useState, type Ref } from 're
 import { DiffFileSection } from './DiffFileSection';
 import { DiffLayoutToggle } from './DiffLayoutToggle';
 import { EditTarget } from './editTarget';
+import { FoldModeRail } from './FoldModeRail';
 import { ImageThumbnailStrip } from './ImageThumbnailStrip';
 import { imageFilesOf, isImagePath } from './imageFiles';
 import { ReviewThreadProvider } from './reviewThreadStore';
@@ -61,31 +62,34 @@ export function DiffPanes({
       <ReviewThreadProvider owner={owner} repo={repo} number={number}>
         <div className="flex min-h-0 flex-1 flex-col">
           <DiffLayoutToggle />
-          <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
-            <ImageStrip
-              key={`${fileSet.baseRef}:${fileSet.headRef}`}
-              owner={owner}
-              repo={repo}
-              fileSet={fileSet}
-              files={imageFilesOf(orderedFiles)}
-            />
-            {orderedFiles.map((file) => (
-              <DiffFileSection
-                key={file.filename}
+          <div className="flex min-h-0 flex-1">
+            <FoldModeRail />
+            <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto">
+              <ImageStrip
+                key={`${fileSet.baseRef}:${fileSet.headRef}`}
                 owner={owner}
                 repo={repo}
-                file={file}
-                baseRef={fileSet.baseRef}
-                headRef={fileSet.headRef}
-                selected={file.filename === selected}
-                open={openFile(toggled, file.filename)}
-                onToggle={() => toggleFile(file.filename)}
-                sectionRef={(node) => {
-                  if (node) sections.current.set(file.filename, node);
-                  else sections.current.delete(file.filename);
-                }}
+                fileSet={fileSet}
+                files={imageFilesOf(orderedFiles)}
               />
-            ))}
+              {orderedFiles.map((file) => (
+                <DiffFileSection
+                  key={file.filename}
+                  owner={owner}
+                  repo={repo}
+                  file={file}
+                  baseRef={fileSet.baseRef}
+                  headRef={fileSet.headRef}
+                  selected={file.filename === selected}
+                  open={openFile(toggled, file.filename)}
+                  onToggle={() => toggleFile(file.filename)}
+                  sectionRef={(node) => {
+                    if (node) sections.current.set(file.filename, node);
+                    else sections.current.delete(file.filename);
+                  }}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </ReviewThreadProvider>

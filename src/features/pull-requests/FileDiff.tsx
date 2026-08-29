@@ -1,6 +1,6 @@
 'use client';
 
-import { useContext, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { CodeBlockEditor } from './CodeBlockEditor';
 import { CommitEditModal } from './CommitEditModal';
 import { DiffSide, type HunkControl } from './DiffSide';
@@ -11,6 +11,7 @@ import { ROW_HEIGHT, SAVE_BAR } from './diffMetrics';
 import { EditTarget } from './editTarget';
 import { type EditableBlock } from './editableBlocks';
 import { expandDiff } from './expandDiff';
+import { useFoldCommand, type FoldMode } from './foldModeStore';
 import { InlineThreads } from './InlineThreads';
 import { setDiffPaneWidth, useDiffPaneWidth } from './diffPaneWidth';
 import { DragHandle, useDragWidth } from './ResizableColumn';
@@ -61,6 +62,7 @@ export function FileDiff({
     token,
     onCommitted: target?.onCommitted,
   });
+  useFoldCommandWholeFile(hunkEdit, setWantWholeFile);
   const showingWholeFile = rows !== patchRows;
   const canEdit = pull !== null && !wantWholeFile;
   const editBlock = canEdit ? hunkEdit.edit?.block ?? null : null;
@@ -113,6 +115,20 @@ export function FileDiff({
       )}
     </div>
   );
+}
+
+function useFoldCommandWholeFile(hunkEdit: ReturnType<typeof useHunkEdit>, setWantWholeFile: (next: boolean) => void) {
+  const command = useFoldCommand();
+  const apply = useRef<(mode: FoldMode) => void>(() => {});
+  apply.current = (mode) => {
+    if (mode !== 'collapseUnchanged' && mode !== 'default') return;
+    if (hunkEdit.edit && hunkEdit.edit.draft !== hunkEdit.edit.block.text) return;
+    hunkEdit.close();
+    setWantWholeFile(mode === 'collapseUnchanged');
+  };
+  useEffect(() => {
+    if (command.epoch > 0) apply.current(command.mode);
+  }, [command]);
 }
 
 function rowsForDisplay(patchRows: DiffRow[], lines: WholeFile['lines']): DiffRow[] {

@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { collapseRegions, type CollapseRegion } from './collapseRegions';
 import { rowOf } from './commentAnchors';
 import type { EditableBlock } from './editableBlocks';
+import { useFoldCommand, type FoldMode } from './foldModeStore';
 import type { ReviewThread } from './reviewThreads';
 import type { DiffRow } from './splitDiff';
 import { treeCollapseRegions } from './treeSitterFolds';
@@ -25,7 +26,7 @@ export interface CodeCollapse {
 }
 
 type Overrides = Record<string, boolean>;
-type SetOverrides = (update: (held: Overrides) => Overrides) => void;
+type SetOverride = (key: string, collapsed: boolean) => void;
 
 export function useCodeCollapse(
   rows: DiffRow[],
@@ -38,10 +39,21 @@ export function useCodeCollapse(
   const parsed = useTreeRegions(rows, contiguous, filename);
   const regions = parsed ?? heuristic;
   const threadRows = useMemo(() => threadRowIndexes(threads, rows), [threads, rows]);
-  const [overrides, setOverrides] = useState<Overrides>({});
+  const command = useFoldCommand();
+  const [held, setHeld] = useState<{ epoch: number; overrides: Overrides }>({ epoch: 0, overrides: {} });
+  const setOverride = useCallback<SetOverride>(
+    (key, collapsed) => {
+      setHeld((was) => ({
+        epoch: command.epoch,
+        overrides: { ...(was.epoch === command.epoch ? was.overrides : {}), [key]: collapsed },
+      }));
+    },
+    [command.epoch],
+  );
+  const overrides = held.epoch === command.epoch ? held.overrides : {};
   return useMemo(
-    () => buildCollapse(regions, threadRows, edit, overrides, setOverrides),
-    [regions, threadRows, edit, overrides],
+    () => buildCollapse(regions, threadRows, edit, command.mode, overrides, setOverride),
+    [regions, threadRows, edit, command.mode, overrides, setOverride],
   );
 }
 
@@ -82,21 +94,33 @@ function buildCollapse(
   regions: CollapseRegion[],
   threadRows: Set<number>,
   edit: EditableBlock | null,
+  mode: FoldMode,
   overrides: Overrides,
-  setOverrides: SetOverrides,
+  setOverride: SetOverride,
 ): CodeCollapse {
   const anchors = new Map<number, CollapseAnchor>();
   const hidden = new Set<number>();
   for (const region of regions) {
     if (edit && region.start <= edit.lastRow && region.end >= edit.firstRow) continue;
-    const collapsed = overrides[region.key] ?? defaultCollapsed(region, threadRows);
-    anchors.set(region.start, anchorFor(region, collapsed, hiddenThreadCount(region, threadRows), setOverrides));
+    const collapsed = overrides[region.key] ?? modeCollapsed(region, threadRows, mode);
+    anchors.set(region.start, anchorFor(region, collapsed, hiddenThreadCount(region, threadRows), setOverride));
     if (collapsed) for (let row = region.start + 1; row <= region.end; row += 1) hidden.add(row);
   }
   return { anchors, hidden };
 }
 
-function anchorFor(region: CollapseRegion, collapsed: boolean, hiddenThreads: number, setOverrides: SetOverrides): CollapseAnchor {
+function modeCollapsed(region: CollapseRegion, threadRows: Set<number>, mode: FoldMode): boolean {
+  if (mode === 'expandAll') return false;
+  if (mode === 'collapseAll') return true;
+  if (mode === 'collapseUnchanged' && unchangedRegion(region) && hiddenThreadCount(region, threadRows) === 0) return true;
+  return defaultCollapsed(region, threadRows);
+}
+
+function unchangedRegion(region: CollapseRegion): boolean {
+  return region.addedLines === 0 && region.deletedLines === 0;
+}
+
+function anchorFor(region: CollapseRegion, collapsed: boolean, hiddenThreads: number, setOverride: SetOverride): CollapseAnchor {
   return {
     collapsed,
     hiddenLines: region.end - region.start,
@@ -105,7 +129,7 @@ function anchorFor(region: CollapseRegion, collapsed: boolean, hiddenThreads: nu
     deletedLines: region.deletedLines,
     kind: region.kind,
     depth: region.depth,
-    toggle: () => setOverrides((held) => ({ ...held, [region.key]: !collapsed })),
+    toggle: () => setOverride(region.key, !collapsed),
   };
 }
 
