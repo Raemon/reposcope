@@ -57,7 +57,7 @@ function Workspace({
   const [path, setPath] = useState<string | null>(null);
   const [discussionSize, setDiscussionSize] = useStickyColumn('discussion');
   const [fileSize, setFileSize] = useStickyColumn('files');
-  const [commitSize, setCommitSize] = useStickyColumn('commits', change.commits.length > 1);
+  const [commitSize, setCommitSize] = useCommitColumnSize(subjectKey, change.commits.length < 2);
   const diffPanes = useRef<DiffPanesHandle>(null);
   const fileRoute = selection === WHOLE_CHANGE ? wholeFilesPath : commitFilesPath(owner, repo, selection);
   const showing = useRef(fileRoute);
@@ -195,8 +195,19 @@ function Workspace({
   );
 }
 
-function collapsibleColumn(size: ColumnSize, onSize: (next: (held: ColumnSize) => ColumnSize) => void) {
-  return { open: size.open, collapsible: true, setOpen: (open: boolean) => onSize((held) => ({ ...held, open })) };
+function useCommitColumnSize(subjectKey: string, single: boolean): [ColumnSize, (next: ColumnSize) => void] {
+  const [stored, setStored] = useStickyColumn('commits');
+  const [expandedSubject, setExpandedSubject] = useState<string | null>(null);
+  const size = single ? { ...stored, open: expandedSubject === subjectKey } : stored;
+  const setSize = (next: ColumnSize) => {
+    if (single) setExpandedSubject(next.open ? subjectKey : null);
+    setStored(single ? { ...next, open: stored.open } : next);
+  };
+  return [size, setSize];
+}
+
+function collapsibleColumn(size: ColumnSize, onSize: (next: ColumnSize) => void) {
+  return { open: size.open, collapsible: true, setOpen: (open: boolean) => onSize({ ...size, open }) };
 }
 
 function reloadFailure(issue: unknown): string {
