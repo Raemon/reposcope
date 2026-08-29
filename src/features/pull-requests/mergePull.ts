@@ -1,6 +1,6 @@
 'use client';
 
-import { nextPullAfter, viewingAcrossRepos } from './nextPull';
+import { nextPullAfter, pullListRoute, viewingAcrossRepos } from './nextPull';
 import { prefetchPull } from './prefetchPull';
 import { trackPullAction, type PullTarget } from './pullActionStore';
 import { mergePullPath } from './pullPaths';
@@ -13,10 +13,9 @@ export function mergePull(target: PullTarget, token: string | null, navigate: (h
   const next = nextPullAfter(target, token, acrossRepos);
   setStickyColumn(acrossRepos ? 'all-pulls' : 'pulls', (size) => ({ ...size, open: true }));
   trackPullAction(target, 'merge', requestMerge(target, token));
-  if (next) {
-    prefetchPull(next.owner, next.repo, next.number, token);
-    navigate(next.href);
-  }
+  if (!next) return navigate(pullListRoute(target, acrossRepos));
+  prefetchPull(next.owner, next.repo, next.number, token);
+  navigate(next.href);
 }
 
 async function requestMerge(target: PullTarget, token: string | null): Promise<string | null> {

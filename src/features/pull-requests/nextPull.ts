@@ -5,6 +5,7 @@ import { listedPulls, readPullFilters, type PullFilters } from './pullFilterStor
 import { allPullsRoute, pullRoute, repoPullsPath } from './pullPaths';
 import type { CrossRepoPulls, PullRequestSummary } from './pullRequests';
 import { allPullsCacheKey } from './useAllPullRequests';
+import { repoRoute } from '@/features/codebases/repoPaths';
 import { ownAuthorCheck } from '@/features/github-auth/useViewerLogin';
 import { readCachedJson } from '@/features/sources/useCachedJson';
 
@@ -27,6 +28,10 @@ export function nextPullAfter(
   const next = index < 0 ? null : listed[index + 1] ?? listed[index - 1] ?? null;
   if (!next) return null;
   return { ...next, href: acrossRepos ? allPullsRoute(next.owner, next.repo, next.number) : pullRoute(next.owner, next.repo, next.number) };
+}
+
+export function pullListRoute(target: PullTarget, acrossRepos: boolean): string {
+  return acrossRepos ? '/pulls' : repoRoute(target.owner, target.repo);
 }
 
 function cachedRepoPulls({ owner, repo }: PullTarget, token: string | null, filters: PullFilters): PullTarget[] {
