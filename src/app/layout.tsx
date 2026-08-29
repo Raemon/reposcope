@@ -1,8 +1,15 @@
 import type { Metadata } from 'next';
+import { Source_Serif_4 } from 'next/font/google';
 import type { ReactNode } from 'react';
 import { CodebaseHeader } from '@/features/codebases/CodebaseHeader';
 import { ThemeScript } from '@/features/theme/ThemeScript';
 import './globals.css';
+
+const sourceSerif = Source_Serif_4({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-source-serif',
+});
 
 export const metadata: Metadata = {
   title: 'reposcope — pull request viewer',
@@ -11,7 +18,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en" className="h-full" suppressHydrationWarning>
+    <html lang="en" className={`h-full ${sourceSerif.variable}`} suppressHydrationWarning>
       <head>
         <ThemeScript />
       </head>

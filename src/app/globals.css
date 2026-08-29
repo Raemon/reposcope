@@ -2,7 +2,7 @@
 
 @theme {
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --font-serif: 'Iowan Old Style', Palatino, 'Palatino Linotype', 'Book Antiqua', Georgia, serif;
+  --font-serif: var(--font-source-serif), 'Iowan Old Style', Palatino, Georgia, serif;
 
   --color-bg: var(--bg);
   --color-panel: var(--panel);
@@ -202,7 +202,7 @@
 .markdown-body code,
 .markdown-body pre {
   font-family: var(--font-mono);
-  font-size: 0.92em;
+  font-size: 0.88em;
 }
 
 .markdown-body > :first-child {
@@ -220,7 +220,7 @@
 .markdown-body blockquote,
 .markdown-body table,
 .markdown-body details {
-  margin: 0.35rem 0;
+  margin: 0.6rem 0;
 }
 
 .markdown-body h1,

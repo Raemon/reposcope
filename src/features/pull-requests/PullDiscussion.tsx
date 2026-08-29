@@ -86,7 +86,7 @@ function DiscussionEntry({
         {path && <span className="min-w-0 flex-1 truncate font-serif text-[10px]">{path}</span>}
       </header>
       <HoverCardHtml
-        className="markdown-body break-words text-[12px] leading-4 text-ink"
+        className="markdown-body break-words text-[13px] leading-[1.5] text-ink"
         html={renderMarkdown(body, { owner, repo })}
         tooltipStyle
       />
