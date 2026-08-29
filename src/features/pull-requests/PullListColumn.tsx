@@ -83,9 +83,9 @@ function PullsColumn({
   const selected = targets.some((target) => target.route === pathname) ? pathname : null;
   const openTarget = (route: string) => {
     const target = targets.find((held) => held.route === route);
-    if (!target) return;
+    if (!target || route === selected) return;
     router.push(target.href);
-    if (target.pull && route !== selected) collapsePullList(column);
+    if (target.pull) collapsePullList(column);
   };
   useRegisterColumn(
     'pulls',

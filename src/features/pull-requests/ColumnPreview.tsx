@@ -28,13 +28,13 @@ export function ColumnPreview({ tokens, column }: { tokens: PreviewToken[]; colu
   return (
     <span className="flex min-h-0 flex-1 items-center justify-end gap-[3px] overflow-auto md:flex-col md:justify-start md:[mask-image:linear-gradient(to_bottom,black_calc(100%-20px),transparent)]">
       {tokens.map((token) => (
-        <PreviewChip key={token.key} token={token} row={nav.row(token.key, token.accent ?? false)} onActivate={() => nav.activate(token.key)} />
+        <PreviewChip key={token.key} token={token} row={nav.row(token.key, token.accent ?? false)} activate={nav.activate} />
       ))}
     </span>
   );
 }
 
-function PreviewChip({ token, row, onActivate }: { token: PreviewToken; row: ColumnRow; onActivate: () => void }) {
+function PreviewChip({ token, row, activate }: { token: PreviewToken; row: ColumnRow; activate: (item: string) => void }) {
   return (
     <HoverCardTrigger label={token.title} focusable={false} tooltipStyle serifLabel={token.serif ?? false}>
       <span
@@ -42,7 +42,7 @@ function PreviewChip({ token, row, onActivate }: { token: PreviewToken; row: Col
         onPointerEnter={row.props.onPointerEnter}
         onClick={(event) => {
           event.stopPropagation();
-          onActivate();
+          activate(token.key);
         }}
         className={`${CHIP} ${CHIP_TONE[row.state]}`}
       >
