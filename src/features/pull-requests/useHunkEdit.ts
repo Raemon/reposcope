@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { commitMessageFor, editableBlockAt, type EditableBlock } from './editableBlocks';
+import { commitMessageFor, editableBlockAt, type BlockBounds, type EditableBlock } from './editableBlocks';
 import type { PullRequestSummary } from './pullRequests';
 import type { DiffRow } from './splitDiff';
 import { apiPostJson } from '@/features/sources/apiClient';
@@ -16,7 +16,7 @@ export interface HunkEditControls {
   message: string | null;
   committing: boolean;
   failure: string | null;
-  begin: (rowIndex: number) => void;
+  begin: (rowIndex: number, bounds: BlockBounds) => void;
   askToCommit: () => void;
   commit: () => void;
   close: () => void;
@@ -32,7 +32,6 @@ export function useHunkEdit({
   headRef,
   rows,
   filename,
-  patch,
   token,
   onCommitted,
 }: {
@@ -42,7 +41,6 @@ export function useHunkEdit({
   headRef: string;
   rows: DiffRow[];
   filename: string;
-  patch: string;
   token: string | null;
   onCommitted?: () => void | Promise<void>;
 }): HunkEditControls {
@@ -61,11 +59,11 @@ export function useHunkEdit({
     dismissModal();
   };
 
-  useEffect(close, [patch, filename]);
+  useEffect(close, [rows, filename]);
 
-  function begin(rowIndex: number) {
+  function begin(rowIndex: number, bounds: BlockBounds) {
     if (!pull || committing || (edit && edit.draft !== edit.block.text)) return;
-    const block = editableBlockAt(rows, rowIndex);
+    const block = editableBlockAt(rows, rowIndex, bounds);
     if (block) setEdit({ block, draft: block.text });
   }
 

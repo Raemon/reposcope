@@ -3,6 +3,7 @@
 import { Fragment, type ReactNode } from 'react';
 import { hunkHasEditableLines, type EditableBlock } from './editableBlocks';
 import { codeSegments } from './codeSegments';
+import { diffEditModeOn } from './editModeStore';
 import type { DiffLine } from './diffLines';
 import type { ThemedToken } from './diffHighlight';
 import type { CharRange, IntralineRanges } from './intralineDiff';
@@ -155,7 +156,7 @@ function DiffLineView({
   return (
     <div
       className={`group ${ROW} ${lineTone(side, changed, line.touched)} ${openable ? 'cursor-text' : ''}`}
-      onClick={openable && onEdit ? (event) => event.detail >= 3 && onEdit() : undefined}
+      onClick={openable && onEdit ? (event) => opensEditor(event.detail) && onEdit() : undefined}
     >
       <GutterCell line={cell.line} anchor={anchor} />
       <span className="diff-code whitespace-pre pr-2 text-[11px]">
@@ -172,6 +173,10 @@ function DiffLineView({
       {anchor?.collapsed && <FoldBadge anchor={anchor} />}
     </div>
   );
+}
+
+function opensEditor(clickCount: number): boolean {
+  return clickCount >= 3 || (diffEditModeOn() && !window.getSelection()?.toString());
 }
 
 function FoldBadge({ anchor }: { anchor: CollapseAnchor }) {
