@@ -13,7 +13,6 @@ import { useGithubToken } from '@/features/sources/sourceStore';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { opensAnotherTab } from '@/features/surface-ui/selectableClick';
 import { RelativeTime } from '@/features/surface-ui/RelativeTime';
-import { useWrappedText } from '@/features/surface-ui/useWrappedText';
 
 interface PullRowSummary {
   number: number;
@@ -28,37 +27,33 @@ interface PullRowSummary {
 export const ROW_META = 'shrink-0 font-mono text-[9px] text-ink-dim';
 export const LIST_NOTE = 'px-2 py-1 text-[11px] leading-4';
 export const NO_PULLS = 'No matching pull requests.';
+export const TITLE_LINE = 'truncate px-2 pb-0.5 pt-1 font-serif text-[14px] leading-[1.2]';
+export const META_LINE = 'flex items-center gap-1.5 border-t border-ink/15 px-2 py-0.5';
 
-export function PullRowFields({ pull }: { pull: PullRowSummary }) {
-  const [title, wrapped] = useWrappedText<HTMLSpanElement>();
+export function PullRowFields({ pull, repo, repoColumnCh }: { pull: PullRowSummary; repo?: string; repoColumnCh?: number }) {
   const isOwnAuthor = useIsOwnAuthor();
   return (
     <>
-      <span className={ROW_META}>{pull.number}</span>
-      <span className="min-w-0 flex-1 break-words">
-        <span ref={title}>{pull.title}</span>
-      </span>
-      {pull.draft && <RowTag>draft</RowTag>}
-      {pull.state !== 'open' && <RowTag>{pull.merged ? 'merged' : 'closed'}</RowTag>}
-      <span className={stackedMetaClass(wrapped)}>
-        {!isOwnAuthor(pull.author) && (
-          <span className={ROW_META}>
-            {pull.author}
-            {wrapped ? '' : ' ·'}
+      <div className={TITLE_LINE} title={pull.title}>{pull.title}</div>
+      <div className={META_LINE}>
+        {repo && (
+          <span className={`${ROW_META} truncate`} style={{ width: `${repoColumnCh}ch` }}>
+            {repo}
           </span>
         )}
+        <span className={ROW_META}>#{pull.number}</span>
+        {!isOwnAuthor(pull.author) && <span className={ROW_META}>{pull.author}</span>}
+        <span className="flex-1" />
+        {pull.draft && <RowTag>draft</RowTag>}
+        {pull.state !== 'open' && <RowTag>{pull.merged ? 'merged' : 'closed'}</RowTag>}
         <RelativeTime iso={pull.updatedAt} className={ROW_META} />
-      </span>
+      </div>
     </>
   );
 }
 
 function RowTag({ children }: { children: ReactNode }) {
   return <span className="shrink-0 rounded bg-btn px-1 font-mono text-[9px]">{children}</span>;
-}
-
-export function stackedMetaClass(wrapped: boolean): string {
-  return `flex shrink-0 gap-x-1.5 ${wrapped ? 'flex-col items-end' : 'items-center'}`;
 }
 
 export function PullListRow({
@@ -82,7 +77,7 @@ export function PullListRow({
       route={pullRoute(target.owner, target.repo, target.number)}
       href={href}
       current={current}
-      serif
+      stacked
       onPointerEnter={() => prefetchPull(target.owner, target.repo, target.number, token)}
       onSelect={(event) => {
         if (!current && !opensAnotherTab(event)) collapsePullList(column);

@@ -9,12 +9,11 @@ import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { RelativeTime } from '@/features/surface-ui/RelativeTime';
 import { rowStateClass } from '@/features/surface-ui/rowState';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
-import { useWrappedText } from '@/features/surface-ui/useWrappedText';
 
-const ROW = 'flex w-full items-center gap-1.5 px-1.5 py-1.5 text-left font-serif text-[14px] leading-[1.2]';
-const HASH = 'ml-1.5 w-[3ch] shrink-0 font-mono text-[9px]';
+const TITLE_LINE = 'w-full truncate px-1.5 pb-0.5 pt-1 text-left font-serif text-[14px] leading-[1.2]';
+const META_LINE = 'flex flex-1 items-center gap-1.5 px-1.5 py-0.5 text-left font-mono text-[9px] leading-4 text-ink-dim';
+const HASH = 'ml-1.5 w-[3ch] shrink-0 font-mono text-[9px] leading-4';
 const HASH_CHARS = 3;
-const META = 'grid shrink-0 items-center justify-items-end gap-x-1.5 font-mono text-[9px] leading-4 text-ink-dim';
 const COPIED_MS = 1200;
 export const WHOLE_CHANGE = 'all';
 
@@ -31,11 +30,9 @@ export function PullCommitColumn({
   const rowFor = (item: string) => nav.row(item, item === selection);
   return (
     <>
-      <CommitRow row={rowFor(WHOLE_CHANGE)} onActivate={() => onSelect(WHOLE_CHANGE)} leading={<span aria-hidden className={HASH} />}>
-        <span className="min-w-0 flex-1">all changes</span>
-        <span className={metaClass(false)}>
-          <ChangeCountCells additions={change.additions} deletions={change.deletions} />
-        </span>
+      <CommitRow row={rowFor(WHOLE_CHANGE)} onActivate={() => onSelect(WHOLE_CHANGE)} title="all changes" hash={<span aria-hidden className={HASH} />}>
+        <span className="flex-1" />
+        <ChangeCountCells additions={change.additions} deletions={change.deletions} />
       </CommitRow>
       {change.commits.map((commit) => (
         <CommitEntry key={commit.sha} commit={commit} row={rowFor(commit.sha)} onActivate={() => onSelect(commit.sha)} />
@@ -45,46 +42,45 @@ export function PullCommitColumn({
 }
 
 function CommitEntry({ commit, row, onActivate }: { commit: CommitSummary; row: ColumnRow; onActivate: () => void }) {
-  const [message, wrapped] = useWrappedText<HTMLSpanElement>();
   return (
-    <CommitRow row={row} onActivate={onActivate} leading={<CopyHash sha={commit.sha} />}>
-      <span className="min-w-0 flex-1 break-words">
-        <span ref={message}>{commit.message}</span>
-      </span>
-      <span className={metaClass(wrapped)}>
-        <span>{commit.fileCount}f</span>
-        <ChangeCountCells additions={commit.additions} deletions={commit.deletions} />
-        <RelativeTime iso={commit.date} />
-      </span>
+    <CommitRow row={row} onActivate={onActivate} title={commit.message} hash={<CopyHash sha={commit.sha} />}>
+      <span className="truncate">{commit.author}</span>
+      <span className="flex-1" />
+      <span>{commit.fileCount}f</span>
+      <ChangeCountCells additions={commit.additions} deletions={commit.deletions} />
+      <RelativeTime iso={commit.date} />
     </CommitRow>
   );
-}
-
-function metaClass(stacked: boolean): string {
-  return `${META} ${stacked ? 'grid-cols-2' : 'grid-flow-col'}`;
 }
 
 function CommitRow({
   row,
   onActivate,
-  leading,
+  title,
+  hash,
   children,
 }: {
   row: ColumnRow;
   onActivate: () => void;
-  leading: ReactNode;
+  title: string;
+  hash: ReactNode;
   children: ReactNode;
 }) {
   return (
     <div
       data-nav-cursor={row.props.cursor || undefined}
       onPointerEnter={row.props.onPointerEnter}
-      className={`flex items-center border-b border-ink/15 ${rowStateClass(row.state)}`}
+      className={`border-b border-ink/30 ${rowStateClass(row.state)}`}
     >
-      {leading}
-      <SelectableRow {...row.props} onActivate={onActivate} className={ROW}>
-        {children}
+      <SelectableRow {...row.props} onActivate={onActivate} className={TITLE_LINE} label={title}>
+        {title}
       </SelectableRow>
+      <div className="flex items-center border-t border-ink/15">
+        {hash}
+        <SelectableRow onPointerEnter={row.props.onPointerEnter} onActivate={onActivate} className={META_LINE}>
+          {children}
+        </SelectableRow>
+      </div>
     </div>
   );
 }
