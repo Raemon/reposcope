@@ -3,7 +3,7 @@
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { useColumnNav } from './columnNav';
-import { LIST_NOTE as NOTE, NO_PULLS, PullListRow, PullRowFields, ROW_META } from './PullListRow';
+import { LIST_NOTE as NOTE, NO_PULLS, PullListRow, PullRowFields } from './PullListRow';
 import { allPullsRoute, pullRoute } from './pullPaths';
 import type { CrossRepoPull } from './pullRequests';
 import { useAllPullList } from './usePullLists';
@@ -91,10 +91,7 @@ function PullRow({
       closable={pull.state === 'open'}
       column="all-pulls"
     >
-      <span className={`${ROW_META} truncate`} style={{ width: `${repoColumnCh}ch` }}>
-        {pull.repo}
-      </span>
-      <PullRowFields pull={pull} />
+      <PullRowFields pull={pull} repo={pull.repo} repoColumnCh={repoColumnCh} />
     </PullListRow>
   );
 }

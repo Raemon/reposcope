@@ -6,14 +6,14 @@ import { rowStateClass } from '@/features/surface-ui/rowState';
 import { SelectableLink } from '@/features/surface-ui/SelectableLink';
 
 const ROW = 'flex min-w-0 flex-1 items-baseline gap-1.5 px-2 py-[1px] text-[11px] leading-4';
-const SERIF_ROW = 'flex min-w-0 flex-1 items-center gap-1.5 px-2 py-1.5 font-serif text-[14px] leading-[1.2]';
+const STACKED_ROW = 'flex min-w-0 flex-1 flex-col text-left';
 
 export function NavListRow({
   route,
   href,
   current,
   dimmed = false,
-  serif = false,
+  stacked = false,
   onPointerEnter,
   onSelect,
   trailing,
@@ -23,7 +23,7 @@ export function NavListRow({
   href: string;
   current: boolean;
   dimmed?: boolean;
-  serif?: boolean;
+  stacked?: boolean;
   onPointerEnter?: () => void;
   onSelect?: (event: ReactMouseEvent<HTMLAnchorElement>) => void;
   trailing?: ReactNode;
@@ -34,9 +34,9 @@ export function NavListRow({
     <div
       data-nav-cursor={row.props.cursor || undefined}
       onPointerEnter={row.props.onPointerEnter}
-      className={`group flex border-b border-ink/15 ${serif ? 'items-center' : 'items-baseline'} ${rowStateClass(row.state)} ${dimmed ? 'opacity-50' : ''}`}
+      className={`group flex border-b ${stacked ? 'items-stretch border-ink/30' : 'items-baseline border-ink/15'} ${rowStateClass(row.state)} ${dimmed ? 'opacity-50' : ''}`}
     >
-      <SelectableLink href={href} current={current} onPointerEnter={onPointerEnter} onSelect={onSelect} className={serif ? SERIF_ROW : ROW}>
+      <SelectableLink href={href} current={current} onPointerEnter={onPointerEnter} onSelect={onSelect} className={stacked ? STACKED_ROW : ROW}>
         {children}
       </SelectableLink>
       {trailing}
