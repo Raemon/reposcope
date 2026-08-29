@@ -27,14 +27,14 @@ interface PullRowSummary {
 export const ROW_META = 'shrink-0 font-mono text-[9px] text-ink-dim';
 export const LIST_NOTE = 'px-2 py-1 text-[11px] leading-4';
 export const NO_PULLS = 'No matching pull requests.';
-export const TITLE_LINE = 'truncate px-2 pb-0.5 pt-1 font-serif text-[14px] leading-[1.2]';
-export const META_LINE = 'flex items-center gap-1.5 border-t border-ink/15 px-2 py-0.5';
+export const TITLE_LINE = 'break-words px-2 pb-0.5 pt-1 font-serif text-[14px] leading-[1.2]';
+export const META_LINE = 'flex items-center gap-1.5 px-2 py-0.5';
 
 export function PullRowFields({ pull, repo, repoColumnCh }: { pull: PullRowSummary; repo?: string; repoColumnCh?: number }) {
   const isOwnAuthor = useIsOwnAuthor();
   return (
     <>
-      <div className={TITLE_LINE} title={pull.title}>{pull.title}</div>
+      <div className={TITLE_LINE}>{pull.title}</div>
       <div className={META_LINE}>
         {repo && (
           <span className={`${ROW_META} truncate`} style={{ width: `${repoColumnCh}ch` }}>

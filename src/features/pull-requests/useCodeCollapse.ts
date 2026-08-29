@@ -128,5 +128,5 @@ function modeCollapsed(region: CollapseRegion, hiddenThreads: number, mode: Fold
 }
 
 function unchangedRegion(region: CollapseRegion): boolean {
-  return region.addedLines === 0 && region.deletedLines === 0;
+  return region.addedLines === 0 && region.deletedLines === 0 && !region.anchorChanged;
 }
