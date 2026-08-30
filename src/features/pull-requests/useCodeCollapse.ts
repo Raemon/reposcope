@@ -23,7 +23,7 @@ export interface CodeCollapse {
 }
 
 type Overrides = Record<string, boolean>;
-type SetOverride = (key: string, collapsed: boolean) => void;
+type SetOverride = (changes: Overrides) => void;
 
 const NO_OVERRIDES: Overrides = {};
 
@@ -58,7 +58,7 @@ function overridesAt(held: HeldOverrides, epoch: number): Overrides {
 function useFoldOverrides(epoch: number): [Overrides, SetOverride] {
   const [held, setHeld] = useState<HeldOverrides>({ epoch, overrides: NO_OVERRIDES });
   const setOverride = useCallback<SetOverride>(
-    (key, collapsed) => setHeld((was) => ({ epoch, overrides: { ...overridesAt(was, epoch), [key]: collapsed } })),
+    (changes) => setHeld((was) => ({ epoch, overrides: { ...overridesAt(was, epoch), ...changes } })),
     [epoch],
   );
   return [overridesAt(held, epoch), setOverride];
@@ -107,14 +107,20 @@ function buildCollapse(
 ): CodeCollapse {
   const anchors = new Map<number, CollapseAnchor>();
   const hidden = new Set<number>();
-  for (const region of regions) {
-    if (regionOverlapsEdit(region, edit)) continue;
+  const foldable = regions.filter((region) => !regionOverlapsEdit(region, edit));
+  for (const region of foldable) {
     const hiddenThreads = innerRows(region).filter((row) => threadRows.has(row)).length;
     const collapsed = overrides[region.key] ?? modeCollapsed(region, hiddenThreads, mode);
-    anchors.set(region.start, { region, collapsed, hiddenThreads, toggle: () => setOverride(region.key, !collapsed) });
+    const toggle = () => setOverride(collapsed ? expansionFrom(foldable, region) : { [region.key]: true });
+    anchors.set(region.start, { region, collapsed, hiddenThreads, toggle });
     if (collapsed) for (const row of innerRows(region)) hidden.add(row);
   }
   return { anchors, hidden };
+}
+
+function expansionFrom(foldable: CollapseRegion[], region: CollapseRegion): Overrides {
+  const following = foldable.filter((other) => other.start >= region.start);
+  return Object.fromEntries(following.map((other) => [other.key, false]));
 }
 
 // start < lastRow: the anchor row only bounds the block, and must keep its chevron.
