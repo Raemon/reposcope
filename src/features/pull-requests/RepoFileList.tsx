@@ -1,47 +1,28 @@
 'use client';
 
-import { useMemo } from 'react';
-import { FileTreeRow } from './FileTreeRow';
-import { groupByFolder } from './fileTree';
-import { FolderGroupedRows } from './FolderGroupedRows';
+import { RepoFileTreeRows } from './RepoFileTreeRows';
 import type { RepoFiles } from './repoFileStore';
+import type { RepoFileTree } from './useRepoFileTree';
 
 const NOTE = 'px-1.5 py-[1px] text-[11px] leading-4';
 const FILTER =
   'w-full border-b border-panel-edge bg-panel px-1.5 py-[2px] text-[11px] leading-4 text-ink outline-none placeholder:text-ink-dim';
-const SHOWN_LIMIT = 400;
-const BROWSE_PREFIX = 'file:';
-
-export function browseKey(path: string): string {
-  return `${BROWSE_PREFIX}${path}`;
-}
-
-export function browsedPath(item: string): string | null {
-  return item.startsWith(BROWSE_PREFIX) ? item.slice(BROWSE_PREFIX.length) : null;
-}
-
-export function listedPaths(repoFiles: RepoFiles, query: string): { shown: string[]; total: number } {
-  const paths = repoFiles.fileSet?.files ?? [];
-  const wanted = query.trim().toLowerCase();
-  const matching = wanted ? paths.filter((path) => path.toLowerCase().includes(wanted)) : paths;
-  const byFolder = groupByFolder(matching, (path) => path).flatMap((group) => group.items);
-  return { shown: byFolder.slice(0, SHOWN_LIMIT), total: matching.length };
-}
 
 export function RepoFileList({
   repoFiles,
+  tree,
   selected,
   onSelect,
   query,
   onQuery,
 }: {
   repoFiles: RepoFiles;
+  tree: RepoFileTree;
   selected: string | null;
   onSelect: (path: string) => void;
   query: string;
   onQuery: (next: string) => void;
 }) {
-  const listed = useMemo(() => listedPaths(repoFiles, query), [repoFiles, query]);
   return (
     <>
       <input
@@ -51,19 +32,19 @@ export function RepoFileList({
         aria-label="Filter files"
         className={FILTER}
       />
-      <FileRows repoFiles={repoFiles} listed={listed} selected={selected} onSelect={onSelect} />
+      <FileRows repoFiles={repoFiles} tree={tree} selected={selected} onSelect={onSelect} />
     </>
   );
 }
 
 function FileRows({
   repoFiles,
-  listed,
+  tree,
   selected,
   onSelect,
 }: {
   repoFiles: RepoFiles;
-  listed: { shown: string[]; total: number };
+  tree: RepoFileTree;
   selected: string | null;
   onSelect: (path: string) => void;
 }) {
@@ -71,19 +52,8 @@ function FileRows({
   if (!fileSet) return <p className={`${NOTE} ${error ? 'text-error-ink' : 'text-ink-dim'}`}>{error ?? 'Loading…'}</p>;
   return (
     <>
-      <FolderGroupedRows items={listed.shown} pathOf={(path) => path}>
-        {(path, indented) => (
-          <FileTreeRow
-            key={path}
-            path={path}
-            navKey={browseKey(path)}
-            selected={path === selected}
-            onSelect={() => onSelect(path)}
-            indented={indented}
-          />
-        )}
-      </FolderGroupedRows>
-      <ListFoot shown={listed.shown.length} total={listed.total} truncated={fileSet.truncated} />
+      <RepoFileTreeRows tree={tree} selected={selected} onSelect={onSelect} />
+      <ListFoot shown={tree.shown} total={tree.total} truncated={fileSet.truncated} />
     </>
   );
 }

@@ -7,7 +7,7 @@ import { ColumnPreview } from './ColumnPreview';
 import { DiffPanes, type DiffPanesHandle } from './DiffPanes';
 import { PullCommitColumn, WHOLE_CHANGE, commitItems, commitTokens } from './PullCommitColumn';
 import { PullFilesColumn, fileTokens } from './PullFilesColumn';
-import { browseKey, browsedPath, listedPaths } from './RepoFileList';
+import { browseKey, isTreeItem } from './fileTreeNodes';
 import { RepoFileReader } from './RepoFileReader';
 import { useRepoFiles } from './repoFileStore';
 import { ResizableColumn, collapsibleColumn, type ColumnSize } from './ResizableColumn';
@@ -20,6 +20,7 @@ import type { ChangedFile, ChangedFileSet, ChangeSummary, PullRequestSummary } f
 import { ReviewThreadProvider, useReviewTarget } from './reviewThreadStore';
 import { useStickyColumn, useStickyOpen } from './stickyColumns';
 import { useFileDeletion } from './useFileDeletion';
+import { useRepoFileTree } from './useRepoFileTree';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 import { useCachedJson } from '@/features/sources/useCachedJson';
 import { usePollWhileVisible } from '@/features/sources/usePollWhileVisible';
@@ -110,13 +111,19 @@ function Workspace({
     setPath(filename);
     setScrollWanted(filename);
   }, []);
+  const browseTree = useRepoFileTree({
+    repoFiles,
+    query: fileQuery,
+    selected: browsePath,
+    onSelectFile: setBrowsePath,
+  });
   const selectFileItem = useCallback(
-    (item: string) => {
-      const browsed = browsedPath(item);
-      if (browsed === null) revealFile(item);
-      else setBrowsePath(browsed);
-    },
-    [revealFile],
+    (item: string) => (isTreeItem(item) ? browseTree.selectItem(item) : revealFile(item)),
+    [browseTree, revealFile],
+  );
+  const activateFileItem = useCallback(
+    (item: string) => (isTreeItem(item) ? browseTree.activateItem(item) : revealFile(item)),
+    [browseTree, revealFile],
   );
   const sort = useDiffSort();
   const { threads } = useReviewTarget();
@@ -125,10 +132,7 @@ function Workspace({
     [fileSet, deleted, showingWhole, sort, threads],
   );
   const fileItems = useMemo(() => files.map((file) => file.filename), [files]);
-  const browseItems = useMemo(
-    () => (allFilesOpen ? listedPaths(repoFiles, fileQuery).shown.map(browseKey) : []),
-    [allFilesOpen, repoFiles, fileQuery],
-  );
+  const browseItems = allFilesOpen ? browseTree.navItems : [];
   const browsing = browsePath !== null && repoFiles.fileSet ? { ref: repoFiles.fileSet.ref, path: browsePath } : null;
   const loadedFiles = fileSet === null ? null : files;
 
@@ -172,6 +176,7 @@ function Workspace({
       items: [...fileItems, ...browseItems],
       selected: browsePath === null ? path : browseKey(browsePath),
       onSelect: selectFileItem,
+      onActivate: activateFileItem,
     },
     showsFiles,
   );
@@ -229,6 +234,7 @@ function Workspace({
           footer={
             <AllFilesSection
               repoFiles={repoFiles}
+              tree={browseTree}
               expanded={allFilesOpen}
               onExpanded={setAllFilesOpen}
               selected={browsePath}
