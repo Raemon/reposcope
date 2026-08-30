@@ -19,20 +19,18 @@ export function DiffLayoutToggle() {
     <div className="relative z-30 flex shrink-0 items-center gap-1 border-b border-panel-edge bg-panel px-1.5 py-[1px]">
       <FoldModeButtons />
       <span className="ml-auto flex items-center gap-1">
-        <span className="hidden items-center gap-1 md:flex">
-          {CHOICES.map(({ layout, icon, label }) => (
-            <ChoiceButton
-              key={layout}
-              label={`Show diffs in a ${label} view`}
-              active={current === layout}
-              onSelect={() => setDiffLayout(layout)}
-              className="px-1.5 text-[9px] leading-4"
-            >
-              <span aria-hidden className="pr-1">{icon}</span>
-              {label}
-            </ChoiceButton>
-          ))}
-        </span>
+        {CHOICES.map(({ layout, icon, label }) => (
+          <ChoiceButton
+            key={layout}
+            label={`Show diffs in a ${label} view`}
+            labelled
+            active={current === layout}
+            onSelect={() => setDiffLayout(layout)}
+            className="h-4 w-5 text-[11px] leading-4"
+          >
+            {icon}
+          </ChoiceButton>
+        ))}
         <EditModeToggle />
         <DiffSortMenu />
       </span>
