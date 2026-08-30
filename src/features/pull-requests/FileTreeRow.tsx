@@ -15,6 +15,7 @@ export function FileTreeRow({
   selected,
   onSelect,
   indented = false,
+  indent,
   action = null,
   children,
 }: {
@@ -23,18 +24,21 @@ export function FileTreeRow({
   selected: boolean;
   onSelect: () => void;
   indented?: boolean;
+  indent?: number;
   action?: ReactNode;
   children?: ReactNode;
 }) {
   const row = useColumnNav('files').row(navKey, selected);
+  const inset = insetOf(indented, indent);
   const button = (
     <SelectableRow
       {...row.props}
       onActivate={onSelect}
-      className={`${ROW} ${indented ? 'pl-4' : 'pl-1.5'} ${action === null ? rowStateClass(row.state) : ''}`}
+      style={inset.style}
+      className={`${ROW} ${inset.className} ${action === null ? rowStateClass(row.state) : ''}`}
     >
       <span className="min-w-0 flex-1 truncate filename-text">
-        {!indented && <ParentFolder path={path} />}
+        {inset.showsParent && <ParentFolder path={path} />}
         <FileName path={path} tinted={!rowShowsAccent(row.state)} />
       </span>
       {children}
@@ -47,6 +51,11 @@ export function FileTreeRow({
       {action}
     </div>
   );
+}
+
+function insetOf(indented: boolean, indent: number | undefined) {
+  if (indent !== undefined) return { className: '', style: { paddingLeft: indent }, showsParent: false };
+  return { className: indented ? 'pl-4' : 'pl-1.5', style: undefined, showsParent: !indented };
 }
 
 function ParentFolder({ path }: { path: string }) {

@@ -2,10 +2,12 @@
 
 import { RepoFileList } from './RepoFileList';
 import type { RepoFiles } from './repoFileStore';
+import type { RepoFileTree } from './useRepoFileTree';
 import { SectionHeader } from './ResizableColumn';
 
 export function AllFilesSection({
   repoFiles,
+  tree,
   expanded,
   onExpanded,
   selected,
@@ -14,6 +16,7 @@ export function AllFilesSection({
   onQuery,
 }: {
   repoFiles: RepoFiles;
+  tree: RepoFileTree;
   expanded: boolean;
   onExpanded: (next: boolean) => void;
   selected: string | null;
@@ -35,7 +38,14 @@ export function AllFilesSection({
       />
       {expanded && (
         <div className="flex min-h-0 flex-1 flex-col overflow-auto py-[1px]">
-          <RepoFileList repoFiles={repoFiles} selected={selected} onSelect={onSelect} query={query} onQuery={onQuery} />
+          <RepoFileList
+            repoFiles={repoFiles}
+            tree={tree}
+            selected={selected}
+            onSelect={onSelect}
+            query={query}
+            onQuery={onQuery}
+          />
         </div>
       )}
     </section>
