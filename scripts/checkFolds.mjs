@@ -356,11 +356,13 @@ const deletedTwoFunctions = [
   '  return 2;',
   '}',
 ];
-check('a fully deleted file is allLinesDeleted', allLinesDeleted(deletedRows(deletedTwoFunctions)), true);
+const deletedTwoFunctionRows = deletedRows(deletedTwoFunctions);
+const deletedTwoFunctionRegions = collapseRegions(deletedTwoFunctionRows, false, 'a.ts');
+check('a fully deleted file is allLinesDeleted', allLinesDeleted(deletedTwoFunctionRows), true);
 check('a mixed file is not allLinesDeleted', allLinesDeleted(mixedRows()), false);
 check(
   'a fully deleted file wraps all code in one fold',
-  collapseRegions(deletedRows(deletedTwoFunctions), false, 'a.ts').map((r) => [r.start, r.end, r.kind]),
+  deletedTwoFunctionRegions.map((r) => [r.start, r.end, r.kind]),
   [[1, 7, 'file'], [5, 7, 'block']],
 );
 check(
@@ -375,12 +377,12 @@ check(
 );
 
 const deletedHidden = new Set();
-for (const region of collapseRegions(deletedRows(deletedTwoFunctions), false, 'a.ts')) {
+for (const region of deletedTwoFunctionRegions) {
   for (let row = region.start + 1; row <= region.end; row += 1) deletedHidden.add(row);
 }
 check(
   'collapsing a deleted file leaves only the first code line',
-  visibleLines(columnLines(deletedRows(deletedTwoFunctions), 'left'), deletedHidden).map((line) => line.kind),
+  visibleLines(columnLines(deletedTwoFunctionRows, 'left'), deletedHidden).map((line) => line.kind),
   ['hunk', 'change'],
 );
 

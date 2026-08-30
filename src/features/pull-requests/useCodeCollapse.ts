@@ -40,9 +40,10 @@ export function useCodeCollapse(
   const threadRows = useMemo(() => threadRowIndexes(threads, rows), [threads, rows]);
   const command = useFoldCommand();
   const [overrides, setOverride] = useFoldOverrides(command.epoch);
+  const allDeleted = allLinesDeleted(rows);
   return useMemo(
-    () => buildCollapse(regions, threadRows, edit, command.mode, overrides, setOverride, rows),
-    [regions, threadRows, edit, command.mode, overrides, setOverride, rows],
+    () => buildCollapse(regions, threadRows, edit, command.mode, overrides, setOverride, allDeleted),
+    [regions, threadRows, edit, command.mode, overrides, setOverride, allDeleted],
   );
 }
 
@@ -104,12 +105,11 @@ function buildCollapse(
   mode: FoldMode,
   overrides: Overrides,
   setOverride: SetOverride,
-  rows: DiffRow[],
+  allDeleted: boolean,
 ): CodeCollapse {
   const anchors = new Map<number, CollapseAnchor>();
   const hidden = new Set<number>();
   const foldable = regions.filter((region) => !regionOverlapsEdit(region, edit));
-  const allDeleted = allLinesDeleted(rows);
   for (const region of foldable) {
     const hiddenThreads = innerRows(region).filter((row) => threadRows.has(row)).length;
     const collapsed = overrides[region.key] ?? modeCollapsed(region, hiddenThreads, mode, allDeleted);
