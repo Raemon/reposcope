@@ -3,6 +3,7 @@
 import { Fragment, type ReactNode } from 'react';
 import { hunkHasEditableLines, type EditableBlock } from './editableBlocks';
 import { codeSegments } from './codeSegments';
+import { collapsedPreview } from './collapsedPreview';
 import { diffEditModeOn } from './editModeStore';
 import type { DiffLine } from './diffLines';
 import type { ThemedToken } from './diffHighlight';
@@ -19,6 +20,7 @@ const TOUCHED_MARK = 'bg-add-bg/60 shadow-[inset_2px_0_0_var(--add-emph)]';
 const STICKY_CHIP = 'sticky right-0 shrink-0 rounded bg-procgen px-1 hover:bg-btn-hover hover:text-ink';
 const EDIT_BTN = `${STICKY_CHIP} uppercase tracking-[0.14em]`;
 const FOLD_BADGE = `${STICKY_CHIP} ml-1 text-[9px] italic text-ink-dim`;
+const FOLD_PREVIEW = 'diff-code max-w-[90ch] shrink overflow-hidden text-ellipsis whitespace-pre pl-2 text-[11px] text-ink-dim/70';
 
 export interface HunkControl {
   expanded: boolean;
@@ -81,15 +83,17 @@ function DiffLines({
       <div className="w-max min-w-full">
         {lines.slice(from, to).map((line, offset) => {
           const index = from + offset;
+          const anchor = anchorOf(line, anchors, rowsWithRightLine);
           return (
             <Fragment key={index}>
               <DiffLineView
                 line={line}
                 labels={labels}
+                preview={previewFor(rows, line, anchor)}
                 lineTokens={tokens?.[line.side][line.row] ?? null}
                 ranges={rangesFor(emphasis[line.row], line.side)}
                 expand={expand}
-                anchor={anchorOf(line, anchors, rowsWithRightLine)}
+                anchor={anchor}
                 editable={editable}
                 onEdit={editStarter(rows, line.row, onEditBlock)}
               />
@@ -115,6 +119,10 @@ function rowsShownOnRight(lines: DiffLine[]): Set<number> {
   return new Set(lines.filter((line) => line.side === 'right').map((line) => line.row));
 }
 
+function previewFor(rows: DiffRow[], line: DiffLine, anchor: CollapseAnchor | null): string {
+  return anchor?.collapsed ? collapsedPreview(rows, anchor.region, line.side) : '';
+}
+
 function anchorOf(line: DiffLine, anchors: Map<number, CollapseAnchor>, rowsWithRightLine: Set<number>): CollapseAnchor | null {
   if (line.side === 'left' && rowsWithRightLine.has(line.row)) return null;
   return anchors.get(line.row) ?? null;
@@ -134,11 +142,13 @@ function DiffLineView({
   ranges,
   expand,
   anchor,
+  preview,
   editable,
   onEdit,
 }: {
   line: DiffLine;
   labels: boolean;
+  preview: string;
   lineTokens: ThemedToken[] | null;
   ranges: CharRange[] | null;
   expand: HunkControl;
@@ -170,6 +180,7 @@ function DiffLineView({
           </span>
         ))}
       </span>
+      {preview && <span className={FOLD_PREVIEW}>{preview}</span>}
       {anchor?.collapsed && <FoldBadge anchor={anchor} />}
     </div>
   );
