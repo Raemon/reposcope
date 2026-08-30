@@ -30,7 +30,7 @@ export function CodebaseHeader() {
   const branch = branchBeingRead(pathname);
   const readingPullList = reading !== null && pathname === repoRoute(reading.owner, reading.name);
   return (
-    <header className="flex items-center gap-2 border-b border-panel-edge bg-panel px-2 py-5">
+    <header className="relative z-40 flex items-center gap-2 border-b border-panel-edge bg-panel px-2 py-5">
       <Link href="/" aria-label="reposcope home" className="shrink-0">
         <ScopeMark size={20} title="reposcope home" />
       </Link>
