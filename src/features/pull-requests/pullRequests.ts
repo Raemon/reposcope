@@ -252,6 +252,12 @@ export async function mergePullRequest(owner: string, name: string, number: numb
   return { merged: result.merged ?? false, message: result.message ?? '' };
 }
 
+export async function retargetPullRequest(owner: string, name: string, number: number, base: string): Promise<{ baseRef: string }> {
+  requireGithubUser('changing the base branch');
+  const pull = await githubSend<GithubPull>(`${API}/repos/${owner}/${name}/pulls/${number}`, 'PATCH', { base });
+  return { baseRef: pull.base.ref };
+}
+
 export async function closePullRequest(owner: string, name: string, number: number): Promise<CloseResult> {
   requireGithubUser('closing pull requests');
   const pull = await githubSend<GithubPull>(`${API}/repos/${owner}/${name}/pulls/${number}`, 'PATCH', { state: 'closed' });

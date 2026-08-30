@@ -30,6 +30,7 @@ interface ReviewWorkspaceProps {
   number: number | null;
   subjectKey: string;
   change: ChangeSummary;
+  baseRef: string | null;
   reloadChange: () => Promise<unknown>;
   wholeFilesPath: string;
   listColumn: ReactNode;
@@ -51,6 +52,7 @@ function Workspace({
   number,
   subjectKey,
   change,
+  baseRef,
   reloadChange,
   wholeFilesPath,
   listColumn,
@@ -81,6 +83,7 @@ function Workspace({
   const repoFiles = useRepoFiles(owner, repo, (fileSize.open && allFilesOpen) || browsePath !== null);
 
   usePollWhileVisible(fileState.reload, ready);
+  useReloadOnRetarget(subjectKey, baseRef, fileState.reload);
 
   useEffect(() => {
     setSelection(WHOLE_CHANGE);
@@ -301,6 +304,15 @@ function useCommitColumnSize(subjectKey: string, single: boolean): [ColumnSize, 
     setStored(single ? { ...next, open: stored.open } : next);
   };
   return [size, setSize];
+}
+
+function useReloadOnRetarget(subjectKey: string, baseRef: string | null, reload: () => Promise<unknown>): void {
+  const seen = useRef({ subjectKey, baseRef });
+  useEffect(() => {
+    const before = seen.current;
+    seen.current = { subjectKey, baseRef };
+    if (before.subjectKey === subjectKey && before.baseRef !== baseRef) void reload().catch(() => {});
+  });
 }
 
 function reloadFailure(issue: unknown): string {

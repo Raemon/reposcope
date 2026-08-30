@@ -12,6 +12,7 @@ import { ScopeMark } from '@/features/brand/ScopeMark';
 import { CurrentBranchTitle, CurrentPullTitle } from '@/features/pull-requests/CurrentPullTitle';
 import { MergePullButton } from '@/features/pull-requests/MergePullButton';
 import { PreviewLink } from '@/features/pull-requests/PreviewLink';
+import { PullBranchRefs } from '@/features/pull-requests/PullBranchRefs';
 import { PullRequestMenu } from '@/features/pull-requests/PullRequestMenu';
 import { ViewModeToggle } from '@/features/pull-requests/ViewModeToggle';
 import { type RepoRef } from '@/features/sources/parseRepoLink';
@@ -39,6 +40,7 @@ export function CodebaseHeader() {
         <GithubSignedOutNotice />
         {reading && pullNumber !== null && (
           <>
+            <PullBranchRefs repo={reading} number={pullNumber} />
             <PreviewLink repo={reading} number={pullNumber} />
             <MergePullButton repo={reading} number={pullNumber} />
             <span className="hidden md:contents">

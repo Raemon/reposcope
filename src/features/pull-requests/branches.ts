@@ -15,6 +15,11 @@ export interface BranchPull {
   merged: boolean;
 }
 
+export interface BranchOption {
+  name: string;
+  updatedAt: string;
+}
+
 export interface BranchSummary {
   name: string;
   headSha: string;
@@ -60,9 +65,21 @@ export async function listBranches(owner: string, name: string): Promise<BranchS
     .sort(byUnsettledThenRecent);
 }
 
+export async function listBranchOptions(owner: string, name: string): Promise<BranchOption[]> {
+  const branches = await allBranches(owner, name);
+  const dates = await branchDates(owner, name, branches);
+  return branches
+    .map((branch) => ({ name: branch.name, updatedAt: dates.get(branch.commit.sha) ?? '' }))
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
+function allBranches(owner: string, name: string): Promise<GithubBranch[]> {
+  return githubJson<GithubBranch[]>(`${API}/repos/${owner}/${name}/branches?per_page=${BRANCH_LIMIT}`);
+}
+
 async function nonDefaultBranches(owner: string, name: string): Promise<GithubBranch[]> {
   const [all, repo] = await Promise.all([
-    githubJson<GithubBranch[]>(`${API}/repos/${owner}/${name}/branches?per_page=${BRANCH_LIMIT}`),
+    allBranches(owner, name),
     githubJson<{ default_branch: string }>(`${API}/repos/${owner}/${name}`),
   ]);
   return all.filter((branch) => branch.name !== repo.default_branch);
