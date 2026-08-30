@@ -1,4 +1,4 @@
-import type { Language, Node, Parser } from '@vscode/tree-sitter-wasm';
+import type { Language, Node, Parser, Tree } from '@vscode/tree-sitter-wasm';
 import { assembleRegions, type CollapseRegion } from './collapseRegions';
 import { extensionOf, foldDialect, regionMarkerRules } from './foldDialects';
 import { lineRuleSpans } from './foldLineSpans';
@@ -130,13 +130,27 @@ async function loadGrammar(name: string): Promise<Language | null> {
   }
 }
 
+export function grammarNameFor(filename: string): string | null {
+  return GRAMMAR_BY_EXTENSION[extensionOf(filename)] ?? null;
+}
+
+export async function parseSource(text: string, filename: string): Promise<Tree | null> {
+  const grammar = grammarNameFor(filename);
+  if (!grammar) return null;
+  const language = await grammarLanguage(grammar);
+  if (!language) return null;
+  const parser = await sharedParser();
+  parser.setLanguage(language);
+  return parser.parse(text);
+}
+
 export async function treeCollapseRegions(
   rows: DiffRow[],
   contiguous: boolean,
   filename: string,
 ): Promise<CollapseRegion[] | null> {
   const extension = extensionOf(filename);
-  const grammar = GRAMMAR_BY_EXTENSION[extension];
+  const grammar = grammarNameFor(filename);
   if (!grammar) return null;
   const language = await grammarLanguage(grammar);
   if (!language) return null;
@@ -192,7 +206,7 @@ function foldFromNode(node: Node, lineRows: number[], contiguous: boolean, spans
   }
 }
 
-function lastLineOf(node: Node): number {
+export function lastLineOf(node: Node): number {
   return node.endPosition.column === 0 ? node.endPosition.row - 1 : node.endPosition.row;
 }
 

@@ -62,6 +62,10 @@ export function repoFilesPath(owner: string, repo: string): string {
   return `/api/github/repo-files?${repoParams(owner, repo)}`;
 }
 
+export function repoFilesAtRefPath(owner: string, repo: string, ref: string): string {
+  return `${repoFilesPath(owner, repo)}&ref=${encodeURIComponent(ref)}`;
+}
+
 export function fileTextPath(owner: string, repo: string, ref: string, path: string): string {
   return `/api/github/file?${repoParams(owner, repo)}&ref=${encodeURIComponent(ref)}&path=${encodeURIComponent(path)}`;
 }

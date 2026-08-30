@@ -18,6 +18,7 @@ import { DragHandle, useDragWidth } from './ResizableColumn';
 import { useFileThreads } from './reviewThreadStore';
 import { splitDiff, type DiffRow } from './splitDiff';
 import { useCodeCollapse } from './useCodeCollapse';
+import { useDefinitionClick } from './useDefinitionClick';
 import { useDiffTokens, useIntralineEmphasis } from './useDiffSideHighlight';
 import { useHeightTransition } from './useHeightTransition';
 import { useHunkEdit, type HunkEdit, type HunkEditControls } from './useHunkEdit';
@@ -71,7 +72,8 @@ export function FileDiff({
   const lines = useMemo(() => foldedLines(rows, collapse.hidden), [rows, collapse.hidden]);
   const growing = useHeightTransition(rows, collapse.hidden);
   const expand = expandControl(wholeFile, showingWholeFile, hunkEdit, setWantWholeFile);
-  const shared = { rows, tokens, emphasis, expand, anchors: collapse.anchors };
+  const onCodePress = useDefinitionClick(file, baseRef, headRef);
+  const shared = { rows, tokens, emphasis, expand, anchors: collapse.anchors, onCodePress };
   const bounds = { hidden: collapse.hidden, stopAtBlankLines: showingWholeFile };
   const editing = {
     editable: pull !== null,
