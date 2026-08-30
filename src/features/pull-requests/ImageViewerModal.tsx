@@ -74,7 +74,7 @@ function ViewerStage({ gallery, file, index, onClose }: { gallery: ImageGallery;
 
 function ViewerPicture({ gallery, file }: { gallery: ImageGallery; file: ChangedFile }) {
   return (
-    <div className="flex min-h-0 flex-1 items-center justify-center">
+    <div className="flex min-h-0 flex-1 items-[safe_center] justify-center overflow-y-auto">
       <span onClick={holdClick} className="flex max-h-full min-h-0 max-w-full">
         <GalleryImage gallery={gallery} file={file} className="max-h-full max-w-full object-contain" />
       </span>
