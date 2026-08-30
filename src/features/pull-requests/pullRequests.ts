@@ -255,6 +255,7 @@ export async function mergePullRequest(owner: string, name: string, number: numb
 export async function retargetPullRequest(owner: string, name: string, number: number, base: string): Promise<{ baseRef: string }> {
   requireGithubUser('changing the base branch');
   const pull = await githubSend<GithubPull>(`${API}/repos/${owner}/${name}/pulls/${number}`, 'PATCH', { base });
+  await dropGithubCache(owner, name);
   return { baseRef: pull.base.ref };
 }
 

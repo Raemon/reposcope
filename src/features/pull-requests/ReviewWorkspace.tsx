@@ -83,7 +83,6 @@ function Workspace({
   const repoFiles = useRepoFiles(owner, repo, (fileSize.open && allFilesOpen) || browsePath !== null);
 
   usePollWhileVisible(fileState.reload, ready);
-  useReloadOnRetarget(subjectKey, baseRef, fileState.reload);
 
   useEffect(() => {
     setSelection(WHOLE_CHANGE);
@@ -92,6 +91,8 @@ function Workspace({
   }, [subjectKey]);
 
   const showingWhole = selection === WHOLE_CHANGE;
+  useReloadOnRetarget(subjectKey, baseRef, () => (showingWhole ? fileState.reload() : Promise.resolve()));
+
   useEffect(() => {
     if (scrollWanted === null || browsePath !== null) return;
     diffPanes.current?.scrollToFile(scrollWanted);

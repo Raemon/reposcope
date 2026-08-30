@@ -33,6 +33,8 @@ interface GithubBranch {
   commit: { sha: string };
 }
 
+type DatedBranch = GithubBranch & { updatedAt: string };
+
 interface GithubRefPull {
   number: number;
   state: string;
@@ -58,19 +60,23 @@ const BRANCH_DATE_WORKERS = 8;
 const COMMIT_LIMIT = 100;
 
 export async function listBranches(owner: string, name: string): Promise<BranchSummary[]> {
-  const [branches, pulls] = await Promise.all([nonDefaultBranches(owner, name), recentPulls(owner, name)]);
-  const dates = await branchDates(owner, name, branches);
-  return branches
-    .map((branch) => summarizeBranch(branch, pulls.get(branch.name) ?? null, dates.get(branch.commit.sha) ?? ''))
-    .sort(byUnsettledThenRecent);
+  const [branches, pulls] = await Promise.all([datedBranches(owner, name, nonDefaultBranches), recentPulls(owner, name)]);
+  return branches.map((branch) => summarizeBranch(branch, pulls.get(branch.name) ?? null)).sort(byUnsettledThenRecent);
 }
 
 export async function listBranchOptions(owner: string, name: string): Promise<BranchOption[]> {
-  const branches = await allBranches(owner, name);
+  const branches = await datedBranches(owner, name, allBranches);
+  return branches.map(({ name: branch, updatedAt }) => ({ name: branch, updatedAt })).sort(byRecent);
+}
+
+async function datedBranches(
+  owner: string,
+  name: string,
+  list: (owner: string, name: string) => Promise<GithubBranch[]>,
+): Promise<DatedBranch[]> {
+  const branches = await list(owner, name);
   const dates = await branchDates(owner, name, branches);
-  return branches
-    .map((branch) => ({ name: branch.name, updatedAt: dates.get(branch.commit.sha) ?? '' }))
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  return branches.map((branch) => ({ ...branch, updatedAt: dates.get(branch.commit.sha) ?? '' }));
 }
 
 function allBranches(owner: string, name: string): Promise<GithubBranch[]> {
@@ -138,19 +144,23 @@ async function commitDate(owner: string, name: string, sha: string): Promise<str
   }
 }
 
-function summarizeBranch(branch: GithubBranch, pull: GithubRefPull | null, updatedAt: string): BranchSummary {
+function summarizeBranch(branch: DatedBranch, pull: GithubRefPull | null): BranchSummary {
   const merged = pull?.merged_at != null;
   return {
     name: branch.name,
     headSha: branch.commit.sha,
-    updatedAt,
+    updatedAt: branch.updatedAt,
     pull: pull && { number: pull.number, state: pull.state, merged },
     mergedAndUnchanged: merged && pull?.head.sha === branch.commit.sha,
   };
 }
 
 function byUnsettledThenRecent(a: BranchSummary, b: BranchSummary): number {
-  return Number(a.mergedAndUnchanged) - Number(b.mergedAndUnchanged) || b.updatedAt.localeCompare(a.updatedAt);
+  return Number(a.mergedAndUnchanged) - Number(b.mergedAndUnchanged) || byRecent(a, b);
+}
+
+function byRecent(a: { updatedAt: string }, b: { updatedAt: string }): number {
+  return b.updatedAt.localeCompare(a.updatedAt);
 }
 
 function totalOf<T>(items: T[], count: (item: T) => number): number {

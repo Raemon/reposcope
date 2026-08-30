@@ -55,19 +55,19 @@ function BaseRefPicker({
     setRetargeting(true);
     try {
       await apiPost(retargetPullPath(repo.owner, repo.name, number, base), token);
-      await reloadCurrentPull();
     } catch (issue: unknown) {
-      setFailure(issue instanceof Error ? issue.message : String(issue));
+      return setFailure(`retarget refused: ${describe(issue)}`);
     } finally {
       setRetargeting(false);
     }
+    await reloadCurrentPull().catch((issue: unknown) => setFailure(`base changed; reload failed: ${describe(issue)}`));
   }
 
   return (
     <>
       {failure !== null && (
         <HoverCardTrigger label={failure} className="max-w-56" focusable={false} tooltipStyle>
-          <span className="truncate text-[10px] text-error-ink">retarget failed</span>
+          <span className="max-w-40 truncate text-[10px] text-error-ink">{failure}</span>
         </HoverCardTrigger>
       )}
       <PopoverMenu
@@ -78,8 +78,7 @@ function BaseRefPicker({
         {(close) => (
           <BranchChoices
             repo={repo}
-            skip={headRef}
-            current={baseRef}
+            skip={[headRef, baseRef]}
             onChoose={(base) => {
               close();
               void retarget(base);
@@ -115,12 +114,10 @@ function BaseRefButton({ baseRef, retargeting, open, toggle }: PopoverTrigger & 
 function BranchChoices({
   repo,
   skip,
-  current,
   onChoose,
 }: {
   repo: RepoRef;
-  skip: string;
-  current: string;
+  skip: string[];
   onChoose: (base: string) => void;
 }) {
   const [filter, setFilter] = useState('');
@@ -145,32 +142,19 @@ function BranchChoices({
         {shown.length === 0 ? (
           <p className="px-2 py-1 text-[11px] leading-4 text-ink-dim">No matching branches.</p>
         ) : (
-          shown.map((branch) => (
-            <BranchChoice key={branch.name} branch={branch} current={branch.name === current} onChoose={onChoose} />
-          ))
+          shown.map((branch) => <BranchChoice key={branch.name} branch={branch} onChoose={onChoose} />)
         )}
       </nav>
     </>
   );
 }
 
-function BranchChoice({
-  branch,
-  current,
-  onChoose,
-}: {
-  branch: BranchOption;
-  current: boolean;
-  onChoose: (base: string) => void;
-}) {
+function BranchChoice({ branch, onChoose }: { branch: BranchOption; onChoose: (base: string) => void }) {
   return (
     <button
       type="button"
       onClick={() => onChoose(branch.name)}
-      disabled={current}
-      className={`flex w-full items-baseline gap-2 px-2 py-1 text-left text-[11px] leading-4 ${
-        current ? 'bg-btn-active text-accent' : 'text-ink hover:bg-btn-hover'
-      }`}
+      className="flex w-full items-baseline gap-2 px-2 py-1 text-left text-[11px] leading-4 text-ink hover:bg-btn-hover"
     >
       <span className="min-w-0 flex-1 truncate font-mono">{branch.name}</span>
       <RelativeTime iso={branch.updatedAt} className="shrink-0 text-[9px] text-ink-dim" />
@@ -185,7 +169,11 @@ function useBranchOptions(repo: RepoRef): BranchOption[] {
   return data ?? [];
 }
 
-function matchingBranches(branches: BranchOption[], skip: string, filter: string): BranchOption[] {
+function matchingBranches(branches: BranchOption[], skip: string[], filter: string): BranchOption[] {
   const wanted = filter.trim().toLowerCase();
-  return branches.filter((branch) => branch.name !== skip && branch.name.toLowerCase().includes(wanted));
+  return branches.filter((branch) => !skip.includes(branch.name) && branch.name.toLowerCase().includes(wanted));
+}
+
+function describe(issue: unknown): string {
+  return issue instanceof Error ? issue.message : String(issue);
 }
