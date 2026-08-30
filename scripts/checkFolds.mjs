@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { collapseRegions } from '../src/features/pull-requests/collapseRegions.ts';
 import { columnLines, visibleLines } from '../src/features/pull-requests/diffLines.ts';
+import { allLinesDeleted } from '../src/features/pull-requests/foldSpan.ts';
 import { overrideWasmSource, treeCollapseRegions } from '../src/features/pull-requests/treeSitterFolds.ts';
 
 const WASM = 'node_modules/@vscode/tree-sitter-wasm/wasm';
@@ -340,6 +341,49 @@ check(
   [[0, 4, 1, 2]],
 );
 
+function deletedRows(lines, hunk = true) {
+  const header = hunk ? [{ kind: 'hunk', label: '@@ -1 +0,0 @@', left: null, right: null }] : [];
+  const body = lines.map((text, index) => ({ kind: 'change', label: '', left: { line: index + 1, text }, right: null }));
+  return [...header, ...body];
+}
+
+const deletedTwoFunctions = [
+  'function foo() {',
+  '  return 1;',
+  '}',
+  '',
+  'function bar() {',
+  '  return 2;',
+  '}',
+];
+check('a fully deleted file is allLinesDeleted', allLinesDeleted(deletedRows(deletedTwoFunctions)), true);
+check('a mixed file is not allLinesDeleted', allLinesDeleted(mixedRows()), false);
+check(
+  'a fully deleted file wraps all code in one fold',
+  collapseRegions(deletedRows(deletedTwoFunctions), false, 'a.ts').map((r) => [r.start, r.end, r.kind]),
+  [[1, 7, 'file'], [5, 7, 'block']],
+);
+check(
+  'a fully deleted unstructured file still folds',
+  collapseRegions(deletedRows(['const a = 1;', 'const b = 2;', 'const c = 3;']), false, 'a.ts').map((r) => [r.start, r.end, r.kind]),
+  [[1, 3, 'file']],
+);
+check(
+  'a two-line deleted file is too short to wrap',
+  collapseRegions(deletedRows(['const a = 1;', 'const b = 2;']), false, 'a.ts').map((r) => r.kind),
+  [],
+);
+
+const deletedHidden = new Set();
+for (const region of collapseRegions(deletedRows(deletedTwoFunctions), false, 'a.ts')) {
+  for (let row = region.start + 1; row <= region.end; row += 1) deletedHidden.add(row);
+}
+check(
+  'collapsing a deleted file leaves only the first code line',
+  visibleLines(columnLines(deletedRows(deletedTwoFunctions), 'left'), deletedHidden).map((line) => line.kind),
+  ['hunk', 'change'],
+);
+
 // --- regressions for confirmed wrong-fold bugs ----------------------------------
 function check2(name, lines, filename, expected) { check(name, boundsOf(lines, filename), expected); }
 check2('ruby << operator does not swallow file', [
@@ -621,6 +665,17 @@ const brokenRows = rowsOf([
   '}',
 ]);
 await checkTree('error tolerance keeps valid folds', [], 'a.ts', [[1, 4, 'function_declaration', 0]], { rows: brokenRows });
+
+await checkTree(
+  'fully deleted file wraps all code',
+  [],
+  'a.ts',
+  [
+    [1, 7, 'file', 0],
+    [5, 7, 'function_declaration', 1],
+  ],
+  { contiguous: false, rows: deletedRows(deletedTwoFunctions) },
+);
 
 await checkTree('jsx fragment folds', [
   'const x = (',

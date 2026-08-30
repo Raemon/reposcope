@@ -1,6 +1,6 @@
 import { extensionOf, foldDialect, type FoldDialect } from './foldDialects';
 import { indentSpans, lineRuleSpans, markdownSpans } from './foldLineSpans';
-import { addRowRange, pushSpan, scanRows, scanRowsFlushing, scanSide, textOf, type Side, type Span } from './foldSpan';
+import { addRowRange, allLinesDeleted, pushSpan, scanRows, scanRowsFlushing, scanSide, textOf, type Side, type Span } from './foldSpan';
 import type { DiffRow } from './splitDiff';
 
 export interface CollapseRegion {
@@ -38,7 +38,19 @@ export function assembleRegions(
 ): CollapseRegion[] {
   const imports = importSpans(rows, side, contiguous, importSource, importLine);
   const wideEnough = spans.filter((span) => span.end - span.start >= 2);
-  return finalize(rows, [...imports, ...wideEnough]);
+  return finalize(rows, [...imports, ...wideEnough, ...deletedFileSpans(rows)]);
+}
+
+function contentRowIndexes(rows: DiffRow[]): number[] {
+  return rows.flatMap((row, index) => (row.kind === 'hunk' ? [] : [index]));
+}
+
+function deletedFileSpans(rows: DiffRow[]): Span[] {
+  const lines = contentRowIndexes(rows);
+  const start = lines[0];
+  const end = lines[lines.length - 1];
+  if (!allLinesDeleted(rows) || start === undefined || end === undefined || end - start < 2) return [];
+  return [{ start, end, kind: 'file', imports: false }];
 }
 
 function importSpans(rows: DiffRow[], side: Side, contiguous: boolean, tokens: Span[], importLine: RegExp | null): Span[] {
