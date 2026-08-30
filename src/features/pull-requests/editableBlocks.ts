@@ -9,25 +9,36 @@ export interface EditableBlock {
   text: string;
 }
 
-export function editableBlockAt(rows: DiffRow[], index: number): EditableBlock | null {
-  const bounds = hunkRowBounds(rows, index);
-  return bounds ? blockFromRightCells(rows, bounds.firstRow, bounds.lastRow, index) : null;
+export interface BlockBounds {
+  hidden: Set<number>;
+  stopAtBlankLines: boolean;
 }
 
-function hunkRowBounds(rows: DiffRow[], index: number): { firstRow: number; lastRow: number } | null {
-  if (!withinHunk(rows[index])) return null;
+export function editableBlockAt(rows: DiffRow[], index: number, bounds: BlockBounds): EditableBlock | null {
+  const span = editableRowSpan(rows, index, bounds);
+  return span ? blockFromRightCells(rows, span.firstRow, span.lastRow, index) : null;
+}
+
+function editableRowSpan(rows: DiffRow[], index: number, bounds: BlockBounds): { firstRow: number; lastRow: number } | null {
+  const inBlock = (at: number) => withinHunk(rows[at]) && !bounds.hidden.has(at) && !endsBlock(rows[at], bounds);
+  if (!inBlock(index)) return null;
   let firstRow = index;
   let lastRow = index;
-  while (withinHunk(rows[firstRow - 1])) firstRow -= 1;
-  while (withinHunk(rows[lastRow + 1])) lastRow += 1;
+  while (inBlock(firstRow - 1)) firstRow -= 1;
+  while (inBlock(lastRow + 1)) lastRow += 1;
   return { firstRow, lastRow };
+}
+
+// Without blank-line stops, a fold-free whole-file view is one block for the whole file.
+function endsBlock(row: DiffRow | undefined, bounds: BlockBounds): boolean {
+  return bounds.stopAtBlankLines && row?.kind === 'context' && (row.right?.text ?? '').trim() === '';
 }
 
 function blockFromRightCells(rows: DiffRow[], firstRow: number, lastRow: number, caretIndex: number): EditableBlock | null {
   const cells = rows.slice(firstRow, lastRow + 1).flatMap((row) => (row.right ? [row.right] : []));
   const first = cells[0];
   const last = cells[cells.length - 1];
-  if (!first || !last) return null;
+  if (!first || !last || last.line - first.line + 1 !== cells.length) return null;
   return {
     firstRow,
     lastRow,

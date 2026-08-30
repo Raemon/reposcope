@@ -30,6 +30,7 @@ export function BranchView({ owner, repo, branch }: { owner: string; repo: strin
       number={null}
       subjectKey={`${owner}/${repo}@${branch}`}
       change={change}
+      baseRef={null}
       reloadChange={branchState.reload}
       wholeFilesPath={branchFilesPath(owner, repo, branch)}
       listColumn={<RepoPullsColumn owner={owner} repo={repo} size={listSize} onSize={setListSize} />}

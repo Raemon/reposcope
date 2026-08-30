@@ -4,6 +4,7 @@ import { useMemo, type MouseEvent } from 'react';
 import type { PeekSides } from './definitionContext';
 import { useDefinitionPeekActions, type PeekOrigin } from './definitionPeekStore';
 import type { DiffLine } from './diffLines';
+import { diffEditModeOn } from './editModeStore';
 import { identifierAtPoint } from './identifierAt';
 import type { ChangedFile } from './pullRequests';
 
@@ -30,7 +31,7 @@ export function useDefinitionClick(file: ChangedFile, baseRef: string, headRef: 
       rightPath: file.filename,
     };
     return (line: DiffLine, event: MouseEvent<HTMLElement>) => {
-      if (event.detail !== 1) return;
+      if (event.detail !== 1 || diffEditModeOn()) return;
       const origin = originAtPress(sides, line, event);
       if (origin) actions.open(origin, { x: event.clientX, y: event.clientY });
     };

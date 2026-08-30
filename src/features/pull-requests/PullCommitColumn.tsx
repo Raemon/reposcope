@@ -10,7 +10,7 @@ import { RelativeTime } from '@/features/surface-ui/RelativeTime';
 import { rowStateClass } from '@/features/surface-ui/rowState';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 
-const TITLE_LINE = 'w-full truncate px-1.5 pb-0.5 pt-1 text-left font-serif text-[14px] leading-[1.2]';
+const TITLE_LINE = 'w-full break-words px-1.5 pb-0.5 pt-1 text-left font-serif text-[14px] leading-[1.2]';
 const META_LINE = 'flex flex-1 items-center gap-1.5 px-1.5 py-0.5 text-left font-mono text-[9px] leading-4 text-ink-dim';
 const HASH = 'ml-1.5 w-[3ch] shrink-0 font-mono text-[9px] leading-4';
 const HASH_CHARS = 3;
@@ -70,12 +70,12 @@ function CommitRow({
     <div
       data-nav-cursor={row.props.cursor || undefined}
       onPointerEnter={row.props.onPointerEnter}
-      className={`border-b border-ink/30 ${rowStateClass(row.state)}`}
+      className={`border-b border-ink/15 ${rowStateClass(row.state)}`}
     >
       <SelectableRow {...row.props} onActivate={onActivate} className={TITLE_LINE} label={title}>
         {title}
       </SelectableRow>
-      <div className="flex items-center border-t border-ink/15">
+      <div className="flex items-center">
         {hash}
         <SelectableRow onPointerEnter={row.props.onPointerEnter} onActivate={onActivate} className={META_LINE}>
           {children}

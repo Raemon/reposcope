@@ -9,7 +9,7 @@ export function CurrentPullTitle({ repo, number }: { repo: RepoRef; number: numb
   const pull = useCurrentPull(repo.owner, repo.name, number);
   const isOwnAuthor = useIsOwnAuthor();
   return (
-    <div className="flex min-w-0 flex-1 items-baseline gap-2 text-[13px] leading-5">
+    <div className="flex min-w-0 flex-1 items-baseline gap-2 pl-3 text-[13px] leading-5">
       <span className="shrink-0 text-accent">#{number}</span>
       {pull && (
         <>
@@ -21,10 +21,6 @@ export function CurrentPullTitle({ repo, number }: { repo: RepoRef; number: numb
                 <Dot />
               </>
             )}
-            <span>
-              {pull.headRef} <span className="text-ink-dim/40">→</span> {pull.baseRef}
-            </span>
-            <Dot />
             <span>{timeAgo(pull.pull.updatedAt)}</span>
           </div>
         </>
@@ -43,7 +39,7 @@ function Dot() {
 
 export function CurrentBranchTitle({ branch }: { branch: string }) {
   return (
-    <div className="flex min-w-0 flex-1 items-baseline gap-2 text-[13px] leading-5">
+    <div className="flex min-w-0 flex-1 items-baseline gap-2 pl-3 text-[13px] leading-5">
       <span aria-hidden className="shrink-0 text-accent">⑂</span>
       <span className="min-w-0 truncate font-mono text-[13px] leading-6 text-ink">{branch}</span>
     </div>

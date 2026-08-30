@@ -2,13 +2,14 @@
 
 import { setDiffSort, useDiffSort, type DiffSort } from './diffSortStore';
 import { BUTTON } from '@/features/surface-ui/buttonStyles';
+import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { PopoverMenu, type PopoverTrigger } from '@/features/surface-ui/PopoverMenu';
 
-const CHOICES: { sort: DiffSort; label: string; short: string }[] = [
-  { sort: 'comments', label: 'inline comments', short: 'comments' },
-  { sort: 'diff', label: 'line-diff, excluding imports', short: 'line-diff' },
-  { sort: 'diffAll', label: 'line-diff, all lines', short: 'line-diff (all)' },
-  { sort: 'folder', label: 'alphabetical folder', short: 'folders' },
+const CHOICES: { sort: DiffSort; label: string }[] = [
+  { sort: 'comments', label: 'inline comments' },
+  { sort: 'diff', label: 'line-diff, excluding imports' },
+  { sort: 'diffAll', label: 'line-diff, all lines' },
+  { sort: 'folder', label: 'alphabetical folder' },
 ];
 
 export function DiffSortMenu() {
@@ -22,17 +23,20 @@ export function DiffSortMenu() {
 
 function SortButton({ current, open, toggle }: PopoverTrigger & { current: DiffSort }) {
   const held = CHOICES.find((choice) => choice.sort === current) ?? CHOICES[0]!;
+  const label = `Sort files by ${held.label}`;
   return (
-    <button
-      type="button"
-      aria-haspopup="menu"
-      aria-expanded={open}
-      onClick={toggle}
-      className={`${BUTTON} px-1.5 text-[9px] leading-4 ${open ? 'bg-btn-active text-ink' : ''}`}
-    >
-      sort: {held.short}
-      <span aria-hidden className="pl-1">▾</span>
-    </button>
+    <HoverCardTrigger label={label} focusable={false} tooltipStyle>
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={label}
+        onClick={toggle}
+        className={`${BUTTON} h-4 w-5 text-[11px] leading-4 ${open ? 'bg-btn-active text-ink' : ''}`}
+      >
+        ⇅
+      </button>
+    </HoverCardTrigger>
   );
 }
 
