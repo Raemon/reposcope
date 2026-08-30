@@ -8,6 +8,7 @@ import type { ThemedToken } from './diffHighlight';
 import type { CharRange, IntralineRanges } from './intralineDiff';
 import type { DiffRow } from './splitDiff';
 import type { CollapseAnchor } from './useCodeCollapse';
+import type { CodePress } from './useDefinitionClick';
 import type { SideTokens } from './useDiffSideHighlight';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
@@ -38,6 +39,7 @@ export interface SideProps {
   editor?: ReactNode;
   editedRows?: EditableBlock | null;
   spacer?: { afterRow: number; height: number } | null;
+  onCodePress?: CodePress;
 }
 
 export function DiffSide(props: SideProps) {
@@ -71,6 +73,7 @@ function DiffLines({
   editable,
   onEditBlock,
   spacer,
+  onCodePress,
 }: SideProps & { from: number; to: number }) {
   if (from >= to) return null;
   const spacerLine = spacer ? lastLineOfRow(lines, spacer.afterRow) : -1;
@@ -91,6 +94,7 @@ function DiffLines({
                 anchor={anchorOf(line, anchors, rowsWithRightLine)}
                 editable={editable}
                 onEdit={editStarter(rows, line.row, onEditBlock)}
+                onCodePress={onCodePress}
               />
               {spacerLine === index && <div style={{ height: spacer?.height }} />}
             </Fragment>
@@ -135,6 +139,7 @@ function DiffLineView({
   anchor,
   editable,
   onEdit,
+  onCodePress,
 }: {
   line: DiffLine;
   labels: boolean;
@@ -144,6 +149,7 @@ function DiffLineView({
   anchor: CollapseAnchor | null;
   editable?: boolean;
   onEdit?: () => void;
+  onCodePress?: CodePress;
 }) {
   const { cell, side } = line;
   if (line.kind === 'hunk') {
@@ -158,7 +164,10 @@ function DiffLineView({
       onClick={openable && onEdit ? (event) => event.detail >= 3 && onEdit() : undefined}
     >
       <GutterCell line={cell.line} anchor={anchor} />
-      <span className="diff-code whitespace-pre pr-2 text-[11px]">
+      <span
+        className="diff-code whitespace-pre pr-2 text-[11px]"
+        onClick={onCodePress ? (event) => onCodePress(line, event) : undefined}
+      >
         {codeSegments(cell.text, lineTokens, changed ? ranges : null).map((segment, index) => (
           <span
             key={index}
@@ -218,7 +227,7 @@ function CollapseChevron({ anchor }: { anchor: CollapseAnchor }) {
   );
 }
 
-function lineTone(side: 'left' | 'right', changed: boolean, touched: boolean): string {
+export function lineTone(side: 'left' | 'right', changed: boolean, touched: boolean): string {
   if (changed) return side === 'left' ? 'bg-del-bg text-del-ink' : 'bg-add-bg text-add-ink';
   return touched ? TOUCHED_MARK : '';
 }

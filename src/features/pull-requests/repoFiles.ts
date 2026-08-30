@@ -13,8 +13,8 @@ interface GithubTree {
 
 const API = 'https://api.github.com';
 
-export async function listRepoFiles(owner: string, name: string, fresh = false): Promise<RepoFileSet> {
-  const { default_branch: ref } = await githubJson<{ default_branch: string }>(`${API}/repos/${owner}/${name}`, fresh);
+export async function listRepoFiles(owner: string, name: string, fresh = false, at?: string): Promise<RepoFileSet> {
+  const ref = at ?? (await githubJson<{ default_branch: string }>(`${API}/repos/${owner}/${name}`, fresh)).default_branch;
   const tree = await githubJson<GithubTree>(
     `${API}/repos/${owner}/${name}/git/trees/${encodePath(ref)}?recursive=1`,
     fresh,

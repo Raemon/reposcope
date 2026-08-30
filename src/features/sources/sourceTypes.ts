@@ -5,6 +5,7 @@ export type CodebaseSource =
 
 export const LOGIN_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/;
 export const REPO_NAME_PATTERN = /^[A-Za-z0-9_.-]{1,100}$/;
+export const REF_PATTERN = /^(?!.*\.\.)[A-Za-z0-9._/-]{1,255}$/;
 const MAX_SOURCES = 40;
 
 export function sourceKey(source: CodebaseSource): string {
