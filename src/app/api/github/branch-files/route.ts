@@ -1,6 +1,6 @@
 import { apiRoute, requireParam } from '@/features/github-auth/apiRoute';
 import { listBranchFiles } from '@/features/pull-requests/branches';
-import { BRANCH_NAME_PATTERN } from '@/features/pull-requests/branchParam';
+import { BRANCH_NAME_PATTERN } from '@/features/pull-requests/routeParams';
 import { LOGIN_PATTERN, REPO_NAME_PATTERN } from '@/features/sources/sourceTypes';
 
 export async function GET(request: Request) {

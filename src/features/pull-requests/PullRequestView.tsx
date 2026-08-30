@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { PullDiscussion } from './PullDiscussion';
 import { AllPullsColumn, RepoPullsColumn } from './PullListColumn';
 import { ReviewWorkspace } from './ReviewWorkspace';
@@ -31,9 +31,12 @@ export function PullRequestView({
 
   usePollWhileVisible(pullState.reload, ready);
 
+  const latestReload = useRef(pullState.reload);
+  latestReload.current = pullState.reload;
+
   useEffect(() => () => setCurrentPull(null), []);
   useEffect(() => {
-    setCurrentPull(pull && { owner, repo, pull });
+    setCurrentPull(pull && { owner, repo, pull, reload: () => latestReload.current() });
   }, [pull, owner, repo]);
 
   if (!pull) {
@@ -48,6 +51,7 @@ export function PullRequestView({
       number={number}
       subjectKey={`${owner}/${repo}#${number}`}
       change={pull}
+      baseRef={pull.baseRef}
       reloadChange={pullState.reload}
       wholeFilesPath={pullFilesPath(owner, repo, number)}
       listColumn={

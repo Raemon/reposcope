@@ -7,6 +7,7 @@ export interface CurrentPull {
   owner: string;
   repo: string;
   pull: PullRequestCommits;
+  reload: () => Promise<unknown>;
 }
 
 let current: CurrentPull | null = null;
@@ -15,6 +16,10 @@ const listeners = new Set<() => void>();
 export function setCurrentPull(next: CurrentPull | null): void {
   current = next;
   listeners.forEach((notify) => notify());
+}
+
+export function reloadCurrentPull(): Promise<unknown> {
+  return current?.reload() ?? Promise.resolve();
 }
 
 export function useCurrentPull(owner: string, repo: string, number: number): PullRequestCommits | null {
