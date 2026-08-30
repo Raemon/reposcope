@@ -17,6 +17,10 @@ export function scanSide(rows: DiffRow[]): Side {
   return rows.some((row) => row.right) ? 'right' : 'left';
 }
 
+export function allLinesDeleted(rows: DiffRow[]): boolean {
+  return rows.some((row) => row.left) && rows.every((row) => !row.right);
+}
+
 export function pushSpan(spans: Span[], start: number, end: number, kind: string) {
   if (end > start) spans.push({ start, end, kind, imports: false });
 }

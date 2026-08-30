@@ -4,7 +4,7 @@ import { applyFoldMode, useFoldCommand, type FoldMode } from './foldModeStore';
 import { ChoiceButton } from '@/features/surface-ui/ChoiceButton';
 
 const CHOICES: { mode: FoldMode; icon: string; label: string }[] = [
-  { mode: 'default', icon: '⟲', label: 'Default folding — whole file, with every block that has no changed lines collapsed' },
+  { mode: 'default', icon: '⟲', label: 'Default folding — whole file, with unchanged blocks and fully deleted files collapsed' },
   { mode: 'expandAll', icon: '⊞', label: 'Expand all code sections' },
   { mode: 'collapseAll', icon: '⊟', label: 'Collapse all code sections' },
   { mode: 'gitDefault', icon: '±', label: 'Git default — the diff hunks exactly as GitHub shows them, with nothing folded' },
