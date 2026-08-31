@@ -6,10 +6,6 @@ export function oauthProxy(request?: Request): string | null {
   return proxy && request && proxy === requestOrigin(request) ? null : proxy;
 }
 
-export function relayConfigured(): boolean {
-  return Boolean(process.env.GITHUB_OAUTH_RELAY_SECRET);
-}
-
 export function signReturn(origin: string): string | null {
   const secret = process.env.GITHUB_OAUTH_RELAY_SECRET;
   return secret ? createHmac('sha256', secret).update(origin).digest('base64url') : null;

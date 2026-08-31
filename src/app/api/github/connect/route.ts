@@ -1,37 +1,46 @@
 import { NextResponse } from 'next/server';
-import { parseGithubAccess, oauthScope } from '@/features/github-auth/githubAccess';
+import { parseGithubAccess, oauthScope, type GithubAccess } from '@/features/github-auth/githubAccess';
 import { oauthConfig } from '@/features/github-auth/githubOAuthConfig';
-import { oauthProxy, relayConfigured, signReturn, verifiedReturn } from '@/features/github-auth/oauthProxy';
+import { oauthProxy, signReturn, verifiedReturn } from '@/features/github-auth/oauthProxy';
 import { issueOauthState } from '@/features/github-auth/oauthState';
 import { requestOrigin } from '@/features/github-auth/requestOrigin';
 
-const RELAY_UNCONFIGURED = 'GitHub sign-in relay is not configured: set GITHUB_OAUTH_RELAY_SECRET on this deployment and its proxy';
-const RELAY_UNVERIFIED = 'GitHub sign-in cannot verify the deployment it was asked to return to: check that GITHUB_OAUTH_RELAY_SECRET matches on both';
+const RELAY_BROKEN = 'GitHub sign-in relay failed: set the same GITHUB_OAUTH_RELAY_SECRET on this deployment and its proxy';
+const NOT_CONFIGURED = 'GitHub sign-in is not configured: set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET';
+
+type Fail = (message: string) => NextResponse;
+
+function relayToProxy(proxy: string, origin: string, access: GithubAccess, fail: Fail) {
+  const sig = signReturn(origin);
+  if (!sig) return fail(RELAY_BROKEN);
+  const relay = new URLSearchParams({ access, return: origin, sig });
+  return NextResponse.redirect(`${proxy}/api/github/connect?${relay}`);
+}
+
+async function authorizeUrl(origin: string, access: GithubAccess, returnTo: string | null, clientId: string) {
+  const state = await issueOauthState(access, returnTo);
+  const query = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: `${origin}/api/github/callback`,
+    scope: oauthScope(access),
+    state,
+  });
+  return `https://github.com/login/oauth/authorize?${query}`;
+}
+
+async function startSignIn(origin: string, params: URLSearchParams, access: GithubAccess, fail: Fail) {
+  const config = oauthConfig();
+  if (!config) return fail(NOT_CONFIGURED);
+  const returnTo = verifiedReturn(params.get('return'), params.get('sig'));
+  if (params.has('return') && !returnTo) return fail(RELAY_BROKEN);
+  return NextResponse.redirect(await authorizeUrl(origin, access, returnTo, config.clientId));
+}
 
 export async function GET(request: Request) {
   const origin = requestOrigin(request);
   const params = new URL(request.url).searchParams;
   const access = parseGithubAccess(params.get('access'));
-  const fail = (message: string) => NextResponse.redirect(`${origin}/?error=${encodeURIComponent(message)}`);
+  const fail: Fail = (message) => NextResponse.redirect(`${origin}/?error=${encodeURIComponent(message)}`);
   const proxy = oauthProxy(request);
-  if (proxy) {
-    const sig = signReturn(origin);
-    if (!sig) return fail(RELAY_UNCONFIGURED);
-    const relay = new URLSearchParams({ access, return: origin, sig });
-    return NextResponse.redirect(`${proxy}/api/github/connect?${relay}`);
-  }
-  const config = oauthConfig();
-  if (!config) return fail('GitHub sign-in is not configured: set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET');
-  const returnTo = verifiedReturn(params.get('return'), params.get('sig'));
-  if (params.has('return') && !returnTo) {
-    return fail(relayConfigured() ? RELAY_UNVERIFIED : RELAY_UNCONFIGURED);
-  }
-  const state = await issueOauthState(access, returnTo);
-  const query = new URLSearchParams({
-    client_id: config.clientId,
-    redirect_uri: `${origin}/api/github/callback`,
-    scope: oauthScope(access),
-    state,
-  });
-  return NextResponse.redirect(`https://github.com/login/oauth/authorize?${query}`);
+  return proxy ? relayToProxy(proxy, origin, access, fail) : startSignIn(origin, params, access, fail);
 }
