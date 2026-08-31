@@ -13,7 +13,7 @@ import { type EditableBlock } from './editableBlocks';
 import { expandDiff } from './expandDiff';
 import { useFoldCommand, wholeFileFor, wholeFileWanted, type FoldMode } from './foldModeStore';
 import { InlineThreads } from './InlineThreads';
-import { setDiffPaneWidth, useDiffPaneWidth } from './diffPaneWidth';
+import { setDiffPaneWidth, splitDiffBasis, useDiffPaneWidth } from './diffPaneWidth';
 import { DragHandle, useDragWidth } from './ResizableColumn';
 import { useFileThreads } from './reviewThreadStore';
 import { splitDiff, type DiffRow } from './splitDiff';
@@ -83,7 +83,7 @@ export function FileDiff({
   };
   return (
     <div ref={growing} className="flex" style={{ paddingBottom: threadOverflow }}>
-      <div className="min-w-0 flex-1" style={{ flexBasis: unified ? 0 : removedSize.width * 2 }}>
+      <div className="min-w-0 flex-1" style={{ flexBasis: unified ? 0 : splitDiffBasis(removedSize.width) }}>
         {unified ? (
           <DiffSide {...shared} lines={lines.unified} labels {...editing} />
         ) : (
