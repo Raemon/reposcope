@@ -2,13 +2,13 @@ import { NextResponse } from 'next/server';
 import { parseGithubAccess, oauthScope, type GithubAccess } from '@/features/github-auth/githubAccess';
 import { oauthConfig } from '@/features/github-auth/githubOAuthConfig';
 import { oauthProxy, signReturn, verifiedReturn } from '@/features/github-auth/oauthProxy';
-import { callbackUrl, failHome, NOT_CONFIGURED, RELAY_BROKEN, type Fail } from '@/features/github-auth/oauthRoute';
+import { callbackUrl, failHome, NOT_CONFIGURED, RELAY_UNVERIFIED, type Fail } from '@/features/github-auth/oauthRoute';
 import { issueOauthState } from '@/features/github-auth/oauthState';
 import { requestOrigin } from '@/features/github-auth/requestOrigin';
 
 function relayToProxy(proxy: string, origin: string, access: GithubAccess, fail: Fail) {
   const sig = signReturn(origin);
-  if (!sig) return fail(RELAY_BROKEN);
+  if (!sig) return fail(RELAY_UNVERIFIED);
   const relay = new URLSearchParams({ access, return: origin, sig });
   return NextResponse.redirect(`${proxy}/api/github/connect?${relay}`);
 }
@@ -27,7 +27,7 @@ async function startSignIn(origin: string, params: URLSearchParams, access: Gith
   const config = oauthConfig();
   if (!config) return fail(NOT_CONFIGURED);
   const returnTo = verifiedReturn(params.get('return'), params.get('sig'));
-  if (params.has('return') && !returnTo) return fail(RELAY_BROKEN);
+  if (params.has('return') && !returnTo) return fail(RELAY_UNVERIFIED);
   return NextResponse.redirect(await authorizeUrl(origin, access, returnTo, config.clientId));
 }
 
