@@ -29,10 +29,6 @@ export function browseKey(path: string): string {
   return `${FILE_PREFIX}${path}`;
 }
 
-export function browsedPath(item: string): string | null {
-  return item.startsWith(FILE_PREFIX) ? item.slice(FILE_PREFIX.length) : null;
-}
-
 export function folderKey(path: string): string {
   return `${FOLDER_PREFIX}${path}`;
 }
@@ -43,6 +39,18 @@ export function folderedPath(item: string): string | null {
 
 export function isTreeItem(item: string): boolean {
   return item.startsWith(FILE_PREFIX) || item.startsWith(FOLDER_PREFIX);
+}
+
+export function treePath(item: string): string | null {
+  return folderedPath(item) ?? filedPath(item);
+}
+
+function filedPath(item: string): string | null {
+  return item.startsWith(FILE_PREFIX) ? item.slice(FILE_PREFIX.length) : null;
+}
+
+export function folderFilePaths(paths: string[], folder: string): string[] {
+  return paths.filter((path) => folderOf(path) === folder);
 }
 
 export function rowKey(row: TreeRow): string {

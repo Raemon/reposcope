@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { DiffPanes } from './DiffPanes';
 import { isImagePath } from './imageFiles';
 import { fileTextPath } from './pullPaths';
@@ -10,20 +10,17 @@ import { wholeFileSet } from './wholeFileEntry';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 import { useCachedJson } from '@/features/sources/useCachedJson';
 
-const SETTLE_MS = 150;
-
 export function RepoFileReader({
   owner,
   repo,
   refName,
-  path: asked,
+  path,
 }: {
   owner: string;
   repo: string;
   refName: string;
   path: string;
 }) {
-  const path = useSettled(asked, SETTLE_MS);
   const ready = useStoreReady();
   const token = useGithubToken();
   const wantsText = !isImagePath(path);
@@ -38,15 +35,6 @@ export function RepoFileReader({
       <DiffPanes owner={owner} repo={repo} fileSet={fileSet} files={fileSet?.files ?? []} selected={path} />
     </ReviewThreadProvider>
   );
-}
-
-function useSettled<T>(value: T, delayMs: number): T {
-  const [settled, setSettled] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setSettled(value), delayMs);
-    return () => clearTimeout(timer);
-  }, [value, delayMs]);
-  return settled;
 }
 
 function readableFileSet(refName: string, path: string, wantsText: boolean, data: FileText | null) {
