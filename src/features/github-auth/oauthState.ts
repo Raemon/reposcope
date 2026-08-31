@@ -26,11 +26,10 @@ export async function consumeOauthState(): Promise<string | null> {
   return state;
 }
 
-export function accessFromState(state: string): GithubAccess {
-  return parseGithubAccess(state.split('.')[0]);
-}
-
-export function returnFromState(state: string): string | null {
-  const encoded = state.split('.')[2];
-  return encoded ? Buffer.from(encoded, 'base64url').toString() : null;
+export function parseOauthState(state: string): { access: GithubAccess; returnTo: string | null } {
+  const [access, , encodedReturn] = state.split('.');
+  return {
+    access: parseGithubAccess(access),
+    returnTo: encodedReturn ? Buffer.from(encodedReturn, 'base64url').toString() : null,
+  };
 }

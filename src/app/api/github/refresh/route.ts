@@ -1,6 +1,7 @@
 import { oauthConfig } from '@/features/github-auth/githubOAuthConfig';
 import { GrantRejectedError, refreshGrant } from '@/features/github-auth/githubOAuthTokens';
 import { forwardRefresh, oauthProxy } from '@/features/github-auth/oauthProxy';
+import { NOT_CONFIGURED } from '@/features/github-auth/oauthRoute';
 
 export async function POST(request: Request) {
   const refreshToken = (((await request.json().catch(() => null)) as { refreshToken?: unknown } | null)?.refreshToken) ?? null;
@@ -10,7 +11,7 @@ export async function POST(request: Request) {
   const proxy = oauthProxy(request);
   if (proxy) return forwardRefresh(proxy, refreshToken);
   const config = oauthConfig();
-  if (!config) return Response.json({ error: 'GitHub sign-in is not configured' }, { status: 500 });
+  if (!config) return Response.json({ error: NOT_CONFIGURED }, { status: 500 });
   try {
     return Response.json(await refreshGrant(refreshToken, config));
   } catch (error) {

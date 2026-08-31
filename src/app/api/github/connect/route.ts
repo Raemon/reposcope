@@ -2,13 +2,9 @@ import { NextResponse } from 'next/server';
 import { parseGithubAccess, oauthScope, type GithubAccess } from '@/features/github-auth/githubAccess';
 import { oauthConfig } from '@/features/github-auth/githubOAuthConfig';
 import { oauthProxy, signReturn, verifiedReturn } from '@/features/github-auth/oauthProxy';
+import { callbackUrl, failHome, NOT_CONFIGURED, RELAY_BROKEN, type Fail } from '@/features/github-auth/oauthRoute';
 import { issueOauthState } from '@/features/github-auth/oauthState';
 import { requestOrigin } from '@/features/github-auth/requestOrigin';
-
-const RELAY_BROKEN = 'GitHub sign-in relay failed: set the same GITHUB_OAUTH_RELAY_SECRET on this deployment and its proxy';
-const NOT_CONFIGURED = 'GitHub sign-in is not configured: set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET';
-
-type Fail = (message: string) => NextResponse;
 
 function relayToProxy(proxy: string, origin: string, access: GithubAccess, fail: Fail) {
   const sig = signReturn(origin);
@@ -18,12 +14,11 @@ function relayToProxy(proxy: string, origin: string, access: GithubAccess, fail:
 }
 
 async function authorizeUrl(origin: string, access: GithubAccess, returnTo: string | null, clientId: string) {
-  const state = await issueOauthState(access, returnTo);
   const query = new URLSearchParams({
     client_id: clientId,
-    redirect_uri: `${origin}/api/github/callback`,
+    redirect_uri: callbackUrl(origin),
     scope: oauthScope(access),
-    state,
+    state: await issueOauthState(access, returnTo),
   });
   return `https://github.com/login/oauth/authorize?${query}`;
 }
@@ -40,7 +35,7 @@ export async function GET(request: Request) {
   const origin = requestOrigin(request);
   const params = new URL(request.url).searchParams;
   const access = parseGithubAccess(params.get('access'));
-  const fail: Fail = (message) => NextResponse.redirect(`${origin}/?error=${encodeURIComponent(message)}`);
+  const fail = failHome(origin);
   const proxy = oauthProxy(request);
   return proxy ? relayToProxy(proxy, origin, access, fail) : startSignIn(origin, params, access, fail);
 }
