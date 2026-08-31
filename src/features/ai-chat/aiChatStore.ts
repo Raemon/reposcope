@@ -14,7 +14,6 @@ export interface ChatSession {
   launching: boolean;
   queued: string | null;
   resulted: string | null;
-  followed: string | null;
 }
 
 export const BLANK_SESSION: ChatSession = {
@@ -28,7 +27,6 @@ export const BLANK_SESSION: ChatSession = {
   launching: false,
   queued: null,
   resulted: null,
-  followed: null,
 };
 
 const sessions = new Map<string, ChatSession>();

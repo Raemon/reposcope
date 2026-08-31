@@ -2,7 +2,7 @@
 
 import { appendEntry, entryId, replaceTool, type ChatEntry } from './chatEntries';
 import { readSession, updateSession } from './aiChatStore';
-import type { CursorBranch, CursorRun } from './cursorTypes';
+import { runFinished, type CursorBranch, type CursorRun } from './cursorTypes';
 import type { SseEvent } from './sseEvents';
 
 const DETAIL_LIMIT = 80;
@@ -18,7 +18,7 @@ export function applyRunEvent(subject: string, runId: string, { event, data }: S
 
 export function applyRun(subject: string, run: CursorRun): void {
   updateSession(subject, { status: run.status });
-  if (run.status.toUpperCase() === 'FINISHED') applyResult(subject, run.id, run as unknown as Record<string, unknown>);
+  if (runFinished(run.status)) applyResult(subject, run.id, { status: run.status, text: run.result ?? '', git: run.git });
 }
 
 export function applyError(subject: string, message: string): void {

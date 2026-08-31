@@ -1,6 +1,6 @@
 import type { CursorLaunch, CursorModel, CursorRun, CursorSessionInfo, FollowupRequest, LaunchRequest } from './cursorTypes';
 
-const CURSOR_API = 'https://api.cursor.com';
+const CURSOR_API = process.env.CURSOR_API_URL ?? 'https://api.cursor.com';
 
 export class CursorError extends Error {
   constructor(
@@ -64,7 +64,7 @@ function runPath(agentId: string, runId: string): string {
   return `/v1/agents/${encodeURIComponent(agentId)}/runs/${encodeURIComponent(runId)}`;
 }
 
-// The agent commits onto the pull request's own head branch, so its work lands in the diff being reviewed.
+// Commits go to the PR's head branch, so agent work lands in the diff under review.
 function launchBody({ owner, repo, ref, prompt, model, name }: LaunchRequest) {
   return {
     prompt: { text: prompt },

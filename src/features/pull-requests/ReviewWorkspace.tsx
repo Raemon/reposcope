@@ -33,6 +33,7 @@ interface ReviewWorkspaceProps {
   subjectKey: string;
   change: ChangeSummary;
   baseRef: string | null;
+  headRef: string | null;
   reloadChange: () => Promise<unknown>;
   wholeFilesPath: string;
   listColumn: ReactNode;
@@ -55,6 +56,7 @@ function Workspace({
   subjectKey,
   change,
   baseRef,
+  headRef,
   reloadChange,
   wholeFilesPath,
   listColumn,
@@ -274,7 +276,7 @@ function Workspace({
             />
           </div>
         )}
-        <AiChatColumn owner={owner} repo={repo} subject={subjectKey} headRef={fileSet?.headRef ?? null} />
+        <AiChatColumn owner={owner} repo={repo} subject={subjectKey} headRef={headRef} />
       </div>
       {deletion.asking !== null && (
         <DeleteFileModal

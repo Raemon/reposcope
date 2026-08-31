@@ -1,6 +1,6 @@
 'use client';
 
-import { readSession, updateSession } from './aiChatStore';
+import { readSession } from './aiChatStore';
 import { cursorRunPath, cursorRunStreamPath } from './aiChatPaths';
 import { cursorHeaders } from './cursorKeyStore';
 import { applyError, applyRun, applyRunEvent } from './runEvents';
@@ -10,51 +10,52 @@ import { apiKeyedJson, apiKeyedStream } from '@/features/sources/apiClient';
 
 const POLL_MS = 3000;
 
-export async function followRun(subject: string, key: string, agentId: string, runId: string, signal: AbortSignal): Promise<void> {
-  try {
-    await streamInto(subject, key, agentId, runId, signal);
-  } catch {
-    if (signal.aborted) return;
-  }
-  if (signal.aborted || runFinished(readSession(subject).status)) return;
-  await pollUntilFinished(subject, key, agentId, runId, signal);
+const followed = new Set<string>();
+
+// Following outlives the column: unmounting on collapse must not abort a live run.
+export function followOnce(subject: string, key: string, agentId: string, runId: string): void {
+  if (followed.has(runId)) return;
+  followed.add(runId);
+  void follow(subject, key, agentId, runId);
 }
 
-async function streamInto(subject: string, key: string, agentId: string, runId: string, signal: AbortSignal): Promise<void> {
-  const response = await apiKeyedStream(cursorRunStreamPath(agentId, runId), cursorHeaders(key), signal);
+async function follow(subject: string, key: string, agentId: string, runId: string): Promise<void> {
+  try {
+    await streamInto(subject, key, agentId, runId);
+  } catch {
+    // A dropped stream is recoverable; the status poll below carries the run to its end.
+  }
+  if (stillShowing(subject, runId) && !runFinished(readSession(subject).status)) {
+    await pollUntilFinished(subject, key, agentId, runId);
+  }
+}
+
+async function streamInto(subject: string, key: string, agentId: string, runId: string): Promise<void> {
+  const response = await apiKeyedStream(cursorRunStreamPath(agentId, runId), cursorHeaders(key));
   if (response.body === null) return;
   for await (const event of sseEvents(response.body)) {
-    if (signal.aborted) return;
+    if (!stillShowing(subject, runId)) return;
     applyRunEvent(subject, runId, event);
   }
 }
 
-async function pollUntilFinished(subject: string, key: string, agentId: string, runId: string, signal: AbortSignal): Promise<void> {
-  while (!signal.aborted) {
+async function pollUntilFinished(subject: string, key: string, agentId: string, runId: string): Promise<void> {
+  while (stillShowing(subject, runId)) {
     try {
-      const run = await apiKeyedJson<CursorRun>(cursorRunPath(agentId, runId), cursorHeaders(key), signal);
+      const run = await apiKeyedJson<CursorRun>(cursorRunPath(agentId, runId), cursorHeaders(key));
       applyRun(subject, run);
       if (runFinished(run.status)) return;
     } catch (error) {
-      if (signal.aborted) return;
       return applyError(subject, describeFailure(error));
     }
-    await pause(POLL_MS, signal);
+    await pause(POLL_MS);
   }
 }
 
-function pause(ms: number, signal: AbortSignal): Promise<void> {
-  return new Promise((resolve) => {
-    const timer = setTimeout(resolve, ms);
-    signal.addEventListener('abort', () => {
-      clearTimeout(timer);
-      resolve();
-    });
-  });
+function stillShowing(subject: string, runId: string): boolean {
+  return readSession(subject).runId === runId;
 }
 
-export function claimFollow(subject: string, runId: string): boolean {
-  if (readSession(subject).followed === runId) return false;
-  updateSession(subject, { followed: runId });
-  return true;
+function pause(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

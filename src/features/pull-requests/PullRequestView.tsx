@@ -52,6 +52,7 @@ export function PullRequestView({
       subjectKey={`${owner}/${repo}#${number}`}
       change={pull}
       baseRef={pull.baseRef}
+      headRef={pull.headRef}
       reloadChange={pullState.reload}
       wholeFilesPath={pullFilesPath(owner, repo, number)}
       listColumn={

@@ -63,8 +63,8 @@ async function readJson<T>(response: Response): Promise<T> {
   throw new ApiClientError(response.status, message);
 }
 
-export async function apiKeyedJson<T>(path: string, headers: Record<string, string>, signal?: AbortSignal): Promise<T> {
-  return readJson<T>(await fetch(path, { headers, signal }));
+export async function apiKeyedJson<T>(path: string, headers: Record<string, string>): Promise<T> {
+  return readJson<T>(await fetch(path, { headers }));
 }
 
 export async function apiKeyedPost<T>(path: string, headers: Record<string, string>, body: unknown): Promise<T> {
@@ -73,8 +73,8 @@ export async function apiKeyedPost<T>(path: string, headers: Record<string, stri
   );
 }
 
-export async function apiKeyedStream(path: string, headers: Record<string, string>, signal?: AbortSignal): Promise<Response> {
-  const response = await fetch(path, { headers, signal });
+export async function apiKeyedStream(path: string, headers: Record<string, string>): Promise<Response> {
+  const response = await fetch(path, { headers });
   if (!response.ok || response.body === null) return readJson<never>(response);
   return response;
 }
