@@ -17,8 +17,9 @@ const RUN_LABELS: Record<string, string> = {
 export function statusLabel(session: ChatSession): string {
   if (session.launching) return 'cloning repo';
   if (session.queued !== null) return 'queued';
-  if (session.status === null) return session.error === null ? 'idle' : 'failed';
-  return RUN_LABELS[session.status.toUpperCase()] ?? session.status.toLowerCase();
+  const status = session.status;
+  if (typeof status !== 'string') return session.error === null ? 'idle' : 'failed';
+  return RUN_LABELS[status.toUpperCase()] ?? status.toLowerCase();
 }
 
 export function statusBusy(session: ChatSession): boolean {

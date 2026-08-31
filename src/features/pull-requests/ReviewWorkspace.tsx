@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AiChatColumn } from '@/features/ai-chat/AiChatColumn';
+import { ColumnBoundary } from '@/features/surface-ui/ColumnBoundary';
 import { AllFilesSection } from './AllFilesSection';
 import { CentralTabBar, useShowsColumn } from './centralLayout';
 import { ColumnPreview } from './ColumnPreview';
@@ -276,7 +277,9 @@ function Workspace({
             />
           </div>
         )}
-        <AiChatColumn owner={owner} repo={repo} subject={subjectKey} headRef={headRef} />
+        <ColumnBoundary>
+          <AiChatColumn owner={owner} repo={repo} subject={subjectKey} headRef={headRef} />
+        </ColumnBoundary>
       </div>
       {deletion.asking !== null && (
         <DeleteFileModal

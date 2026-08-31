@@ -13,7 +13,6 @@ export function applyRunEvent(subject: string, runId: string, { event, data }: S
   if (event === 'tool_call') return addTool(subject, payload);
   if (event === 'status') return updateSession(subject, { status: stringOf(payload, 'status') ?? readSession(subject).status });
   if (event === 'result') return applyResult(subject, runId, payload);
-  if (event === 'error') return applyError(subject, textOf(payload) || 'The agent reported an error.');
 }
 
 export function applyRun(subject: string, run: CursorRun): void {
