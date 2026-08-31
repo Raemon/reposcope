@@ -1,15 +1,11 @@
 import { NextResponse } from 'next/server';
-import { parseGithubAccess, oauthScope, type GithubAccess } from '@/features/github-auth/githubAccess';
+import { parseGithubAccess, oauthScope } from '@/features/github-auth/githubAccess';
 import { oauthConfig } from '@/features/github-auth/githubOAuthConfig';
 import { oauthProxy, relayConfigured, signReturn, verifiedReturn } from '@/features/github-auth/oauthProxy';
 import { issueOauthState } from '@/features/github-auth/oauthState';
 import { requestOrigin } from '@/features/github-auth/requestOrigin';
 
 const RELAY_UNCONFIGURED = 'GitHub sign-in relay is not configured: set GITHUB_OAUTH_RELAY_SECRET on this deployment and its proxy';
-
-function relayParams(access: GithubAccess, origin: string, sig: string): URLSearchParams {
-  return new URLSearchParams({ access, return: origin, sig });
-}
 
 export async function GET(request: Request) {
   const origin = requestOrigin(request);
@@ -20,7 +16,8 @@ export async function GET(request: Request) {
   if (proxy) {
     const sig = signReturn(origin);
     if (!sig) return fail(RELAY_UNCONFIGURED);
-    return NextResponse.redirect(`${proxy}/api/github/connect?${relayParams(access, origin, sig)}`);
+    const relay = new URLSearchParams({ access, return: origin, sig });
+    return NextResponse.redirect(`${proxy}/api/github/connect?${relay}`);
   }
   const config = oauthConfig();
   if (!config) return fail('GitHub sign-in is not configured: set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET');

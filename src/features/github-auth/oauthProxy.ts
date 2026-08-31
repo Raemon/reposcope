@@ -19,8 +19,8 @@ export function verifiedReturn(origin: string | null, signature: string | null):
   if (!origin || !signature) return null;
   const expected = signReturn(origin);
   if (!expected) return null;
-  const [want, got] = [Buffer.from(expected), Buffer.from(signature)];
-  return want.length === got.length && timingSafeEqual(want, got) ? origin : null;
+  const [want, given] = [Buffer.from(expected), Buffer.from(signature)];
+  return want.length === given.length && timingSafeEqual(want, given) ? origin : null;
 }
 
 export function forwardRefresh(proxy: string, refreshToken: string): Promise<Response> {
