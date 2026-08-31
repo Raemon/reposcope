@@ -16,6 +16,8 @@ import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 
 const ROW = 'flex h-[15px] items-center gap-1 leading-[15px]';
+// Literal px; Tailwind can't compile computed classes. Sync with BLANK_ROW_HEIGHT.
+const BLANK_ROW = 'flex h-[8px] items-center gap-1 leading-[8px]';
 const GUTTER = 'flex w-[46px] shrink-0 select-none items-center text-[9px] text-ink-dim';
 const TOUCHED_MARK = 'bg-add-bg/60 shadow-[inset_2px_0_0_var(--add-emph)]';
 const STICKY_CHIP = 'sticky right-0 shrink-0 rounded bg-procgen px-1 hover:bg-btn-hover hover:text-ink';
@@ -166,15 +168,16 @@ function DiffLineView({
   if (line.kind === 'hunk') {
     return <HunkLine label={labels ? line.label : ''} expand={expand} onEdit={editable && side === 'right' ? onEdit : undefined} />;
   }
-  if (!cell) return <div className={`${ROW} bg-procgen/40`} />;
+  const row = line.blank ? BLANK_ROW : ROW;
+  if (!cell) return <div className={`${row} bg-procgen/40`} />;
   const changed = line.kind === 'change';
   const openable = Boolean(editable && side === 'right');
   return (
     <div
-      className={`group ${ROW} ${lineTone(side, changed, line.touched)} ${openable ? 'cursor-text' : ''}`}
+      className={`group ${row} ${lineTone(side, changed, line.touched)} ${openable ? 'cursor-text' : ''}`}
       onClick={openable && onEdit ? (event) => opensEditor(event.detail) && onEdit() : undefined}
     >
-      <GutterCell line={cell.line} anchor={anchor} />
+      <GutterCell line={line.blank ? null : cell.line} anchor={anchor} />
       <span
         className="diff-code whitespace-pre pr-2 text-[11px]"
         onClick={onCodePress ? (event) => onCodePress(line, event) : undefined}
@@ -219,7 +222,7 @@ function plural(count: number, word: string): string {
   return `${count} ${word}${count === 1 ? '' : 's'}`;
 }
 
-function GutterCell({ line, anchor }: { line: number; anchor: CollapseAnchor | null }) {
+function GutterCell({ line, anchor }: { line: number | null; anchor: CollapseAnchor | null }) {
   return (
     <span className={GUTTER}>
       <span className="min-w-0 flex-1 text-right">{line}</span>

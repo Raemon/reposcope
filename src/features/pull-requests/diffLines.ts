@@ -7,6 +7,7 @@ export interface DiffLine {
   cell: DiffCell | null;
   row: number;
   touched: boolean;
+  blank: boolean;
 }
 
 interface PlacedRow {
@@ -47,5 +48,11 @@ function sideLines(run: PlacedRow[], side: 'left' | 'right'): DiffLine[] {
 }
 
 function lineOf(row: DiffRow, index: number, side: 'left' | 'right'): DiffLine {
-  return { kind: row.kind, label: row.label, side, cell: row[side], row: index, touched: row.touched === true };
+  const flags = { touched: row.touched === true, blank: blankRow(row) };
+  return { kind: row.kind, label: row.label, side, cell: row[side], row: index, ...flags };
+}
+
+// Judged per row, not per side, so both columns of a split diff stay aligned.
+function blankRow(row: DiffRow): boolean {
+  return row.kind !== 'hunk' && (row.left?.text ?? '') === '' && (row.right?.text ?? '') === '';
 }
