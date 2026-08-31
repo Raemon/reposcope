@@ -20,14 +20,16 @@ export function collapsibleColumn(size: ColumnSize, onSize: (next: ColumnSize) =
   return { open: size.open, collapsible: true, setOpen: (open: boolean) => onSize({ ...size, open }) };
 }
 
-export function useDragWidth(size: ColumnSize, onSize: (next: ColumnSize) => void) {
+export type DragEdge = 'left' | 'right';
+
+export function useDragWidth(size: ColumnSize, onSize: (next: ColumnSize) => void, edge: DragEdge = 'right') {
   return useCallback(
     (event: ReactPointerEvent<HTMLElement>) => {
       event.preventDefault();
       const startX = event.clientX;
       const startWidth = size.width;
       const move = (moved: PointerEvent) => {
-        onSize({ width: clampWidth(startWidth + moved.clientX - startX), open: true });
+        onSize({ width: clampWidth(startWidth + grownBy(moved.clientX - startX, edge)), open: true });
       };
       const stop = () => {
         window.removeEventListener('pointermove', move);
@@ -38,17 +40,29 @@ export function useDragWidth(size: ColumnSize, onSize: (next: ColumnSize) => voi
       window.addEventListener('pointerup', stop);
       window.addEventListener('pointercancel', stop);
     },
-    [size.width, onSize],
+    [size.width, onSize, edge],
   );
 }
 
-export function DragHandle({ onPointerDown }: { onPointerDown: (event: ReactPointerEvent<HTMLElement>) => void }) {
+function grownBy(dragged: number, edge: DragEdge): number {
+  return edge === 'left' ? -dragged : dragged;
+}
+
+export function DragHandle({
+  onPointerDown,
+  edge = 'right',
+}: {
+  onPointerDown: (event: ReactPointerEvent<HTMLElement>) => void;
+  edge?: DragEdge;
+}) {
   return (
     <div
       onPointerDown={onPointerDown}
       role="separator"
       aria-orientation="vertical"
-      className="absolute inset-y-0 -right-[3px] z-10 hidden w-[6px] cursor-col-resize hover:bg-btn-active md:block"
+      className={`absolute inset-y-0 z-10 hidden w-[6px] cursor-col-resize hover:bg-btn-active md:block ${
+        edge === 'left' ? '-left-[3px]' : '-right-[3px]'
+      }`}
     />
   );
 }

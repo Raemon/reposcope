@@ -83,7 +83,7 @@ export function FileDiff({
   };
   return (
     <div ref={growing} className="flex" style={{ paddingBottom: threadOverflow }}>
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1" style={{ flexBasis: unified ? 0 : removedSize.width * 2 }}>
         {unified ? (
           <DiffSide {...shared} lines={lines.unified} labels {...editing} />
         ) : (
