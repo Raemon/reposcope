@@ -1,7 +1,7 @@
 'use client';
 
 import { FileTreeRow } from './FileTreeRow';
-import { browseKey } from './fileTreeNodes';
+import { browseKey, folderKey } from './fileTreeNodes';
 import { FolderTreeRow } from './FolderTreeRow';
 import type { RepoFileTree } from './useRepoFileTree';
 
@@ -15,7 +15,7 @@ export function RepoFileTreeRows({
 }: {
   tree: RepoFileTree;
   selected: string | null;
-  onSelect: (path: string) => void;
+  onSelect: (item: string) => void;
 }) {
   return tree.rows.map(({ node, depth }) =>
     node.kind === 'folder' ? (
@@ -25,15 +25,16 @@ export function RepoFileTreeRows({
         name={node.name}
         indent={indentOf(depth)}
         open={tree.isOpen(node.path)}
-        onToggle={() => tree.toggle(node.path)}
+        selected={folderKey(node.path) === selected}
+        onActivate={() => tree.activateItem(folderKey(node.path))}
       />
     ) : (
       <FileTreeRow
         key={node.path}
         path={node.path}
         navKey={browseKey(node.path)}
-        selected={node.path === selected}
-        onSelect={() => onSelect(node.path)}
+        selected={browseKey(node.path) === selected}
+        onSelect={() => onSelect(browseKey(node.path))}
         indent={indentOf(depth) + STEP}
       />
     ),

@@ -20,7 +20,7 @@ export function AllFilesSection({
   expanded: boolean;
   onExpanded: (next: boolean) => void;
   selected: string | null;
-  onSelect: (path: string) => void;
+  onSelect: (item: string) => void;
   query: string;
   onQuery: (next: string) => void;
 }) {

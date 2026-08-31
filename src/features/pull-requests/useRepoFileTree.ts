@@ -3,11 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ancestorFolders,
-  browsedPath,
   buildFileTree,
   folderedPath,
   listedPaths,
   rowKey,
+  treePath,
   visibleRows,
   type TreeRow,
 } from './fileTreeNodes';
@@ -16,6 +16,7 @@ import type { RepoFiles } from './repoFileStore';
 export interface RepoFileTree {
   rows: TreeRow[];
   navItems: string[];
+  listed: string[];
   shown: number;
   total: number;
   isOpen: (path: string) => boolean;
@@ -28,12 +29,12 @@ export function useRepoFileTree({
   repoFiles,
   query,
   selected,
-  onSelectFile,
+  onSelect,
 }: {
   repoFiles: RepoFiles;
   query: string;
   selected: string | null;
-  onSelectFile: (path: string) => void;
+  onSelect: (item: string) => void;
 }): RepoFileTree {
   const [opened, setOpened] = useState<ReadonlySet<string>>(() => new Set());
   const listed = useMemo(() => listedPaths(repoFiles, query), [repoFiles, query]);
@@ -44,33 +45,28 @@ export function useRepoFileTree({
   const toggle = useCallback((path: string) => setOpened((held) => withToggled(held, path)), []);
 
   useEffect(() => {
-    if (selected !== null) setOpened((held) => withOpened(held, ancestorFolders(selected)));
+    const path = selected === null ? null : treePath(selected);
+    if (path !== null) setOpened((held) => withOpened(held, ancestorFolders(path)));
   }, [selected]);
 
-  const selectItem = useCallback(
-    (item: string) => {
-      const path = browsedPath(item);
-      if (path !== null) onSelectFile(path);
-    },
-    [onSelectFile],
-  );
   const activateItem = useCallback(
     (item: string) => {
       const folder = folderedPath(item);
-      if (folder === null) selectItem(item);
-      else toggle(folder);
+      if (folder !== null) toggle(folder);
+      onSelect(item);
     },
-    [selectItem, toggle],
+    [onSelect, toggle],
   );
 
   return {
     rows,
     navItems: useMemo(() => rows.map(rowKey), [rows]),
+    listed: listed.shown,
     shown: listed.shown.length,
     total: listed.total,
     isOpen,
     toggle,
-    selectItem,
+    selectItem: onSelect,
     activateItem,
   };
 }
