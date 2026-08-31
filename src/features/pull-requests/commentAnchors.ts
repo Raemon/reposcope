@@ -1,4 +1,4 @@
-import { ROW_HEIGHT } from './diffMetrics';
+import { linesHeight, ROW_HEIGHT } from './diffMetrics';
 import type { DiffLine } from './diffLines';
 import type { ReviewThread } from './reviewThreads';
 import type { DiffRow } from './splitDiff';
@@ -43,7 +43,7 @@ function anchorTopOf(thread: ReviewThread, rows: DiffRow[], lines: DiffLine[]): 
   const row = rowOf(thread, rows);
   if (row < 0) return null;
   const index = displayIndexOf(row, thread.side, lines);
-  return index < 0 ? null : index * ROW_HEIGHT;
+  return index < 0 ? null : linesHeight(lines.slice(0, index));
 }
 
 export function rowOf(thread: ReviewThread, rows: DiffRow[]): number {

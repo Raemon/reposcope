@@ -7,7 +7,7 @@ import { DiffSide, type HunkControl } from './DiffSide';
 import { useDiffLayout } from './diffLayoutStore';
 import { columnLines, unifiedLines, visibleLines, type DiffLine } from './diffLines';
 import { langForPath } from './diffHighlight';
-import { ROW_HEIGHT, SAVE_BAR } from './diffMetrics';
+import { linesHeight, ROW_HEIGHT, SAVE_BAR } from './diffMetrics';
 import { EditTarget } from './editTarget';
 import { type EditableBlock } from './editableBlocks';
 import { expandDiff } from './expandDiff';
@@ -191,7 +191,7 @@ function hunkEditor(filename: string, hunkEdit: HunkEditControls, shown: DiffLin
 
 // Rendered lines, not rows: a unified change row draws its before and after line.
 function coveredHeight(shown: DiffLine[], block: EditableBlock): number {
-  return shown.filter((line) => line.row >= block.firstRow && line.row <= block.lastRow).length * ROW_HEIGHT;
+  return linesHeight(shown.filter((line) => line.row >= block.firstRow && line.row <= block.lastRow));
 }
 
 function spacerFor(edit: HunkEdit | null, shown: DiffLine[]): { afterRow: number; height: number } | null {

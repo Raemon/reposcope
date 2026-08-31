@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { anchorThreads, placeThreads, type PlacedThread } from './commentAnchors';
 import { useCommentColumnWidth } from './commentColumnWidth';
-import { ROW_HEIGHT } from './diffMetrics';
+import { linesHeight, ROW_HEIGHT } from './diffMetrics';
 import type { DiffLine } from './diffLines';
 import type { ReviewThread } from './reviewThreads';
 import type { DiffRow } from './splitDiff';
@@ -34,7 +34,7 @@ export function InlineThreads({
     setHeights((held) => (held[rootId] === height ? held : { ...held, [rootId]: height }));
   }, []);
   const cards = placeThreads(anchors, heights, CARD_GAP, MIN_SLOT);
-  const overflow = overflowBelow(cards, heights, expanded, lines.length * ROW_HEIGHT);
+  const overflow = overflowBelow(cards, heights, expanded, linesHeight(lines));
 
   useEffect(() => onOverflow(overflow), [overflow, onOverflow]);
 
