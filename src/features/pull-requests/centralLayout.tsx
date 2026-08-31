@@ -5,13 +5,14 @@ import { useColumnNav } from './columnNav';
 import type { ColumnId } from './navColumn';
 import { useViewMode } from './viewModeStore';
 
-export type CentralTab = 'pulls' | 'discussion' | 'commits' | 'files';
+export type CentralTab = 'pulls' | 'discussion' | 'commits' | 'files' | 'ai-chat';
 
 const TABS: { tab: CentralTab; column: ColumnId; label: string }[] = [
   { tab: 'pulls', column: 'pulls', label: 'pull requests' },
   { tab: 'discussion', column: 'discussion', label: 'discussion' },
   { tab: 'commits', column: 'commits', label: 'commits' },
   { tab: 'files', column: 'files', label: 'files & diff' },
+  { tab: 'ai-chat', column: 'ai-chat', label: 'ai chat' },
 ];
 
 const TAB_OF_COLUMN: Record<ColumnId, CentralTab> = {
@@ -20,6 +21,7 @@ const TAB_OF_COLUMN: Record<ColumnId, CentralTab> = {
   commits: 'commits',
   files: 'files',
   diff: 'files',
+  'ai-chat': 'ai-chat',
 };
 
 export const PANE_WIDTH = 'mx-auto w-full max-w-[980px]';

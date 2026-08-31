@@ -1,6 +1,6 @@
-export type ColumnId = 'pulls' | 'discussion' | 'commits' | 'files' | 'diff';
+export type ColumnId = 'pulls' | 'discussion' | 'commits' | 'files' | 'diff' | 'ai-chat';
 
-export const COLUMN_ORDER: ColumnId[] = ['pulls', 'discussion', 'commits', 'files', 'diff'];
+export const COLUMN_ORDER: ColumnId[] = ['pulls', 'discussion', 'commits', 'files', 'diff', 'ai-chat'];
 
 export const COLUMN_HEADER = 'nav:header';
 
