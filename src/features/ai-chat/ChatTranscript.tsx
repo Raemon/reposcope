@@ -10,7 +10,10 @@ const LABEL = 'text-[9px] uppercase tracking-[0.18em] text-ink-dim';
 
 export function ChatTranscript({ entries, owner, repo, busy }: { entries: ChatEntry[]; owner: string; repo: string; busy: boolean }) {
   const foot = useRef<HTMLDivElement>(null);
-  useEffect(() => foot.current?.scrollIntoView({ block: 'end' }), [entries]);
+  useEffect(() => {
+    // scrollIntoView returns a Promise in Chrome; returning it makes React call it as cleanup
+    foot.current?.scrollIntoView({ block: 'end' });
+  }, [entries]);
   return (
     <div className="flex flex-col">
       {entries.map((entry) => (
