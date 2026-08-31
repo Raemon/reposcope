@@ -7,7 +7,7 @@ export function wholeFileSet(ref: string, filename: string, text: string | null)
   return { baseRef: ref, headRef: ref, files: [wholeFileEntry(filename, text)] };
 }
 
-function wholeFileEntry(filename: string, text: string | null): ChangedFile {
+export function wholeFileEntry(filename: string, text: string | null): ChangedFile {
   return {
     filename,
     previousFilename: null,

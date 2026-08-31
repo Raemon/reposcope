@@ -12,21 +12,23 @@ export function FolderTreeRow({
   name,
   indent,
   open,
-  onToggle,
+  selected,
+  onActivate,
 }: {
   path: string;
   name: string;
   indent: number;
   open: boolean;
-  onToggle: () => void;
+  selected: boolean;
+  onActivate: () => void;
 }) {
-  const row = useColumnNav('files').row(folderKey(path));
+  const row = useColumnNav('files').row(folderKey(path), selected);
   return (
     <SelectableRow
       {...row.props}
-      onActivate={onToggle}
+      onActivate={onActivate}
       expanded={open}
-      label={`${open ? 'Collapse' : 'Expand'} ${path}`}
+      label={`Show files in ${path}`}
       style={{ paddingLeft: indent }}
       className={`${ROW} ${rowStateClass(row.state)}`}
     >

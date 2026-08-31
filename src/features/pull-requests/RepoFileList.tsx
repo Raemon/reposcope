@@ -19,7 +19,7 @@ export function RepoFileList({
   repoFiles: RepoFiles;
   tree: RepoFileTree;
   selected: string | null;
-  onSelect: (path: string) => void;
+  onSelect: (item: string) => void;
   query: string;
   onQuery: (next: string) => void;
 }) {
@@ -46,7 +46,7 @@ function FileRows({
   repoFiles: RepoFiles;
   tree: RepoFileTree;
   selected: string | null;
-  onSelect: (path: string) => void;
+  onSelect: (item: string) => void;
 }) {
   const { fileSet, error } = repoFiles;
   if (!fileSet) return <p className={`${NOTE} ${error ? 'text-error-ink' : 'text-ink-dim'}`}>{error ?? 'Loading…'}</p>;

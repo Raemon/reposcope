@@ -8,8 +8,8 @@ import { ColumnPreview } from './ColumnPreview';
 import { DiffPanes, type DiffPanesHandle } from './DiffPanes';
 import { PullCommitColumn, WHOLE_CHANGE, commitItems, commitTokens } from './PullCommitColumn';
 import { PullFilesColumn, fileTokens } from './PullFilesColumn';
-import { browseKey, isTreeItem } from './fileTreeNodes';
-import { RepoFileReader } from './RepoFileReader';
+import { isTreeItem } from './fileTreeNodes';
+import { RepoBrowseReader } from './RepoBrowseReader';
 import { useRepoFiles } from './repoFileStore';
 import { ResizableColumn, collapsibleColumn, type ColumnSize } from './ResizableColumn';
 import { useRegisterColumn } from './columnNav';
@@ -69,7 +69,7 @@ function Workspace({
   const [selection, setSelection] = useState<string>(WHOLE_CHANGE);
   const [path, setPath] = useState<string | null>(null);
   const [deleted, setDeleted] = useState<string[]>([]);
-  const [browsePath, setBrowsePath] = useState<string | null>(null);
+  const [browsed, setBrowsed] = useState<string | null>(null);
   const [fileQuery, setFileQuery] = useState('');
   const [scrollWanted, setScrollWanted] = useState<string | null>(null);
   const [allFilesOpen, setAllFilesOpen] = useStickyOpen('all-files');
@@ -84,24 +84,24 @@ function Workspace({
   const fileSet = fileState.data;
   const fileError = fileState.error;
 
-  const repoFiles = useRepoFiles(owner, repo, (fileSize.open && allFilesOpen) || browsePath !== null);
+  const repoFiles = useRepoFiles(owner, repo, (fileSize.open && allFilesOpen) || browsed !== null);
 
   usePollWhileVisible(fileState.reload, ready);
 
   useEffect(() => {
     setSelection(WHOLE_CHANGE);
     setNotice(null);
-    setBrowsePath(null);
+    setBrowsed(null);
   }, [subjectKey]);
 
   const showingWhole = selection === WHOLE_CHANGE;
   useReloadOnRetarget(subjectKey, baseRef, () => (showingWhole ? fileState.reload() : Promise.resolve()));
 
   useEffect(() => {
-    if (scrollWanted === null || browsePath !== null) return;
+    if (scrollWanted === null || browsed !== null) return;
     diffPanes.current?.scrollToFile(scrollWanted);
     setScrollWanted(null);
-  }, [scrollWanted, browsePath]);
+  }, [scrollWanted, browsed]);
 
   useEffect(() => {
     if (!fileSet) return;
@@ -110,15 +110,15 @@ function Workspace({
   }, [fileSet, showingWhole]);
 
   const revealFile = useCallback((filename: string) => {
-    setBrowsePath(null);
+    setBrowsed(null);
     setPath(filename);
     setScrollWanted(filename);
   }, []);
   const browseTree = useRepoFileTree({
     repoFiles,
     query: fileQuery,
-    selected: browsePath,
-    onSelectFile: setBrowsePath,
+    selected: browsed,
+    onSelect: setBrowsed,
   });
   const selectFileItem = useCallback(
     (item: string) => (isTreeItem(item) ? browseTree.selectItem(item) : revealFile(item)),
@@ -136,7 +136,6 @@ function Workspace({
   );
   const fileItems = useMemo(() => files.map((file) => file.filename), [files]);
   const browseItems = allFilesOpen ? browseTree.navItems : [];
-  const browsing = browsePath !== null && repoFiles.fileSet ? { ref: repoFiles.fileSet.ref, path: browsePath } : null;
   const loadedFiles = fileSet === null ? null : files;
 
   const editableFiles = showingWhole ? editableWhole : null;
@@ -177,7 +176,7 @@ function Workspace({
     {
       ...collapsibleColumn(fileSize, setFileSize),
       items: [...fileItems, ...browseItems],
-      selected: browsePath === null ? path : browseKey(browsePath),
+      selected: browsed ?? path,
       onSelect: selectFileItem,
       onActivate: activateFileItem,
     },
@@ -240,8 +239,8 @@ function Workspace({
               tree={browseTree}
               expanded={allFilesOpen}
               onExpanded={setAllFilesOpen}
-              selected={browsePath}
-              onSelect={setBrowsePath}
+              selected={browsed}
+              onSelect={setBrowsed}
               query={fileQuery}
               onQuery={setFileQuery}
             />
@@ -255,9 +254,9 @@ function Workspace({
             onDelete={editableFiles !== null && fileSet !== null ? deletion.ask : null}
           />
         </ResizableColumn>
-        {!showsDiff ? null : browsing !== null ? (
+        {!showsDiff ? null : browsed !== null && repoFiles.fileSet !== null ? (
           <div className="flex min-w-0 flex-1 flex-col max-md:h-[80vh] max-md:flex-none">
-            <RepoFileReader owner={owner} repo={repo} refName={browsing.ref} path={browsing.path} />
+            <RepoBrowseReader owner={owner} repo={repo} fileSet={repoFiles.fileSet} item={browsed} />
           </div>
         ) : fileSet === null && fileError !== null ? (
           <p className="flex-1 px-2 py-1 text-[11px] text-error-ink">{fileError}</p>
