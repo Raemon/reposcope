@@ -16,6 +16,7 @@ import type { RepoFiles } from './repoFileStore';
 export interface RepoFileTree {
   rows: TreeRow[];
   navItems: string[];
+  listed: string[];
   shown: number;
   total: number;
   isOpen: (path: string) => boolean;
@@ -60,6 +61,7 @@ export function useRepoFileTree({
   return {
     rows,
     navItems: useMemo(() => rows.map(rowKey), [rows]),
+    listed: listed.shown,
     shown: listed.shown.length,
     total: listed.total,
     isOpen,

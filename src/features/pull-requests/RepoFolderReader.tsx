@@ -14,8 +14,6 @@ const NOTE = 'flex-1 px-2 py-1 text-[11px] text-ink-dim';
 const FOOT = 'shrink-0 px-2 py-1 text-[11px] text-ink-dim';
 const AT_ONCE = 40;
 
-type Read = { text: string | null; failed: boolean };
-
 export function RepoFolderReader({
   owner,
   repo,
@@ -28,38 +26,56 @@ export function RepoFolderReader({
   paths: string[];
 }) {
   const shown = useMemo(() => paths.slice(0, AT_ONCE), [paths]);
-  const { reads, hold } = useFolderReads();
-  const files = useMemo(() => readableFiles(shown, reads), [shown, reads]);
+  const read = useMemo(() => shown.filter((path) => !isImagePath(path)), [shown]);
+  const { texts, hold } = useHeldTexts();
+  const files = useMemo(() => readableFiles(shown, texts), [shown, texts]);
+  const waiting = read.filter((path) => !texts.has(path)).length;
 
   if (paths.length === 0) return <p className={NOTE}>No files directly in this folder — open a subfolder.</p>;
   return (
     <ReviewThreadProvider owner={owner} repo={repo} number={null}>
-      {shown.filter((path) => !isImagePath(path)).map((path) => (
-        <FileTextLoader key={path} owner={owner} repo={repo} refName={refName} path={path} onRead={hold} />
+      {read.map((path) => (
+        <FileTextLoader key={path} owner={owner} repo={repo} refName={refName} path={path} onText={hold} />
       ))}
-      {files.length === 0 ? (
-        <p className={NOTE}>Loading…</p>
+      {waiting > 0 ? (
+        <p className={NOTE}>Loading {waiting} of {read.length} files…</p>
       ) : (
-        <DiffPanes owner={owner} repo={repo} fileSet={wholeFileSetOf(refName, files)} files={files} selected={null} />
+        <FolderPanes owner={owner} repo={repo} refName={refName} files={files} />
       )}
-      <FolderNotes left={paths.length - shown.length} failed={failedCount(reads)} />
+      <FolderNotes left={paths.length - shown.length} skipped={waiting > 0 ? 0 : shown.length - files.length} />
     </ReviewThreadProvider>
   );
 }
 
-function FolderNotes({ left, failed }: { left: number; failed: number }) {
+function FolderPanes({
+  owner,
+  repo,
+  refName,
+  files,
+}: {
+  owner: string;
+  repo: string;
+  refName: string;
+  files: ChangedFile[];
+}) {
+  const fileSet = useMemo(() => wholeFileSetOf(refName, files), [refName, files]);
+  if (files.length === 0) return <p className={NOTE}>None of these files can be shown here.</p>;
+  return <DiffPanes owner={owner} repo={repo} fileSet={fileSet} files={files} selected={null} />;
+}
+
+function FolderNotes({ left, skipped }: { left: number; skipped: number }) {
   return (
     <>
       {left > 0 && <p className={FOOT}>{left} more files in this folder — open them one at a time.</p>}
-      {failed > 0 && <p className={FOOT}>{failed} of these files could not be read.</p>}
+      {skipped > 0 && <p className={FOOT}>{skipped} files left out — too large to show, or unreadable.</p>}
     </>
   );
 }
 
-function useFolderReads() {
-  const [reads, setReads] = useState<ReadonlyMap<string, Read>>(() => new Map());
-  const hold = useCallback((path: string, read: Read) => setReads((held) => new Map(held).set(path, read)), []);
-  return { reads, hold };
+function useHeldTexts() {
+  const [texts, setTexts] = useState<ReadonlyMap<string, string | null>>(() => new Map());
+  const hold = useCallback((path: string, text: string | null) => setTexts((held) => new Map(held).set(path, text)), []);
+  return { texts, hold };
 }
 
 function FileTextLoader({
@@ -67,30 +83,26 @@ function FileTextLoader({
   repo,
   refName,
   path,
-  onRead,
+  onText,
 }: {
   owner: string;
   repo: string;
   refName: string;
   path: string;
-  onRead: (path: string, read: Read) => void;
+  onText: (path: string, text: string | null) => void;
 }) {
   const ready = useStoreReady();
   const token = useGithubToken();
   const { data, error } = useCachedJson<FileText>(fileTextPath(owner, repo, refName, path), token, ready);
   const text = data?.text ?? null;
   useEffect(() => {
-    if (data || error) onRead(path, { text, failed: error !== null });
-  }, [data, error, text, path, onRead]);
+    if (data || error) onText(path, text);
+  }, [data, error, text, path, onText]);
   return null;
 }
 
-function failedCount(reads: ReadonlyMap<string, Read>): number {
-  return [...reads.values()].filter((read) => read.failed).length;
-}
-
-function readableFiles(paths: string[], reads: ReadonlyMap<string, Read>): ChangedFile[] {
+function readableFiles(paths: string[], texts: ReadonlyMap<string, string | null>): ChangedFile[] {
   return paths
-    .filter((path) => isImagePath(path) || reads.has(path))
-    .map((path) => wholeFileEntry(path, reads.get(path)?.text ?? null));
+    .filter((path) => (isImagePath(path) ? true : (texts.get(path) ?? null) !== null))
+    .map((path) => wholeFileEntry(path, texts.get(path) ?? null));
 }

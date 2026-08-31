@@ -43,7 +43,7 @@ export function RepoFilesBrowser({ owner, repo, children }: { owner: string; rep
       </ResizableColumn>
       <div className="flex min-w-0 flex-1 flex-col max-md:h-[80vh] max-md:flex-none">
         {browsed !== null && fileSet !== null ? (
-          <RepoBrowseReader owner={owner} repo={repo} fileSet={fileSet} item={browsed} />
+          <RepoBrowseReader owner={owner} repo={repo} fileSet={fileSet} tree={tree} item={browsed} />
         ) : (
           <p className="px-2 py-1 text-[11px] text-ink-dim">Pick a file or folder to read it here.</p>
         )}

@@ -256,7 +256,7 @@ function Workspace({
         </ResizableColumn>
         {!showsDiff ? null : browsed !== null && repoFiles.fileSet !== null ? (
           <div className="flex min-w-0 flex-1 flex-col max-md:h-[80vh] max-md:flex-none">
-            <RepoBrowseReader owner={owner} repo={repo} fileSet={repoFiles.fileSet} item={browsed} />
+            <RepoBrowseReader owner={owner} repo={repo} fileSet={repoFiles.fileSet} tree={browseTree} item={browsed} />
           </div>
         ) : fileSet === null && fileError !== null ? (
           <p className="flex-1 px-2 py-1 text-[11px] text-error-ink">{fileError}</p>
