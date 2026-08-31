@@ -6,6 +6,7 @@ import { issueOauthState } from '@/features/github-auth/oauthState';
 import { requestOrigin } from '@/features/github-auth/requestOrigin';
 
 const RELAY_UNCONFIGURED = 'GitHub sign-in relay is not configured: set GITHUB_OAUTH_RELAY_SECRET on this deployment and its proxy';
+const RELAY_UNVERIFIED = 'GitHub sign-in cannot verify the deployment it was asked to return to: check that GITHUB_OAUTH_RELAY_SECRET matches on both';
 
 export async function GET(request: Request) {
   const origin = requestOrigin(request);
@@ -23,7 +24,7 @@ export async function GET(request: Request) {
   if (!config) return fail('GitHub sign-in is not configured: set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET');
   const returnTo = verifiedReturn(params.get('return'), params.get('sig'));
   if (params.has('return') && !returnTo) {
-    return fail(relayConfigured() ? 'GitHub sign-in cannot return to an unrecognised deployment' : RELAY_UNCONFIGURED);
+    return fail(relayConfigured() ? RELAY_UNVERIFIED : RELAY_UNCONFIGURED);
   }
   const state = await issueOauthState(access, returnTo);
   const query = new URLSearchParams({
