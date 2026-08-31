@@ -1,9 +1,10 @@
 'use client';
 
 import { setDiffSort, useDiffSort, type DiffSort } from './diffSortStore';
-import { BUTTON } from '@/features/surface-ui/buttonStyles';
+import { iconButtonClass } from '@/features/surface-ui/buttonStyles';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { PopoverMenu, type PopoverTrigger } from '@/features/surface-ui/PopoverMenu';
+import { SortIcon } from './diffToolbarIcons';
 
 const CHOICES: { sort: DiffSort; label: string }[] = [
   { sort: 'comments', label: 'inline comments' },
@@ -32,9 +33,9 @@ function SortButton({ current, open, toggle }: PopoverTrigger & { current: DiffS
         aria-expanded={open}
         aria-label={label}
         onClick={toggle}
-        className={`${BUTTON} h-4 w-5 text-[11px] leading-4 ${open ? 'bg-btn-active text-ink' : ''}`}
+        className={iconButtonClass(open)}
       >
-        ⇅
+        <SortIcon />
       </button>
     </HoverCardTrigger>
   );
