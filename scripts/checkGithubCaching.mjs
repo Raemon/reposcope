@@ -7,6 +7,7 @@ const ALLOWED = new Map([
   ['src/features/codebases/githubRequest.ts', 'the cached GitHub transport'],
   ['src/features/github-auth/githubOAuthTokens.ts', 'the OAuth token exchange, which carries no repository data'],
   ['src/features/github-auth/oauthProxy.ts', 'forwarding a refresh to the deployment that holds the OAuth secret'],
+  ['src/features/ai-chat/cursorApi.ts', 'the Cursor cloud-agent API, which is not GitHub and must never be cached'],
   ['src/features/sources/apiClient.ts', 'browser calls to this app of its own API routes'],
   ['src/features/sources/githubSession.ts', 'the browser renewing its GitHub sign-in against this app'],
 ]);
