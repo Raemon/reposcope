@@ -41,8 +41,12 @@ export function isTreeItem(item: string): boolean {
   return item.startsWith(FILE_PREFIX) || item.startsWith(FOLDER_PREFIX);
 }
 
-export function treePath(item: string): string {
-  return item.slice(item.indexOf(':') + 1);
+export function treePath(item: string): string | null {
+  return folderedPath(item) ?? filedPath(item);
+}
+
+function filedPath(item: string): string | null {
+  return item.startsWith(FILE_PREFIX) ? item.slice(FILE_PREFIX.length) : null;
 }
 
 export function folderFilePaths(paths: string[], folder: string): string[] {

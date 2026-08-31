@@ -5,7 +5,6 @@ import {
   ancestorFolders,
   buildFileTree,
   folderedPath,
-  isTreeItem,
   listedPaths,
   rowKey,
   treePath,
@@ -45,22 +44,17 @@ export function useRepoFileTree({
   const toggle = useCallback((path: string) => setOpened((held) => withToggled(held, path)), []);
 
   useEffect(() => {
-    if (selected !== null) setOpened((held) => withOpened(held, ancestorFolders(treePath(selected))));
+    const path = selected === null ? null : treePath(selected);
+    if (path !== null) setOpened((held) => withOpened(held, ancestorFolders(path)));
   }, [selected]);
 
-  const selectItem = useCallback(
-    (item: string) => {
-      if (isTreeItem(item)) onSelect(item);
-    },
-    [onSelect],
-  );
   const activateItem = useCallback(
     (item: string) => {
       const folder = folderedPath(item);
       if (folder !== null) toggle(folder);
-      selectItem(item);
+      onSelect(item);
     },
-    [selectItem, toggle],
+    [onSelect, toggle],
   );
 
   return {
@@ -70,7 +64,7 @@ export function useRepoFileTree({
     total: listed.total,
     isOpen,
     toggle,
-    selectItem,
+    selectItem: onSelect,
     activateItem,
   };
 }

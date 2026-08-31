@@ -22,8 +22,10 @@ export function RepoBrowseReader({
   const settled = useSettled(item, SETTLE_MS);
   const folder = folderedPath(settled);
   const paths = useMemo(() => (folder === null ? [] : folderFilePaths(fileSet.files, folder)), [fileSet, folder]);
-  if (folder === null) return <RepoFileReader owner={owner} repo={repo} refName={fileSet.ref} path={treePath(settled)} />;
-  return <RepoFolderReader key={folder} owner={owner} repo={repo} refName={fileSet.ref} paths={paths} />;
+  const path = treePath(settled);
+  if (folder !== null)
+    return <RepoFolderReader key={`${fileSet.ref}:${folder}`} owner={owner} repo={repo} refName={fileSet.ref} paths={paths} />;
+  return path === null ? null : <RepoFileReader owner={owner} repo={repo} refName={fileSet.ref} path={path} />;
 }
 
 function useSettled<T>(value: T, delayMs: number): T {

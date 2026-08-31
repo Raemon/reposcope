@@ -4,7 +4,11 @@ import type { ChangedFile, ChangedFileSet } from './pullRequests';
 export const WHOLE_FILE_STATUS = 'file';
 
 export function wholeFileSet(ref: string, filename: string, text: string | null): ChangedFileSet {
-  return { baseRef: ref, headRef: ref, files: [wholeFileEntry(filename, text)] };
+  return wholeFileSetOf(ref, [wholeFileEntry(filename, text)]);
+}
+
+export function wholeFileSetOf(ref: string, files: ChangedFile[]): ChangedFileSet {
+  return { baseRef: ref, headRef: ref, files };
 }
 
 export function wholeFileEntry(filename: string, text: string | null): ChangedFile {

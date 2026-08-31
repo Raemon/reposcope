@@ -28,7 +28,7 @@ export function FolderTreeRow({
       {...row.props}
       onActivate={onActivate}
       expanded={open}
-      label={`Show files in ${path}`}
+      label={`${open ? 'Collapse' : 'Expand'} ${path}`}
       style={{ paddingLeft: indent }}
       className={`${ROW} ${rowStateClass(row.state)}`}
     >
