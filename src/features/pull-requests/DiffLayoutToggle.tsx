@@ -1,32 +1,31 @@
 'use client';
 
-import { useContext } from 'react';
+import { useContext, type ReactNode } from 'react';
 import { setDiffLayout, useDiffLayout, type DiffLayout } from './diffLayoutStore';
 import { EditTarget } from './editTarget';
 import { setDiffEditMode, useDiffEditMode } from './editModeStore';
 import { DiffSortMenu } from './DiffSortMenu';
 import { FoldModeButtons } from './FoldModeButtons';
 import { ChoiceButton } from '@/features/surface-ui/ChoiceButton';
+import { EditIcon, SplitViewIcon, UnifiedViewIcon } from './diffToolbarIcons';
 
-const CHOICES: { layout: DiffLayout; icon: string; label: string }[] = [
-  { layout: 'split', icon: '▥', label: 'two-column' },
-  { layout: 'unified', icon: '▤', label: 'one-column' },
+const CHOICES: { layout: DiffLayout; icon: ReactNode; label: string }[] = [
+  { layout: 'split', icon: <SplitViewIcon />, label: 'two-column' },
+  { layout: 'unified', icon: <UnifiedViewIcon />, label: 'one-column' },
 ];
 
 export function DiffLayoutToggle() {
   const current = useDiffLayout();
   return (
-    <div className="relative z-30 flex shrink-0 items-center gap-1 border-b border-panel-edge bg-panel px-1.5 py-[1px]">
+    <div className="relative z-30 flex shrink-0 items-center gap-2 border-b border-panel-edge bg-panel px-2 py-[2px]">
       <FoldModeButtons />
-      <span className="ml-auto flex items-center gap-1">
+      <span className="ml-auto flex items-center gap-2">
         {CHOICES.map(({ layout, icon, label }) => (
           <ChoiceButton
             key={layout}
             label={`Show diffs in a ${label} view`}
-            labelled
             active={current === layout}
             onSelect={() => setDiffLayout(layout)}
-            className="h-4 w-5 text-[11px] leading-4"
           >
             {icon}
           </ChoiceButton>
@@ -45,12 +44,10 @@ function EditModeToggle() {
   return (
     <ChoiceButton
       label="Edit mode — click any line to edit it; triple-click works either way"
-      labelled
       active={editMode}
       onSelect={() => setDiffEditMode(!editMode)}
-      className="h-4 w-5 text-[11px] leading-4"
     >
-      ✎
+      <EditIcon />
     </ChoiceButton>
   );
 }
