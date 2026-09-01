@@ -81,7 +81,7 @@ function ThreadComment({
   onToggle: () => void;
 }) {
   return (
-    <div className="border-t border-panel-edge/40 px-1.5 py-[2px] first:border-t-0">
+    <div className="border-t border-panel-edge px-1.5 py-[2px] first:border-t-0">
       <header className="flex items-center gap-1 text-[9px] leading-4 text-ink-dim">
         <Portrait comment={comment} />
         <button type="button" onClick={onToggle} className="min-w-0 shrink truncate text-left text-ink">
@@ -121,7 +121,7 @@ function ThreadActions({
 }) {
   const first = thread.comments[0];
   return (
-    <div className="absolute bottom-0 right-0 flex items-center gap-0.5 rounded-tl border-l border-t border-panel-edge/60 bg-tip px-1 text-[10px] opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+    <div className="absolute bottom-0 right-0 flex items-center gap-0.5 rounded-tl border-l border-t border-panel-edge bg-tip px-1 text-[10px] opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
       <HoverCardTrigger label="Reply" focusable={false} tooltipStyle>
         <button type="button" aria-label="Reply" onClick={onReply} disabled={busy} className={ACTION}>
           ↩

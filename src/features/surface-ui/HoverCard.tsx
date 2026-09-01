@@ -18,7 +18,7 @@ type TipWidth = keyof typeof CARD_WIDTHS;
 const POPPER_BASE = 'fixed z-50 w-max overflow-hidden';
 const CARD_POPPER = 'min-w-64 rounded-md bg-tip shadow-card';
 const TOOLTIP_POPPER = 'bg-black/85 text-white pointer-events-none';
-const CARD_LABEL = 'truncate border-b border-btn-edge px-3 py-2 text-accent';
+const CARD_LABEL = 'truncate border-b border-panel-edge px-3 py-2 text-accent';
 const TOOLTIP_LABEL = 'truncate px-2 py-1 text-white';
 
 function labelClass(tooltipStyle: boolean, serif: boolean): string {
