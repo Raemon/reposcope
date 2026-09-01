@@ -73,6 +73,10 @@ export async function apiKeyedPost<T>(path: string, headers: Record<string, stri
   );
 }
 
+export function failureStatus(error: unknown): number | null {
+  return error instanceof ApiClientError ? error.status : null;
+}
+
 export async function apiKeyedStream(path: string, headers: Record<string, string>): Promise<Response> {
   const response = await fetch(path, { headers });
   if (!response.ok || response.body === null) return readJson<never>(response);

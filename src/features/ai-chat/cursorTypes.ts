@@ -1,4 +1,8 @@
 export const CURSOR_KEY_HEADER = 'x-cursor-key';
+export const LAST_EVENT_ID_HEADER = 'last-event-id';
+
+// Cursor drops a run's event history after a retention window; reconnecting then is 410.
+export const STREAM_EXPIRED_STATUS = 410;
 
 export const WARMUP_PROMPT =
   'Clone the repository and get ready to work. Do not change any files yet. Reply with one short sentence naming the stack you found.';

@@ -15,6 +15,7 @@ interface Call {
   method?: string;
   body?: unknown;
   accept?: string;
+  headers?: Record<string, string>;
 }
 
 async function cursorFetch(key: string, path: string, call: Call = {}): Promise<Response> {
@@ -24,6 +25,7 @@ async function cursorFetch(key: string, path: string, call: Call = {}): Promise<
       Authorization: `Bearer ${key}`,
       ...(call.body === undefined ? {} : { 'Content-Type': 'application/json' }),
       ...(call.accept === undefined ? {} : { Accept: call.accept }),
+      ...call.headers,
     },
     body: call.body === undefined ? undefined : JSON.stringify(call.body),
     cache: 'no-store',
@@ -74,8 +76,11 @@ function optionalText(value: unknown): string | null {
   return typeof value === 'string' ? value : null;
 }
 
-export async function streamRun(key: string, agentId: string, runId: string): Promise<Response> {
-  return cursorFetch(key, `${runPath(agentId, runId)}/stream`, { accept: 'text/event-stream' });
+export async function streamRun(key: string, agentId: string, runId: string, lastEventId: string | null): Promise<Response> {
+  return cursorFetch(key, `${runPath(agentId, runId)}/stream`, {
+    accept: 'text/event-stream',
+    headers: lastEventId === null ? {} : { 'Last-Event-ID': lastEventId },
+  });
 }
 
 function runPath(agentId: string, runId: string): string {

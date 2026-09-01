@@ -1,4 +1,5 @@
 export interface SseEvent {
+  id: string | null;
   event: string;
   data: string;
 }
@@ -23,9 +24,11 @@ export async function* sseEvents(body: ReadableStream<Uint8Array>): AsyncGenerat
 function parseChunk(chunk: string): SseEvent | null {
   const data: string[] = [];
   let event = 'message';
+  let id: string | null = null;
   for (const line of chunk.split('\n')) {
     if (line.startsWith('event:')) event = line.slice(6).trim();
+    else if (line.startsWith('id:')) id = line.slice(3).trim();
     else if (line.startsWith('data:')) data.push(line.slice(5).replace(/^ /, ''));
   }
-  return data.length === 0 ? null : { event, data: data.join('\n') };
+  return data.length === 0 ? null : { id, event, data: data.join('\n') };
 }
