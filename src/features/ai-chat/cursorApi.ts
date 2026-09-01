@@ -42,18 +42,36 @@ export async function describeSession(key: string): Promise<CursorSessionInfo> {
 }
 
 export async function launchAgent(key: string, ask: LaunchRequest): Promise<CursorLaunch> {
-  return cursorJson<CursorLaunch>(key, '/v1/agents', { method: 'POST', body: launchBody(ask) });
+  const launched = await cursorJson<CursorLaunch>(key, '/v1/agents', { method: 'POST', body: launchBody(ask) });
+  return { ...launched, run: runOf(launched.run) };
 }
 
 export async function startFollowup(key: string, { agentId, prompt }: FollowupRequest): Promise<CursorRun> {
-  return cursorJson<CursorRun>(key, `/v1/agents/${encodeURIComponent(agentId)}/runs`, {
-    method: 'POST',
-    body: { prompt: { text: prompt }, mode: 'agent' },
-  });
+  return runOf(
+    await cursorJson<unknown>(key, `/v1/agents/${encodeURIComponent(agentId)}/runs`, {
+      method: 'POST',
+      body: { prompt: { text: prompt }, mode: 'agent' },
+    }),
+  );
 }
 
 export async function readRun(key: string, agentId: string, runId: string): Promise<CursorRun> {
-  return cursorJson<CursorRun>(key, runPath(agentId, runId));
+  return runOf(await cursorJson<unknown>(key, runPath(agentId, runId)));
+}
+
+// Cursor wraps the run in `{ run }` when starting one but returns it bare when reading it.
+function runOf(body: unknown): CursorRun {
+  const held = (body ?? {}) as { run?: unknown };
+  const run = (held.run ?? body ?? {}) as Partial<CursorRun>;
+  return { ...run, id: text(run.id), agentId: text(run.agentId), status: optionalText(run.status) };
+}
+
+function text(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
+function optionalText(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
 }
 
 export async function streamRun(key: string, agentId: string, runId: string): Promise<Response> {

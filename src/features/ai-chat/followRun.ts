@@ -9,6 +9,8 @@ import { sseEvents } from './sseEvents';
 import { apiKeyedJson, apiKeyedStream } from '@/features/sources/apiClient';
 
 const POLL_MS = 3000;
+const STREAM_TRIES = 3;
+const RETRY_MS = 2000;
 
 const followed = new Set<string>();
 
@@ -20,14 +22,27 @@ export function followOnce(subject: string, key: string, agentId: string, runId:
 }
 
 async function follow(subject: string, key: string, agentId: string, runId: string): Promise<void> {
-  try {
-    await streamInto(subject, key, agentId, runId);
-  } catch {
-    // A dropped stream is recoverable; the status poll below carries the run to its end.
-  }
+  await streamWithRetry(subject, key, agentId, runId);
   if (stillShowing(subject, runId) && !runFinished(readSession(subject).status)) {
     await pollUntilFinished(subject, key, agentId, runId);
   }
+}
+
+// Cursor refuses the stream of a run it has not started yet, and replays one in full once it has.
+async function streamWithRetry(subject: string, key: string, agentId: string, runId: string): Promise<void> {
+  const before = readSession(subject).entries.length;
+  for (let attempt = 1; attempt <= STREAM_TRIES; attempt += 1) {
+    try {
+      return await streamInto(subject, key, agentId, runId);
+    } catch {
+      if (attempt === STREAM_TRIES || replayWouldDuplicate(subject, before)) return;
+      await pause(RETRY_MS);
+    }
+  }
+}
+
+function replayWouldDuplicate(subject: string, before: number): boolean {
+  return readSession(subject).entries.length !== before;
 }
 
 async function streamInto(subject: string, key: string, agentId: string, runId: string): Promise<void> {
@@ -35,6 +50,7 @@ async function streamInto(subject: string, key: string, agentId: string, runId: 
   if (response.body === null) return;
   for await (const event of sseEvents(response.body)) {
     if (!stillShowing(subject, runId)) return;
+    if (event.event === 'error') throw new Error(event.data);
     applyRunEvent(subject, runId, event);
   }
 }

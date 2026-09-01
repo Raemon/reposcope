@@ -22,7 +22,7 @@ export interface CursorBranch {
 export interface CursorRun {
   id: string;
   agentId: string;
-  status: string;
+  status: string | null;
   result?: string | null;
   git?: { branches?: CursorBranch[] } | null;
 }
@@ -56,8 +56,9 @@ export interface FollowupRequest {
 
 const TERMINAL = ['FINISHED', 'ERROR', 'FAILED', 'CANCELLED', 'CANCELED', 'EXPIRED', 'ARCHIVED'];
 
-export function runFinished(status: string | null): boolean {
-  return status === null || TERMINAL.includes(status.toUpperCase());
+// Total in `status` because a run status reaching here unrecognised must not throw mid-render.
+export function runFinished(status: string | null | undefined): boolean {
+  return typeof status !== 'string' || TERMINAL.includes(status.toUpperCase());
 }
 
 export function describeFailure(error: unknown): string {
