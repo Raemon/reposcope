@@ -70,7 +70,7 @@ function CommitRow({
     <div
       data-nav-cursor={row.props.cursor || undefined}
       onPointerEnter={row.props.onPointerEnter}
-      className={`border-b border-ink/15 ${rowStateClass(row.state)}`}
+      className={`border-b border-panel-edge ${rowStateClass(row.state)}`}
     >
       <SelectableRow {...row.props} onActivate={onActivate} className={TITLE_LINE} label={title}>
         {title}

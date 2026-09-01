@@ -34,7 +34,7 @@ export function NavListRow({
     <div
       data-nav-cursor={row.props.cursor || undefined}
       onPointerEnter={row.props.onPointerEnter}
-      className={`group flex border-b border-ink/15 ${stacked ? 'items-stretch' : 'items-baseline'} ${rowStateClass(row.state)} ${dimmed ? 'opacity-50' : ''}`}
+      className={`group flex border-b border-panel-edge ${stacked ? 'items-stretch' : 'items-baseline'} ${rowStateClass(row.state)} ${dimmed ? 'opacity-50' : ''}`}
     >
       <SelectableLink href={href} current={current} onPointerEnter={onPointerEnter} onSelect={onSelect} className={stacked ? STACKED_ROW : ROW}>
         {children}

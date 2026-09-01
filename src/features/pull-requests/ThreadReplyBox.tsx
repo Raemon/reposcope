@@ -15,7 +15,7 @@ export function ThreadReplyBox({
   const [draft, setDraft] = useState('');
   const send = () => draft.trim() && onSend(draft.trim());
   return (
-    <div className="border-t border-panel-edge/40 px-1.5 py-1">
+    <div className="border-t border-panel-edge px-1.5 py-1">
       <textarea
         autoFocus
         rows={2}

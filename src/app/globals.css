@@ -19,7 +19,6 @@
   --color-field: var(--field);
   --color-procgen: var(--procgen);
   --color-btn: var(--btn);
-  --color-btn-edge: var(--btn-edge);
   --color-btn-hover: var(--btn-hover);
   --color-btn-active: var(--btn-active);
   --color-btn-both: var(--btn-both);
@@ -57,7 +56,7 @@
   --code: #ffffff;
   --panel: #ffffff;
   --shade: #eef1f5;
-  --panel-edge: #7f8a9955;
+  --panel-edge: #7f8a9940;
   --checker: #7f8a99;
   --ink: #0a0e14;
   --ink-dim: #45505f;
@@ -68,7 +67,6 @@
   --field: #e6ebf2;
   --procgen: #dfe5ee;
   --btn: #e3e9f1;
-  --btn-edge: #737e8e;
   --btn-hover: #d2dbe7;
   --btn-active: #bfcbdb;
   --btn-both: #a9b8cc;
@@ -102,7 +100,7 @@
     --code: #0f0e0d;
     --panel: #1a1917;
     --shade: #1a1917;
-    --panel-edge: #6f675c55;
+    --panel-edge: #6f675c40;
     --checker: #6f675c;
     --ink: #f8f4ec;
     --ink-dim: #bcb2a4;
@@ -113,7 +111,6 @@
     --field: #141311;
     --procgen: #35302a;
     --btn: #272521;
-    --btn-edge: #7a7264;
     --btn-hover: #37322b;
     --btn-active: #474036;
     --btn-both: #574f42;
@@ -173,7 +170,7 @@
   --code: #0f0e0d;
   --panel: #1a1917;
   --shade: #1a1917;
-  --panel-edge: #6f675c55;
+  --panel-edge: #6f675c40;
   --checker: #6f675c;
   --ink: #f8f4ec;
   --ink-dim: #bcb2a4;
@@ -184,7 +181,6 @@
   --field: #141311;
   --procgen: #35302a;
   --btn: #272521;
-  --btn-edge: #7a7264;
   --btn-hover: #37322b;
   --btn-active: #474036;
   --btn-both: #574f42;

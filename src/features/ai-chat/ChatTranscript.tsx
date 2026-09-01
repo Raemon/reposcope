@@ -5,7 +5,7 @@ import type { ChatEntry } from './chatEntries';
 import { HoverCardHtml } from '@/features/surface-ui/HoverCard';
 import { renderMarkdown } from '@/features/markdown/renderMarkdown';
 
-const ROW = 'border-b border-panel-edge/40 px-1.5 py-1';
+const ROW = 'border-b border-panel-edge px-1.5 py-1';
 const LABEL = 'text-[9px] uppercase tracking-[0.18em] text-ink-dim';
 
 export function ChatTranscript({ entries, owner, repo, busy }: { entries: ChatEntry[]; owner: string; repo: string; busy: boolean }) {
