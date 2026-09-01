@@ -28,16 +28,16 @@ function declaredName(text: string): NameSpan | null {
 }
 
 function dimSegment(segment: CodeSegment, start: number, name: NameSpan): CodeSegment[] {
-  return cutPoints(segment.content, start, name).map((from, index, points) => ({
+  return sliceStarts(segment.content, start, name).map((from, index, starts) => ({
     ...segment,
-    content: segment.content.slice(from - start, (points[index + 1] ?? start + segment.content.length) - start),
-    opacity: opacityAt(from, name),
+    content: segment.content.slice(from, starts[index + 1]),
+    opacity: opacityAt(start + from, name),
   }));
 }
 
-function cutPoints(text: string, start: number, name: NameSpan): number[] {
-  const inside = [name.start, name.end].filter((point) => point > start && point < start + text.length);
-  return [start, ...inside];
+function sliceStarts(text: string, start: number, name: NameSpan): number[] {
+  const inside = [name.start, name.end].map((point) => point - start).filter((at) => at > 0 && at < text.length);
+  return [0, ...inside];
 }
 
 function opacityAt(position: number, name: NameSpan): number | undefined {
