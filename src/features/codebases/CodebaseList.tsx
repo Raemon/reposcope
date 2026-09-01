@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { repoRoute } from './repoPaths';
 import type { SidebarGroup } from './sidebarGroups';
 import { removeSource } from '@/features/sources/sourceStore';
@@ -10,7 +10,15 @@ import { FilterField } from '@/features/surface-ui/FilterField';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { SelectableLink } from '@/features/surface-ui/SelectableLink';
 
-export function CodebaseList({ groups }: { groups: SidebarGroup[] }) {
+export function CodebaseList({
+  groups,
+  autoFocusFilter = false,
+  children,
+}: {
+  groups: SidebarGroup[];
+  autoFocusFilter?: boolean;
+  children?: ReactNode;
+}) {
   const [filter, setFilter] = useState('');
   const pathname = usePathname();
   const shown = useMemo(() => filterGroups(groups, filter), [groups, filter]);
@@ -22,8 +30,10 @@ export function CodebaseList({ groups }: { groups: SidebarGroup[] }) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="border-b border-panel-edge px-2 py-2">
+      <div className="border-b border-panel-edge px-1 py-1">
         <FilterField
+          variant="plain"
+          autoFocus={autoFocusFilter}
           value={filter}
           onChange={setFilter}
           placeholder="filter repositories"
@@ -31,6 +41,7 @@ export function CodebaseList({ groups }: { groups: SidebarGroup[] }) {
           className="w-full"
         />
       </div>
+      {children}
       <nav className="min-h-0 flex-1 overflow-auto py-1">
         {shown.map((group) => (
           <section key={group.owner}>
