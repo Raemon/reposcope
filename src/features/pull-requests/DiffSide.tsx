@@ -2,7 +2,7 @@
 
 import { Fragment, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { hunkHasEditableLines, type EditableBlock } from './editableBlocks';
-import { codeSegments } from './codeSegments';
+import { codeSegments, type CodeSegment } from './codeSegments';
 import { dimAroundName } from './foldDimming';
 import { shortenKeywords } from './keywordAbbreviations';
 import { collapsedPreview } from './collapsedPreview';
@@ -234,7 +234,8 @@ function DiffLineView({
   if (!cell) return <div className={`${row} bg-procgen/40`} style={sized} />;
   const changed = line.kind === 'change';
   const openable = Boolean(editable && side === 'right');
-  const segments = codeSegments(cell.text, lineTokens, changed ? ranges : null);
+  const raw = codeSegments(cell.text, lineTokens, changed ? ranges : null);
+  const segments = dim ? shortenKeywords(dimAroundName(raw, lineTokens)) : raw;
   return (
     <div
       className={`group ${row} ${lineTone(side, changed, line.touched)} ${openable ? 'cursor-text' : ''}`}
@@ -248,8 +249,9 @@ function DiffLineView({
           className={codeClass(collapsed, wrapping)}
           style={wrapping && !collapsed ? hangingIndentStyle(cell.text) : undefined}
           onClick={onCodePress ? (event) => onCodePress(line, event) : undefined}
+          {...sourceOffsets(segments)}
         >
-          {(dim ? shortenKeywords(dimAroundName(segments, lineTokens)) : segments).map((segment, index) => (
+          {segments.map((segment, index) => (
             <span
               key={index}
               className={segment.emphasized ? emphasisTone(side) : undefined}
@@ -276,6 +278,14 @@ function codeClass(collapsed: boolean, wrapping: boolean): string {
 function hangingIndentStyle(text: string): { paddingLeft: string; textIndent: string } {
   const indent = hangingIndent(text);
   return { paddingLeft: `${indent}ch`, textIndent: `-${indent}ch` };
+}
+
+// Abbreviated keywords shift later columns; definition lookups read these back.
+function sourceOffsets(segments: CodeSegment[]): { 'data-shrunk'?: number; 'data-prefix-end'?: number } {
+  const shrunk = segments.reduce((total, segment) => total + (segment.shortenedBy ?? 0), 0);
+  if (shrunk === 0) return {};
+  const prefix = segments.filter((segment) => segment.prefix);
+  return { 'data-shrunk': shrunk, 'data-prefix-end': prefix.reduce((total, one) => total + one.content.length, 0) };
 }
 
 function opensEditor(clickCount: number): boolean {
