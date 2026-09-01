@@ -8,7 +8,7 @@ import { useFileBlob } from './useFileBlob';
 
 export const CHECKERBOARD = {
   backgroundImage:
-    'linear-gradient(45deg, var(--color-panel-edge) 25%, transparent 25%), linear-gradient(-45deg, var(--color-panel-edge) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, var(--color-panel-edge) 75%), linear-gradient(-45deg, transparent 75%, var(--color-panel-edge) 75%)',
+    'linear-gradient(45deg, var(--color-checker) 25%, transparent 25%), linear-gradient(-45deg, var(--color-checker) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, var(--color-checker) 75%), linear-gradient(-45deg, transparent 75%, var(--color-checker) 75%)',
   backgroundSize: '12px 12px',
   backgroundPosition: '0 0, 0 6px, 6px -6px, -6px 0',
 };

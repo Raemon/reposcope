@@ -9,6 +9,7 @@
   --color-shade: var(--shade);
   --color-panel: var(--panel);
   --color-panel-edge: var(--panel-edge);
+  --color-checker: var(--checker);
   --color-ink: var(--ink);
   --color-ink-dim: var(--ink-dim);
   --color-accent: var(--accent);
@@ -56,7 +57,8 @@
   --code: #ffffff;
   --panel: #ffffff;
   --shade: #eef1f5;
-  --panel-edge: #7f8a99;
+  --panel-edge: #7f8a9955;
+  --checker: #7f8a99;
   --ink: #0a0e14;
   --ink-dim: #45505f;
   --accent: #7a4400;
@@ -100,7 +102,8 @@
     --code: #0f0e0d;
     --panel: #1a1917;
     --shade: #1a1917;
-    --panel-edge: #6f675c;
+    --panel-edge: #6f675c55;
+    --checker: #6f675c;
     --ink: #f8f4ec;
     --ink-dim: #bcb2a4;
     --accent: #ffbe55;
@@ -170,7 +173,8 @@
   --code: #0f0e0d;
   --panel: #1a1917;
   --shade: #1a1917;
-  --panel-edge: #6f675c;
+  --panel-edge: #6f675c55;
+  --checker: #6f675c;
   --ink: #f8f4ec;
   --ink-dim: #bcb2a4;
   --accent: #ffbe55;
