@@ -2,14 +2,15 @@ import { NextResponse } from 'next/server';
 import { oauthConfig } from '@/features/github-auth/githubOAuthConfig';
 import { exchangeCode } from '@/features/github-auth/githubOAuthTokens';
 import { grantToParams } from '@/features/github-auth/grantParams';
-import { accessFromState, consumeOauthState, returnFromState } from '@/features/github-auth/oauthState';
+import { callbackUrl, failHome, NOT_CONFIGURED } from '@/features/github-auth/oauthRoute';
+import { consumeOauthState, parseOauthState } from '@/features/github-auth/oauthState';
 import { requestOrigin } from '@/features/github-auth/requestOrigin';
 
 export async function GET(request: Request) {
   const origin = requestOrigin(request);
-  const fail = (message: string) => NextResponse.redirect(`${origin}/?error=${encodeURIComponent(message)}`);
+  const fail = failHome(origin);
   const config = oauthConfig();
-  if (!config) return fail('GitHub sign-in is not configured');
+  if (!config) return fail(NOT_CONFIGURED);
   const query = new URL(request.url).searchParams;
   const denied = query.get('error_description') ?? query.get('error');
   if (denied) return fail(`GitHub sign-in failed: ${denied}`);
@@ -18,9 +19,9 @@ export async function GET(request: Request) {
   const expected = await consumeOauthState();
   if (!code || !state || !expected || state !== expected) return fail('GitHub sign-in state mismatch; try again');
   try {
-    const grant = await exchangeCode(code, `${origin}/api/github/callback`, config);
-    const landing = returnFromState(state) ?? origin;
-    return NextResponse.redirect(`${landing}/connect#${grantToParams(grant, accessFromState(state))}`);
+    const grant = await exchangeCode(code, callbackUrl(origin), config);
+    const { access, returnTo } = parseOauthState(state);
+    return NextResponse.redirect(`${returnTo ?? origin}/connect#${grantToParams(grant, access)}`);
   } catch (error) {
     return fail(error instanceof Error ? error.message : 'GitHub sign-in failed');
   }
