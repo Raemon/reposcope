@@ -1,7 +1,7 @@
 import type { CodeSegment } from './codeSegments';
 import type { ThemedToken } from './diffHighlight';
 
-export const KEYWORD_OPACITY = 0.45;
+const KEYWORD_OPACITY = 0.45;
 const TAIL_OPACITY = 0.6;
 const LEADING_SCOPES = /^(keyword|storage|punctuation|comment|meta\.brace)/;
 
@@ -44,6 +44,7 @@ function dimSegment(segment: CodeSegment, start: number, name: NameSpan): CodeSe
     ...segment,
     content: segment.content.slice(from, starts[index + 1]),
     opacity: opacityAt(start + from, name),
+    prefix: start + from < name.start,
   }));
 }
 

@@ -7,6 +7,8 @@ export interface CodeSegment {
   style?: CSSProperties;
   emphasized: boolean;
   opacity?: number;
+  prefix?: boolean;
+  shortenedBy?: number;
 }
 
 export function codeSegments(

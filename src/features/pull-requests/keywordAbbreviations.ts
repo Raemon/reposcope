@@ -1,5 +1,4 @@
 import type { CodeSegment } from './codeSegments';
-import { KEYWORD_OPACITY } from './foldDimming';
 
 const SHORT: Record<string, string> = {
   export: 'exp', import: 'imp', function: 'func', interface: 'interf', default: 'def', abstract: 'abs',
@@ -10,11 +9,11 @@ const SHORT: Record<string, string> = {
 };
 
 export function shortenKeywords(segments: CodeSegment[]): CodeSegment[] {
-  return segments.map((segment) =>
-    segment.opacity === KEYWORD_OPACITY ? { ...segment, content: shortWords(segment.content) } : segment,
-  );
+  return segments.map((segment) => (segment.prefix ? shortened(segment) : segment));
 }
 
-function shortWords(text: string): string {
-  return text.replace(/[A-Za-z]+/g, (word) => SHORT[word] ?? word);
+function shortened(segment: CodeSegment): CodeSegment {
+  if (!/^[A-Za-z\s]+$/.test(segment.content)) return segment;
+  const content = segment.content.replace(/[A-Za-z]+/g, (word) => SHORT[word] ?? word);
+  return { ...segment, content, shortenedBy: segment.content.length - content.length };
 }
