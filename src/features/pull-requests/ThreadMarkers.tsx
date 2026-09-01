@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { placeThreads, type AnchoredThread } from './commentAnchors';
+import { isDraftThread } from './draftThread';
+import { clearDraftThread } from './draftThreadStore';
 import type { ReviewThread } from './reviewThreads';
 import { ThreadCard } from './ThreadCard';
 import { ModalShell } from '@/features/surface-ui/ModalShell';
@@ -16,23 +18,29 @@ export function ThreadMarkers({
   anchors: AnchoredThread[];
   onOverflow: (pixels: number) => void;
 }) {
-  const [opened, setOpened] = useState<ReviewThread | null>(null);
+  const [picked, setPicked] = useState<ReviewThread | null>(null);
   const markers = placeThreads(anchors, {}, MARKER_GAP, MARKER);
+  const opened = anchors.find(({ thread }) => isDraftThread(thread))?.thread ?? picked;
 
   useEffect(() => onOverflow(0), [onOverflow]);
 
   return (
     <div className="relative shrink-0 border-l border-panel-edge bg-shade" style={{ width: MARKER + MARKER_GAP * 2 }}>
       {markers.map((marker) => (
-        <MarkerButton key={marker.thread.rootId} top={marker.top} thread={marker.thread} onOpen={setOpened} />
+        <MarkerButton key={marker.thread.rootId} top={marker.top} thread={marker.thread} onOpen={setPicked} />
       ))}
       {opened && (
-        <ModalShell label={threadLabel(opened)} dismissable onDismiss={() => setOpened(null)}>
+        <ModalShell label={threadLabel(opened)} dismissable onDismiss={() => dismissThread(setPicked)}>
           <ThreadCard thread={opened} />
         </ModalShell>
       )}
     </div>
   );
+}
+
+function dismissThread(setPicked: (thread: ReviewThread | null) => void) {
+  clearDraftThread();
+  setPicked(null);
 }
 
 function MarkerButton({

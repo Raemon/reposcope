@@ -1,7 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { reviewReactionPath, reviewReplyPath, reviewResolvePath } from './pullPaths';
+import { useContext, useState } from 'react';
+import { isDraftThread } from './draftThread';
+import { clearDraftThread } from './draftThreadStore';
+import { EditTarget } from './editTarget';
+import { reviewCommentPath, reviewReactionPath, reviewReplyPath, reviewResolvePath } from './pullPaths';
 import type { ReviewComment, ReviewThread } from './reviewThreads';
 import { useReviewTarget, type ReviewThreadTarget } from './reviewThreadStore';
 import { ThreadReplyBox } from './ThreadReplyBox';
@@ -15,6 +18,30 @@ import { apiPost, apiPostJson } from '@/features/sources/apiClient';
 const ACTION = 'rounded px-1 leading-4 text-ink-dim hover:bg-btn-hover hover:text-ink disabled:opacity-40';
 
 export function ThreadCard({ thread }: { thread: ReviewThread }) {
+  if (isDraftThread(thread)) return <DraftThreadCard thread={thread} />;
+  return <PostedThreadCard thread={thread} />;
+}
+
+function DraftThreadCard({ thread }: { thread: ReviewThread }) {
+  const target = useReviewTarget();
+  const token = useGithubToken();
+  const commitId = useContext(EditTarget)?.headRef ?? '';
+  const action = useThreadAction(() => target.reload().then(clearDraftThread));
+  return (
+    <article className="overflow-hidden rounded border border-panel-edge bg-tip shadow-card">
+      <header className="px-1.5 pt-[2px] text-[9px] leading-4 text-ink-dim">New comment · line {thread.line}</header>
+      <ThreadReplyBox
+        busy={action.busy}
+        placeholder="Comment…"
+        onCancel={clearDraftThread}
+        onSend={(body) => action.run(() => sendNewThread(target, thread, commitId, body, token))}
+      />
+      {action.failure && <p className="px-1.5 pb-0.5 text-[9px] leading-3 text-error-ink">{action.failure}</p>}
+    </article>
+  );
+}
+
+function PostedThreadCard({ thread }: { thread: ReviewThread }) {
   const target = useReviewTarget();
   const token = useGithubToken();
   const action = useThreadAction(target.reload);
@@ -158,6 +185,20 @@ function ThreadActions({
       </HoverCardTrigger>
     </div>
   );
+}
+
+function sendNewThread(
+  target: ReviewThreadTarget,
+  thread: ReviewThread,
+  commitId: string,
+  body: string,
+  token: string | null,
+): Promise<unknown> {
+  if (target.number === null || thread.line === null) {
+    return Promise.reject(new Error('Line comments need an open pull request'));
+  }
+  const draft = { body, commitId, path: thread.path, line: thread.line, side: thread.side };
+  return apiPostJson(reviewCommentPath(target.owner, target.repo, target.number), token, draft);
 }
 
 function sendReply(

@@ -5,6 +5,8 @@ import { CodeBlockEditor } from './CodeBlockEditor';
 import { CommitEditModal } from './CommitEditModal';
 import { DiffSide, type HunkControl } from './DiffSide';
 import { useDiffLayout } from './diffLayoutStore';
+import { withDraftThread } from './draftThread';
+import { startDraftThread, useDraftAnchor } from './draftThreadStore';
 import { columnLines, unifiedLines, visibleLines, type DiffLine } from './diffLines';
 import { langForPath } from './diffHighlight';
 import { linesHeight, ROW_HEIGHT, SAVE_BAR } from './diffMetrics';
@@ -67,13 +69,16 @@ export function FileDiff({
   });
   useFoldCommandWholeFile(hunkEdit, setWantWholeFile);
   const editBlock = hunkEdit.edit?.block ?? null;
-  const threads = useFileThreads(file.filename);
+  const fileThreads = useFileThreads(file.filename);
+  const draftAnchor = useDraftAnchor();
+  const threads = useMemo(() => withDraftThread(fileThreads, draftAnchor, file.filename), [fileThreads, draftAnchor, file.filename]);
   const collapse = useCodeCollapse(rows, showingWholeFile, file.filename, threads, editBlock);
   const lines = useMemo(() => foldedLines(rows, collapse.hidden), [rows, collapse.hidden]);
   const growing = useHeightTransition(rows, collapse.hidden);
   const expand = expandControl(wholeFile, showingWholeFile, hunkEdit, setWantWholeFile);
   const onCodePress = useDefinitionClick(file, baseRef, headRef);
-  const shared = { rows, tokens, emphasis, expand, anchors: collapse.anchors, onCodePress };
+  const onDraftThread = draftThreadStarter(file.filename, token !== null && pull !== null);
+  const shared = { rows, tokens, emphasis, expand, anchors: collapse.anchors, onCodePress, onDraftThread };
   const bounds = { hidden: collapse.hidden, stopAtBlankLines: showingWholeFile };
   const editing = {
     editable: pull !== null,
@@ -118,6 +123,11 @@ export function FileDiff({
       )}
     </div>
   );
+}
+
+function draftThreadStarter(path: string, allowed: boolean) {
+  if (!allowed) return undefined;
+  return (line: number, side: 'left' | 'right') => startDraftThread({ path, line, side });
 }
 
 function useFoldCommandWholeFile(hunkEdit: HunkEditControls, setWantWholeFile: (next: boolean) => void) {

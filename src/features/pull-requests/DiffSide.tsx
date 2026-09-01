@@ -18,7 +18,9 @@ import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 const ROW = 'flex h-[15px] items-center gap-1 leading-[15px]';
 // Literal px; Tailwind can't compile computed classes. Sync with BLANK_ROW_HEIGHT.
 const BLANK_ROW = 'flex h-[4px] items-center gap-1 leading-[4px]';
-const GUTTER = 'flex w-[46px] shrink-0 select-none items-center text-[9px] text-ink-dim';
+const GUTTER = 'relative flex w-[46px] shrink-0 select-none items-center text-[9px] text-ink-dim';
+const DRAFT_BTN =
+  'absolute left-0 flex h-[15px] w-[11px] items-center justify-center rounded-sm bg-btn text-[10px] leading-none text-ink-dim opacity-0 hover:bg-btn-hover hover:text-ink group-hover:opacity-100';
 const TOUCHED_MARK = 'bg-add-bg/60 shadow-[inset_2px_0_0_var(--add-emph)]';
 const STICKY_CHIP = 'sticky right-0 shrink-0 rounded bg-procgen px-1 hover:bg-btn-hover hover:text-ink';
 const EDIT_BTN = `${STICKY_CHIP} uppercase tracking-[0.14em]`;
@@ -45,6 +47,7 @@ export interface SideProps {
   editedRows?: EditableBlock | null;
   spacer?: { afterRow: number; height: number } | null;
   onCodePress?: CodePress;
+  onDraftThread?: (line: number, side: 'left' | 'right') => void;
 }
 
 export function DiffSide(props: SideProps) {
@@ -79,6 +82,7 @@ function DiffLines({
   onEditBlock,
   spacer,
   onCodePress,
+  onDraftThread,
 }: SideProps & { from: number; to: number }) {
   if (from >= to) return null;
   const spacerLine = spacer ? lastLineOfRow(lines, spacer.afterRow) : -1;
@@ -102,6 +106,7 @@ function DiffLines({
                 editable={editable}
                 onEdit={editStarter(rows, line.row, onEditBlock)}
                 onCodePress={onCodePress}
+                onDraft={draftStarter(rows, line, onDraftThread)}
               />
               {spacerLine === index && <div style={{ height: spacer?.height }} />}
             </Fragment>
@@ -141,6 +146,20 @@ function editStarter(rows: DiffRow[], index: number, onEditBlock?: (rowIndex: nu
   return () => onEditBlock(index + (hunk ? 1 : 0));
 }
 
+function draftStarter(rows: DiffRow[], line: DiffLine, onDraftThread?: SideProps['onDraftThread']) {
+  const target = draftTarget(rows[line.row], line);
+  if (!onDraftThread || !target) return undefined;
+  return () => onDraftThread(target.line, target.side);
+}
+
+// Context rows carry both numberings; comment on the head file so the anchor survives.
+function draftTarget(row: DiffRow | undefined, line: DiffLine): { line: number; side: 'left' | 'right' } | null {
+  if (!row || line.blank) return null;
+  const side = line.side === 'left' && row.kind === 'context' ? 'right' : line.side;
+  const cell = row[side];
+  return cell ? { line: cell.line, side } : null;
+}
+
 function DiffLineView({
   line,
   labels,
@@ -152,6 +171,7 @@ function DiffLineView({
   editable,
   onEdit,
   onCodePress,
+  onDraft,
 }: {
   line: DiffLine;
   labels: boolean;
@@ -163,6 +183,7 @@ function DiffLineView({
   editable?: boolean;
   onEdit?: () => void;
   onCodePress?: CodePress;
+  onDraft?: () => void;
 }) {
   const { cell, side } = line;
   if (line.kind === 'hunk') {
@@ -177,7 +198,7 @@ function DiffLineView({
       className={`group ${row} ${lineTone(side, changed, line.touched)} ${openable ? 'cursor-text' : ''}`}
       onClick={openable && onEdit ? (event) => opensEditor(event.detail) && onEdit() : undefined}
     >
-      <GutterCell line={line.blank ? null : cell.line} anchor={anchor} />
+      <GutterCell line={line.blank ? null : cell.line} anchor={anchor} onDraft={onDraft} />
       <span
         className="diff-code whitespace-pre pr-2 text-[11px]"
         onClick={onCodePress ? (event) => onCodePress(line, event) : undefined}
@@ -222,12 +243,37 @@ function plural(count: number, word: string): string {
   return `${count} ${word}${count === 1 ? '' : 's'}`;
 }
 
-function GutterCell({ line, anchor }: { line: number | null; anchor: CollapseAnchor | null }) {
+function GutterCell({
+  line,
+  anchor,
+  onDraft,
+}: {
+  line: number | null;
+  anchor: CollapseAnchor | null;
+  onDraft?: () => void;
+}) {
   return (
     <span className={GUTTER}>
+      {onDraft && <DraftThreadButton onDraft={onDraft} />}
       <span className="min-w-0 flex-1 text-right">{line}</span>
       <span className="w-3 shrink-0 text-center">{anchor && <CollapseChevron anchor={anchor} />}</span>
     </span>
+  );
+}
+
+function DraftThreadButton({ onDraft }: { onDraft: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-label="Comment on this line"
+      onClick={(event) => {
+        event.stopPropagation();
+        onDraft();
+      }}
+      className={DRAFT_BTN}
+    >
+      +
+    </button>
   );
 }
 

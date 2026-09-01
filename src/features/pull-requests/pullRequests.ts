@@ -347,9 +347,7 @@ async function editableFile(
   headRef: string,
 ): Promise<{ contents: string; branch: string }> {
   requireGithubUser('committing');
-  const pull = await githubJson<GithubPull>(`${API}/repos/${owner}/${name}/pulls/${number}`, true);
-  if (pull.state !== 'open') throw new GithubRequestError(409, `Pull request #${number} is ${pull.state}`);
-  if (pull.head.sha !== headRef) throw new GithubRequestError(409, staleMessage(path));
+  const pull = await openPullAtHead(owner, name, number, headRef, path);
   const target = pull.head.repo?.full_name;
   if (!target) throw new GithubRequestError(422, `The head repository for #${number} is gone`);
   const changed = await changedFilePages(owner, name, number);
@@ -357,6 +355,19 @@ async function editableFile(
     throw new GithubRequestError(422, `${path} is not among the files this pull request changes`);
   }
   return { contents: `${API}/repos/${target}/contents/${encodePath(path)}`, branch: pull.head.ref };
+}
+
+export async function openPullAtHead(
+  owner: string,
+  name: string,
+  number: number,
+  headRef: string,
+  path: string,
+): Promise<GithubPull> {
+  const pull = await githubJson<GithubPull>(`${API}/repos/${owner}/${name}/pulls/${number}`, true);
+  if (pull.state !== 'open') throw new GithubRequestError(409, `Pull request #${number} is ${pull.state}`);
+  if (pull.head.sha !== headRef) throw new GithubRequestError(409, staleMessage(path));
+  return pull;
 }
 
 async function commitContents(
@@ -394,7 +405,7 @@ function stripReturn(line: string): string {
 }
 
 function staleMessage(path: string): string {
-  return `${path} has changed on the branch since this diff loaded; reload before editing`;
+  return `${path} has changed on the branch since this diff loaded; reload before continuing`;
 }
 
 function encodePath(path: string): string {

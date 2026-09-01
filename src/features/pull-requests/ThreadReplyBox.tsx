@@ -5,10 +5,12 @@ import { BUTTON } from '@/features/surface-ui/buttonStyles';
 
 export function ThreadReplyBox({
   busy,
+  placeholder = 'Reply…',
   onSend,
   onCancel,
 }: {
   busy: boolean;
+  placeholder?: string;
   onSend: (body: string) => void;
   onCancel: () => void;
 }) {
@@ -21,7 +23,7 @@ export function ThreadReplyBox({
         rows={2}
         value={draft}
         disabled={busy}
-        placeholder="Reply…"
+        placeholder={placeholder}
         onChange={(event) => setDraft(event.target.value)}
         onKeyDown={(event) => replyKey(event, send, onCancel)}
         className="w-full resize-y rounded bg-field px-1 py-0.5 font-serif text-[13px] leading-[1.5] text-ink outline-none"
