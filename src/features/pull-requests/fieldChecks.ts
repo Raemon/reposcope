@@ -1,8 +1,5 @@
 import { GithubRequestError } from '@/features/codebases/githubRequest';
 
-export const SHA_PATTERN = /^[0-9a-f]{40}$/;
-export const PATH_PATTERN = /^(?!\/)(?!.*(?:^|\/)\.\.(?:\/|$))[^\0]{1,1024}$/;
-
 export function text(value: unknown, name: string, allowEmpty = false): string {
   if (typeof value !== 'string' || (!allowEmpty && value === '')) {
     throw new GithubRequestError(400, `Missing or invalid ${name}`);

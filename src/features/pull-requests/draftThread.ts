@@ -1,15 +1,35 @@
-import type { DraftAnchor } from './draftThreadStore';
 import type { ReviewThread } from './reviewThreads';
 
 export const DRAFT_ROOT_ID = 0;
 
-export function isDraftThread(thread: ReviewThread): boolean {
-  return thread.comments.length === 0;
+export interface DraftAnchor {
+  owner: string;
+  repo: string;
+  number: number;
+  commitId: string;
+  path: string;
+  line: number;
+  side: 'left' | 'right';
 }
 
-export function withDraftThread(threads: ReviewThread[], anchor: DraftAnchor | null, path: string): ReviewThread[] {
-  if (anchor === null || anchor.path !== path) return threads;
+export type DraftPlace = Pick<DraftAnchor, 'owner' | 'repo' | 'path'> & { number: number | null };
+
+export function isDraftThread(thread: ReviewThread): boolean {
+  return thread.rootId === DRAFT_ROOT_ID;
+}
+
+export function withDraftThread(threads: ReviewThread[], anchor: DraftAnchor | null, place: DraftPlace): ReviewThread[] {
+  if (anchor === null || !samePlace(anchor, place)) return threads;
   return [...threads, draftThread(anchor)];
+}
+
+function samePlace(anchor: DraftAnchor, place: DraftPlace): boolean {
+  return (
+    anchor.owner === place.owner &&
+    anchor.repo === place.repo &&
+    anchor.number === place.number &&
+    anchor.path === place.path
+  );
 }
 
 function draftThread(anchor: DraftAnchor): ReviewThread {

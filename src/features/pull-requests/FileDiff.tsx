@@ -5,7 +5,7 @@ import { CodeBlockEditor } from './CodeBlockEditor';
 import { CommitEditModal } from './CommitEditModal';
 import { DiffSide, type HunkControl } from './DiffSide';
 import { useDiffLayout } from './diffLayoutStore';
-import { withDraftThread } from './draftThread';
+import { withDraftThread, type DraftAnchor } from './draftThread';
 import { startDraftThread, useDraftAnchor } from './draftThreadStore';
 import { columnLines, unifiedLines, visibleLines, type DiffLine } from './diffLines';
 import { langForPath } from './diffHighlight';
@@ -18,6 +18,7 @@ import { InlineThreads } from './InlineThreads';
 import { setDiffPaneWidth, useDiffPaneWidth } from './diffPaneWidth';
 import { DragHandle, useDragWidth } from './ResizableColumn';
 import { useFileThreads } from './reviewThreadStore';
+import { SHA_PATTERN } from './routeParams';
 import { splitDiff, type DiffRow } from './splitDiff';
 import { useCodeCollapse } from './useCodeCollapse';
 import { useDefinitionClick } from './useDefinitionClick';
@@ -25,7 +26,7 @@ import { useDiffTokens, useIntralineEmphasis } from './useDiffSideHighlight';
 import { useHeightTransition } from './useHeightTransition';
 import { useHunkEdit, type HunkEdit, type HunkEditControls } from './useHunkEdit';
 import { hunkHint, useWholeFile, type WholeFile } from './useWholeFile';
-import type { ChangedFile } from './pullRequests';
+import type { ChangedFile, PullRequestSummary } from './pullRequests';
 import { WHOLE_FILE_STATUS } from './wholeFileEntry';
 import { useGithubToken } from '@/features/sources/sourceStore';
 
@@ -71,14 +72,18 @@ export function FileDiff({
   const editBlock = hunkEdit.edit?.block ?? null;
   const fileThreads = useFileThreads(file.filename);
   const draftAnchor = useDraftAnchor();
-  const threads = useMemo(() => withDraftThread(fileThreads, draftAnchor, file.filename), [fileThreads, draftAnchor, file.filename]);
+  const threads = useMemo(
+    () => withDraftThread(fileThreads, draftAnchor, { owner, repo, number: pull?.number ?? null, path: file.filename }),
+    [fileThreads, draftAnchor, owner, repo, pull, file.filename],
+  );
   const collapse = useCodeCollapse(rows, showingWholeFile, file.filename, threads, editBlock);
   const lines = useMemo(() => foldedLines(rows, collapse.hidden), [rows, collapse.hidden]);
   const growing = useHeightTransition(rows, collapse.hidden);
   const expand = expandControl(wholeFile, showingWholeFile, hunkEdit, setWantWholeFile);
   const onCodePress = useDefinitionClick(file, baseRef, headRef);
-  const onDraftThread = draftThreadStarter(file.filename, token !== null && pull !== null);
-  const shared = { rows, tokens, emphasis, expand, anchors: collapse.anchors, onCodePress, onDraftThread };
+  const draftable = useMemo(() => (showingWholeFile ? patchLineKeys(patchRows) : null), [showingWholeFile, patchRows]);
+  const draftThreadAt = draftThreadStarter(draftBase(owner, repo, pull, headRef, file.filename, token), draftable);
+  const shared = { rows, tokens, emphasis, expand, anchors: collapse.anchors, onCodePress, draftThreadAt };
   const bounds = { hidden: collapse.hidden, stopAtBlankLines: showingWholeFile };
   const editing = {
     editable: pull !== null,
@@ -125,9 +130,40 @@ export function FileDiff({
   );
 }
 
-function draftThreadStarter(path: string, allowed: boolean) {
-  if (!allowed) return undefined;
-  return (line: number, side: 'left' | 'right') => startDraftThread({ path, line, side });
+type DraftBase = Omit<DraftAnchor, 'line' | 'side'>;
+
+function draftBase(
+  owner: string,
+  repo: string,
+  pull: PullRequestSummary | null,
+  commitId: string,
+  path: string,
+  token: string | null,
+): DraftBase | null {
+  if (pull === null || token === null || !SHA_PATTERN.test(commitId)) return null;
+  return { owner, repo, number: pull.number, commitId, path };
+}
+
+function draftThreadStarter(base: DraftBase | null, draftable: Set<string> | null) {
+  if (base === null) return undefined;
+  return (line: number, side: 'left' | 'right') =>
+    draftable && !draftable.has(lineKey(side, line)) ? null : () => startDraftThread({ ...base, line, side });
+}
+
+// GitHub rejects a comment on a line outside the diff, so expanded rows offer no button.
+function patchLineKeys(rows: DiffRow[]): Set<string> {
+  return new Set(rows.filter((row) => row.kind !== 'hunk').flatMap(rowLineKeys));
+}
+
+function rowLineKeys(row: DiffRow): string[] {
+  const keys: string[] = [];
+  if (row.left) keys.push(lineKey('left', row.left.line));
+  if (row.right) keys.push(lineKey('right', row.right.line));
+  return keys;
+}
+
+function lineKey(side: 'left' | 'right', line: number): string {
+  return `${side}:${line}`;
 }
 
 function useFoldCommandWholeFile(hunkEdit: HunkEditControls, setWantWholeFile: (next: boolean) => void) {

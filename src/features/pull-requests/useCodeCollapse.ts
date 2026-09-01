@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { collapseRegions, type CollapseRegion } from './collapseRegions';
 import { rowOf } from './commentAnchors';
+import { isDraftThread } from './draftThread';
 import type { EditableBlock } from './editableBlocks';
 import { useFoldCommand, type FoldMode } from './foldModeStore';
 import { allLinesDeleted, innerRows } from './foldSpan';
@@ -89,7 +90,17 @@ function useTreeRegions(rows: DiffRow[], contiguous: boolean, filename: string):
   return held.regions;
 }
 
-function threadRowIndexes(threads: ReviewThread[], rows: DiffRow[]): Set<number> {
+interface ThreadRows {
+  posted: Set<number>;
+  any: Set<number>;
+}
+
+function threadRowIndexes(threads: ReviewThread[], rows: DiffRow[]): ThreadRows {
+  const posted = threads.filter((thread) => !isDraftThread(thread));
+  return { posted: rowIndexes(posted, rows), any: rowIndexes(threads, rows) };
+}
+
+function rowIndexes(threads: ReviewThread[], rows: DiffRow[]): Set<number> {
   const found = new Set<number>();
   for (const thread of threads) {
     const index = rowOf(thread, rows);
@@ -98,9 +109,13 @@ function threadRowIndexes(threads: ReviewThread[], rows: DiffRow[]): Set<number>
   return found;
 }
 
+function countIn(rows: number[], within: Set<number>): number {
+  return rows.filter((row) => within.has(row)).length;
+}
+
 function buildCollapse(
   regions: CollapseRegion[],
-  threadRows: Set<number>,
+  threadRows: ThreadRows,
   edit: EditableBlock | null,
   mode: FoldMode,
   overrides: Overrides,
@@ -111,11 +126,12 @@ function buildCollapse(
   const hidden = new Set<number>();
   const foldable = regions.filter((region) => !regionOverlapsEdit(region, edit));
   for (const region of foldable) {
-    const hiddenThreads = innerRows(region).filter((row) => threadRows.has(row)).length;
-    const collapsed = overrides[region.key] ?? modeCollapsed(region, hiddenThreads, mode, allDeleted);
+    const inner = innerRows(region);
+    const hiddenThreads = countIn(inner, threadRows.posted);
+    const collapsed = overrides[region.key] ?? modeCollapsed(region, countIn(inner, threadRows.any), mode, allDeleted);
     const toggle = () => setOverride(collapsed ? expansionFrom(foldable, region) : { [region.key]: true });
     anchors.set(region.start, { region, collapsed, hiddenThreads, toggle });
-    if (collapsed) for (const row of innerRows(region)) hidden.add(row);
+    if (collapsed) for (const row of inner) hidden.add(row);
   }
   return { anchors, hidden };
 }

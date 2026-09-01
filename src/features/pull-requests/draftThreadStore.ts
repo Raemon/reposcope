@@ -1,12 +1,7 @@
 'use client';
 
+import type { DraftAnchor } from './draftThread';
 import { memoryPref, usePref } from './localPref';
-
-export interface DraftAnchor {
-  path: string;
-  line: number;
-  side: 'left' | 'right';
-}
 
 const draftAnchor = memoryPref<DraftAnchor | null>(null);
 

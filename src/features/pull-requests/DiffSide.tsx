@@ -20,7 +20,7 @@ const ROW = 'flex h-[15px] items-center gap-1 leading-[15px]';
 const BLANK_ROW = 'flex h-[4px] items-center gap-1 leading-[4px]';
 const GUTTER = 'relative flex w-[46px] shrink-0 select-none items-center text-[9px] text-ink-dim';
 const DRAFT_BTN =
-  'absolute left-0 flex h-[15px] w-[11px] items-center justify-center rounded-sm bg-btn text-[10px] leading-none text-ink-dim opacity-0 hover:bg-btn-hover hover:text-ink group-hover:opacity-100';
+  'absolute left-0 flex h-[15px] w-[11px] items-center justify-center rounded-sm bg-btn text-[10px] leading-none text-ink-dim opacity-0 hover:bg-btn-hover hover:text-ink focus-visible:opacity-100 group-hover:opacity-100';
 const TOUCHED_MARK = 'bg-add-bg/60 shadow-[inset_2px_0_0_var(--add-emph)]';
 const STICKY_CHIP = 'sticky right-0 shrink-0 rounded bg-procgen px-1 hover:bg-btn-hover hover:text-ink';
 const EDIT_BTN = `${STICKY_CHIP} uppercase tracking-[0.14em]`;
@@ -47,7 +47,7 @@ export interface SideProps {
   editedRows?: EditableBlock | null;
   spacer?: { afterRow: number; height: number } | null;
   onCodePress?: CodePress;
-  onDraftThread?: (line: number, side: 'left' | 'right') => void;
+  draftThreadAt?: (line: number, side: 'left' | 'right') => (() => void) | null;
 }
 
 export function DiffSide(props: SideProps) {
@@ -82,7 +82,7 @@ function DiffLines({
   onEditBlock,
   spacer,
   onCodePress,
-  onDraftThread,
+  draftThreadAt,
 }: SideProps & { from: number; to: number }) {
   if (from >= to) return null;
   const spacerLine = spacer ? lastLineOfRow(lines, spacer.afterRow) : -1;
@@ -106,7 +106,7 @@ function DiffLines({
                 editable={editable}
                 onEdit={editStarter(rows, line.row, onEditBlock)}
                 onCodePress={onCodePress}
-                onDraft={draftStarter(rows, line, onDraftThread)}
+                onDraft={draftStarter(rows, line, draftThreadAt)}
               />
               {spacerLine === index && <div style={{ height: spacer?.height }} />}
             </Fragment>
@@ -146,13 +146,13 @@ function editStarter(rows: DiffRow[], index: number, onEditBlock?: (rowIndex: nu
   return () => onEditBlock(index + (hunk ? 1 : 0));
 }
 
-function draftStarter(rows: DiffRow[], line: DiffLine, onDraftThread?: SideProps['onDraftThread']) {
+function draftStarter(rows: DiffRow[], line: DiffLine, draftThreadAt?: SideProps['draftThreadAt']) {
   const target = draftTarget(rows[line.row], line);
-  if (!onDraftThread || !target) return undefined;
-  return () => onDraftThread(target.line, target.side);
+  if (!draftThreadAt || !target) return undefined;
+  return draftThreadAt(target.line, target.side) ?? undefined;
 }
 
-// Context rows carry both numberings; comment on the head file so the anchor survives.
+// GitHub wants RIGHT for unchanged lines; LEFT is only for deletions.
 function draftTarget(row: DiffRow | undefined, line: DiffLine): { line: number; side: 'left' | 'right' } | null {
   if (!row || line.blank) return null;
   const side = line.side === 'left' && row.kind === 'context' ? 'right' : line.side;

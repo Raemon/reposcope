@@ -1,5 +1,6 @@
 import { GithubRequestError } from '@/features/codebases/githubRequest';
-import { counting, matching, text, PATH_PATTERN, SHA_PATTERN } from './fieldChecks';
+import { counting, matching, text } from './fieldChecks';
+import { PATH_PATTERN, SHA_PATTERN } from './routeParams';
 import type { FileDeletion, FileEdit } from './pullRequests';
 
 export const COMMIT_NUMBER_PATTERN = /^[1-9][0-9]{0,8}$/;

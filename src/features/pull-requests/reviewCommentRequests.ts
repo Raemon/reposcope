@@ -1,11 +1,12 @@
 import { GithubRequestError } from '@/features/codebases/githubRequest';
-import { counting, matching, text, PATH_PATTERN, SHA_PATTERN } from './fieldChecks';
-import type { ReviewThreadDraft } from './reviewThreads';
+import { counting, matching, text } from './fieldChecks';
+import type { NewReviewComment } from './reviewThreads';
+import { PATH_PATTERN, SHA_PATTERN } from './routeParams';
 
 const MAX_BODY_CHARS = 65_536;
 
-export function reviewThreadDraft(body: unknown): ReviewThreadDraft {
-  const asked = body as Partial<ReviewThreadDraft> | null;
+export function newReviewComment(body: unknown): NewReviewComment {
+  const asked = body as Partial<NewReviewComment> | null;
   return {
     body: commentBody(asked?.body),
     commitId: matching(asked?.commitId, 'commitId', SHA_PATTERN),
@@ -15,7 +16,7 @@ export function reviewThreadDraft(body: unknown): ReviewThreadDraft {
   };
 }
 
-function commentBody(value: unknown): string {
+export function commentBody(value: unknown): string {
   const given = text(value, 'body');
   if (given.length > MAX_BODY_CHARS) throw new GithubRequestError(413, 'Comment body is too long');
   return given;

@@ -16,7 +16,7 @@ export interface ReviewComment {
   viewerReacted: boolean;
 }
 
-export interface ReviewThreadDraft {
+export interface NewReviewComment {
   body: string;
   commitId: string;
   path: string;
@@ -85,20 +85,19 @@ export async function createReviewThread(
   owner: string,
   name: string,
   number: number,
-  draft: ReviewThreadDraft,
+  comment: NewReviewComment,
 ): Promise<ReviewComment> {
   requireGithubUser('starting a review thread');
-  await openPullAtHead(owner, name, number, draft.commitId, draft.path);
+  await openPullAtHead(owner, name, number, comment.commitId, comment.path);
   const posted = await githubSend<GithubReviewComment>(
     `${API}/repos/${owner}/${name}/pulls/${number}/comments`,
     'POST',
-    newCommentBody(draft),
+    githubCommentFields(comment),
   );
   return reviewComment(posted);
 }
 
-function newCommentBody(draft: ReviewThreadDraft): Record<string, unknown> {
-  const { body, commitId, path, line, side } = draft;
+function githubCommentFields({ body, commitId, path, line, side }: NewReviewComment): Record<string, unknown> {
   return { body, commit_id: commitId, path, line, side: side.toUpperCase() };
 }
 
