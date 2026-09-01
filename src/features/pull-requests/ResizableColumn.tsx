@@ -22,6 +22,10 @@ export function collapsibleColumn(size: ColumnSize, onSize: (next: ColumnSize) =
 
 export type DragEdge = 'left' | 'right';
 
+export type ColumnSide = 'left' | 'right';
+
+const OUTER_EDGE: Record<ColumnSide, string> = { left: 'md:border-r', right: 'md:border-l' };
+
 export function useDragWidth(size: ColumnSize, onSize: (next: ColumnSize) => void, edge: DragEdge = 'right') {
   return useCallback(
     (event: ReactPointerEvent<HTMLElement>) => {
@@ -72,6 +76,7 @@ export function CollapsedColumn({
   icon,
   preview,
   focused,
+  side,
   onExpand,
   onPointerDown,
   onPointerLeave,
@@ -80,6 +85,7 @@ export function CollapsedColumn({
   icon: string;
   preview?: ReactNode;
   focused: boolean;
+  side: ColumnSide;
   onExpand: () => void;
   onPointerDown: () => void;
   onPointerLeave: () => void;
@@ -91,7 +97,7 @@ export function CollapsedColumn({
       onPointerDown={onPointerDown}
       onPointerLeave={onPointerLeave}
       aria-label={`Expand ${title}`}
-      className={`flex w-full shrink-0 items-center gap-1.5 border-b px-1.5 py-1 text-[10px] uppercase tracking-[0.18em] text-ink-dim hover:text-ink md:w-7 md:min-h-0 md:flex-col md:gap-2.5 md:border-b-0 md:border-r md:px-0 ${columnEdge(focused)}`}
+      className={`flex w-full shrink-0 items-center gap-1.5 border-b px-1.5 py-1 text-[10px] uppercase tracking-[0.18em] text-ink-dim hover:text-ink md:w-7 md:min-h-0 md:flex-col md:gap-2.5 md:border-b-0 ${OUTER_EDGE[side]} md:px-0 ${columnEdge(focused)}`}
     >
       <span aria-hidden className="shrink-0 text-[11px] leading-none">{icon}</span>
       <span className="shrink-0 overflow-hidden md:max-h-[40%] md:[writing-mode:vertical-rl]">{title}</span>
@@ -188,11 +194,12 @@ interface ColumnProps {
   action?: ReactNode;
   footer?: ReactNode;
   tone?: string;
+  side?: ColumnSide;
   children: ReactNode;
 }
 
 export function ResizableColumn(props: ColumnProps) {
-  const { navId, title, icon, note, preview, size, onSize, action, footer, tone = 'bg-panel', children } = props;
+  const { navId, title, icon, note, preview, size, onSize, action, footer, tone = 'bg-panel', side = 'left', children } = props;
   const nav = useColumnNav(navId);
   const startDrag = useDragWidth(size, onSize);
   const pane = usePaneMode(navId);
@@ -213,6 +220,7 @@ export function ResizableColumn(props: ColumnProps) {
         icon={icon}
         preview={preview}
         focused={nav.focused}
+        side={side}
         onExpand={() => onSize({ ...size, open: true })}
         onPointerDown={nav.focus}
         onPointerLeave={nav.clearHover}
@@ -222,7 +230,7 @@ export function ResizableColumn(props: ColumnProps) {
     <section
       onPointerDown={nav.focus}
       onPointerLeave={nav.clearHover}
-      className={`relative flex w-full shrink-0 flex-col border-b md:w-[var(--col-w)] md:min-h-0 md:border-b-0 md:border-r ${columnEdge(nav.focused, tone)}`}
+      className={`relative flex w-full shrink-0 flex-col border-b md:w-[var(--col-w)] md:min-h-0 md:border-b-0 ${OUTER_EDGE[side]} ${columnEdge(nav.focused, tone)}`}
       style={{ '--col-w': `${size.width}px` } as CSSProperties}
     >
       <ColumnHeader
@@ -242,7 +250,7 @@ export function ResizableColumn(props: ColumnProps) {
 }
 
 function columnEdge(focused: boolean, tone = 'bg-panel'): string {
-  return focused ? 'border-accent bg-btn' : `border-panel-edge ${tone}`;
+  return focused ? 'border-accent/35 bg-btn' : `border-panel-edge ${tone}`;
 }
 
 function headerTone(row: ColumnRow, focused: boolean): string {

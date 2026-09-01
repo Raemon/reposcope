@@ -27,6 +27,7 @@ export function AiChatColumn({ owner, repo, subject, headRef }: { owner: string;
   return (
     <ResizableColumn
       navId="ai-chat"
+      side="right"
       icon={ICON}
       title="ai chat"
       note={key === null ? 'needs key' : statusLabel(session)}
