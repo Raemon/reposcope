@@ -189,7 +189,7 @@ function DiffLineView({
           className={folded ? `${CODE} min-w-0 overflow-hidden text-ellipsis` : CODE}
           onClick={onCodePress ? (event) => onCodePress(line, event) : undefined}
         >
-          {(folded ? dimAroundName(segments, cell.text) : segments).map((segment, index) => (
+          {(folded ? dimAroundName(segments, lineTokens) : segments).map((segment, index) => (
             <span
               key={index}
               className={segment.emphasized ? emphasisTone(side) : undefined}

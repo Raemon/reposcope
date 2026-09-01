@@ -1,15 +1,17 @@
-import { DECLARATION_WORDS, type CodeSegment } from './codeSegments';
+import type { CodeSegment } from './codeSegments';
+import type { ThemedToken } from './diffHighlight';
 
-const KEYWORD_OPACITY = 0.3;
+const KEYWORD_OPACITY = 0.45;
 const TAIL_OPACITY = 0.6;
+const LEADING_SCOPES = /^(keyword|storage|punctuation|comment|meta\.brace)/;
 
 interface NameSpan {
   start: number;
   end: number;
 }
 
-export function dimAroundName(segments: CodeSegment[], text: string): CodeSegment[] {
-  const name = declaredName(text);
+export function dimAroundName(segments: CodeSegment[], tokens: ThemedToken[] | null): CodeSegment[] {
+  const name = tokens && declaredName(tokens);
   if (!name) return segments;
   let offset = 0;
   return segments.flatMap((segment) => {
@@ -19,12 +21,22 @@ export function dimAroundName(segments: CodeSegment[], text: string): CodeSegmen
   });
 }
 
-function declaredName(text: string): NameSpan | null {
-  for (const match of text.matchAll(/[A-Za-z_$][\w$]*/g)) {
-    if (DECLARATION_WORDS.has(match[0])) continue;
-    return { start: match.index, end: match.index + match[0].length };
+function declaredName(tokens: ThemedToken[]): NameSpan | null {
+  let at = 0;
+  for (const token of tokens) {
+    if (namesTheBlock(token)) return { start: at, end: at + token.content.length };
+    at += token.content.length;
   }
   return null;
+}
+
+function namesTheBlock(token: ThemedToken): boolean {
+  return /\w/.test(token.content) && !LEADING_SCOPES.test(innermostScope(token));
+}
+
+function innermostScope(token: ThemedToken): string {
+  const scopes = token.explanation?.[0]?.scopes ?? [];
+  return scopes[scopes.length - 1]?.scopeName ?? '';
 }
 
 function dimSegment(segment: CodeSegment, start: number, name: NameSpan): CodeSegment[] {
