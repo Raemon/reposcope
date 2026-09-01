@@ -17,7 +17,7 @@ import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 
 const ROW = 'flex h-[15px] items-center gap-1 leading-[15px]';
 // Literal px; Tailwind can't compile computed classes. Sync with BLANK_ROW_HEIGHT.
-const BLANK_ROW = 'flex h-[8px] items-center gap-1 leading-[8px]';
+const BLANK_ROW = 'flex h-[4px] items-center gap-1 leading-[4px]';
 const GUTTER = 'flex w-[46px] shrink-0 select-none items-center text-[9px] text-ink-dim';
 const TOUCHED_MARK = 'bg-add-bg/60 shadow-[inset_2px_0_0_var(--add-emph)]';
 const STICKY_CHIP = 'sticky right-0 shrink-0 rounded bg-procgen px-1 hover:bg-btn-hover hover:text-ink';
