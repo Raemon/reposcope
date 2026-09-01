@@ -6,6 +6,7 @@ export interface CodeSegment {
   content: string;
   style?: CSSProperties;
   emphasized: boolean;
+  opacity?: number;
 }
 
 export function codeSegments(
@@ -18,7 +19,7 @@ export function codeSegments(
   return splitColoredByRanges(colored, ranges);
 }
 
-const DECLARATION_WORDS = new Set([
+export const DECLARATION_WORDS = new Set([
   'export', 'import', 'default', 'function', 'interface', 'type', 'class', 'enum', 'namespace',
   'abstract', 'async', 'const', 'let', 'var', 'static', 'public', 'private', 'protected', 'readonly',
   'declare', 'extends', 'implements', 'def', 'fn', 'func', 'struct', 'impl', 'trait', 'module',

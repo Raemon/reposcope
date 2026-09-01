@@ -2,7 +2,8 @@
 
 import { Fragment, type ReactNode } from 'react';
 import { hunkHasEditableLines, type EditableBlock } from './editableBlocks';
-import { codeSegments } from './codeSegments';
+import { codeSegments, type CodeSegment } from './codeSegments';
+import { dimAroundName } from './foldDimming';
 import { collapsedPreview } from './collapsedPreview';
 import { diffEditModeOn } from './editModeStore';
 import type { DiffLine } from './diffLines';
@@ -23,7 +24,10 @@ const TOUCHED_MARK = 'bg-add-bg/60 shadow-[inset_2px_0_0_var(--add-emph)]';
 const STICKY_CHIP = 'sticky right-0 shrink-0 rounded bg-procgen px-1 hover:bg-btn-hover hover:text-ink';
 const EDIT_BTN = `${STICKY_CHIP} uppercase tracking-[0.14em]`;
 const FOLD_BADGE = `${STICKY_CHIP} ml-1 text-[9px] italic text-ink-dim`;
-const FOLD_PREVIEW = 'diff-code max-w-[90ch] shrink overflow-hidden text-ellipsis whitespace-pre pl-2 text-[11px] text-ink-dim/70';
+const FOLD_PREVIEW = 'diff-code max-w-[90ch] shrink-[999] overflow-hidden text-ellipsis whitespace-pre pl-2 text-[11px] text-ink-dim/70';
+const CODE = 'diff-code whitespace-pre pr-2 text-[11px]';
+// 100cqw is the visible column width; the subtraction leaves the fold badge room past the ellipsis.
+const FOLDED_TEXT = 'flex min-w-0 max-w-[calc(100cqw-150px)] overflow-hidden';
 
 export interface HunkControl {
   expanded: boolean;
@@ -84,7 +88,7 @@ function DiffLines({
   const spacerLine = spacer ? lastLineOfRow(lines, spacer.afterRow) : -1;
   const rowsWithRightLine = rowsShownOnRight(lines);
   return (
-    <div className="min-w-0 flex-1 overflow-x-auto">
+    <div className="@container min-w-0 flex-1 overflow-x-auto">
       <div className="w-max min-w-full">
         {lines.slice(from, to).map((line, offset) => {
           const index = from + offset;
@@ -172,30 +176,38 @@ function DiffLineView({
   if (!cell) return <div className={`${row} bg-procgen/40`} />;
   const changed = line.kind === 'change';
   const openable = Boolean(editable && side === 'right');
+  const folded = Boolean(anchor?.collapsed);
+  const segments = codeSegments(cell.text, lineTokens, changed ? ranges : null);
   return (
     <div
       className={`group ${row} ${lineTone(side, changed, line.touched)} ${openable ? 'cursor-text' : ''}`}
       onClick={openable && onEdit ? (event) => opensEditor(event.detail) && onEdit() : undefined}
     >
       <GutterCell line={line.blank ? null : cell.line} anchor={anchor} />
-      <span
-        className="diff-code whitespace-pre pr-2 text-[11px]"
-        onClick={onCodePress ? (event) => onCodePress(line, event) : undefined}
-      >
-        {codeSegments(cell.text, lineTokens, changed ? ranges : null).map((segment, index) => (
-          <span
-            key={index}
-            className={segment.emphasized ? emphasisTone(side) : undefined}
-            style={segment.style}
-          >
-            {segment.content}
-          </span>
-        ))}
+      <span className={folded ? FOLDED_TEXT : 'contents'}>
+        <span
+          className={folded ? `${CODE} min-w-0 overflow-hidden text-ellipsis` : CODE}
+          onClick={onCodePress ? (event) => onCodePress(line, event) : undefined}
+        >
+          {(folded ? dimAroundName(segments, cell.text) : segments).map((segment, index) => (
+            <span
+              key={index}
+              className={segment.emphasized ? emphasisTone(side) : undefined}
+              style={segmentStyle(segment)}
+            >
+              {segment.content}
+            </span>
+          ))}
+        </span>
+        {preview && <span className={FOLD_PREVIEW}>{preview}</span>}
       </span>
-      {preview && <span className={FOLD_PREVIEW}>{preview}</span>}
-      {anchor?.collapsed && <FoldBadge anchor={anchor} />}
+      {folded && anchor && <FoldBadge anchor={anchor} />}
     </div>
   );
+}
+
+function segmentStyle(segment: CodeSegment) {
+  return segment.opacity === undefined ? segment.style : { ...segment.style, opacity: segment.opacity };
 }
 
 function opensEditor(clickCount: number): boolean {
