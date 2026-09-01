@@ -6,6 +6,7 @@ import { codeSegments } from './codeSegments';
 import { dimAroundName } from './foldDimming';
 import { collapsedPreview } from './collapsedPreview';
 import { diffEditModeOn } from './editModeStore';
+import { foldsCollapsed, useFoldCommand } from './foldModeStore';
 import type { DiffLine } from './diffLines';
 import type { ThemedToken } from './diffHighlight';
 import type { CharRange, IntralineRanges } from './intralineDiff';
@@ -84,6 +85,7 @@ function DiffLines({
   spacer,
   onCodePress,
 }: SideProps & { from: number; to: number }) {
+  const dim = foldsCollapsed(useFoldCommand().mode);
   if (from >= to) return null;
   const spacerLine = spacer ? lastLineOfRow(lines, spacer.afterRow) : -1;
   const rowsWithRightLine = rowsShownOnRight(lines);
@@ -103,6 +105,7 @@ function DiffLines({
                 ranges={rangesFor(emphasis[line.row], line.side)}
                 expand={expand}
                 anchor={anchor}
+                dim={dim}
                 editable={editable}
                 onEdit={editStarter(rows, line.row, onEditBlock)}
                 onCodePress={onCodePress}
@@ -153,6 +156,7 @@ function DiffLineView({
   expand,
   anchor,
   preview,
+  dim,
   editable,
   onEdit,
   onCodePress,
@@ -164,6 +168,7 @@ function DiffLineView({
   ranges: CharRange[] | null;
   expand: HunkControl;
   anchor: CollapseAnchor | null;
+  dim: boolean;
   editable?: boolean;
   onEdit?: () => void;
   onCodePress?: CodePress;
@@ -189,7 +194,7 @@ function DiffLineView({
           className={folded ? `${CODE} min-w-0 overflow-hidden text-ellipsis` : CODE}
           onClick={onCodePress ? (event) => onCodePress(line, event) : undefined}
         >
-          {(folded ? dimAroundName(segments, lineTokens) : segments).map((segment, index) => (
+          {(dim ? dimAroundName(segments, lineTokens) : segments).map((segment, index) => (
             <span
               key={index}
               className={segment.emphasized ? emphasisTone(side) : undefined}
