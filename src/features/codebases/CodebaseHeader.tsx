@@ -77,25 +77,30 @@ function CodebaseMenu({ reading }: { reading: RepoRef | null }) {
     >
       {() => (
         <>
-          <MenuRow href={ALL_PULLS} active={readingAllPulls} label="All">
-            open pull requests from every codebase, newest first
-          </MenuRow>
           {!ready ? (
-            <p className="px-2 py-1 text-[11px] leading-4 text-ink-dim">Loading…</p>
+            <>
+              <AllPullsRow active={readingAllPulls} />
+              <p className="px-2 py-1 text-[11px] leading-4 text-ink-dim">Loading…</p>
+            </>
           ) : sources.length === 0 ? (
-            reading ? (
-              <ReadingRow reading={reading} />
-            ) : (
-              <p className="px-2 py-1 text-[11px] leading-4 text-ink-dim">
-                No repositories yet.{' '}
-                <Link href="/" className="text-accent underline">
-                  Add one
-                </Link>{' '}
-                to get started.
-              </p>
-            )
+            <>
+              <AllPullsRow active={readingAllPulls} />
+              {reading ? (
+                <ReadingRow reading={reading} />
+              ) : (
+                <p className="px-2 py-1 text-[11px] leading-4 text-ink-dim">
+                  No repositories yet.{' '}
+                  <Link href="/" className="text-accent underline">
+                    Add one
+                  </Link>{' '}
+                  to get started.
+                </p>
+              )}
+            </>
           ) : (
-            <CodebaseList groups={sidebarGroups(sources, results)} />
+            <CodebaseList groups={sidebarGroups(sources, results)} autoFocusFilter>
+              <AllPullsRow active={readingAllPulls} />
+            </CodebaseList>
           )}
           {connected && (
             <div className="border-t border-panel-edge px-2 py-1">
@@ -112,6 +117,14 @@ function CodebaseMenu({ reading }: { reading: RepoRef | null }) {
         </>
       )}
     </HeaderMenu>
+  );
+}
+
+function AllPullsRow({ active }: { active: boolean }) {
+  return (
+    <MenuRow href={ALL_PULLS} active={active} label="All">
+      open pull requests from every codebase, newest first
+    </MenuRow>
   );
 }
 
