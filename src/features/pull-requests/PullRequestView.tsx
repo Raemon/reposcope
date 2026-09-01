@@ -31,7 +31,7 @@ export function PullRequestView({
   const pull = pullState.data;
 
   usePollWhileVisible(pullState.reload, ready);
-  useMarkSeenAfterDwell(pullSeenKey(owner, repo, number), pull?.pull.headSha ?? null);
+  useMarkSeenAfterDwell(pullSeenKey(owner, repo, number), markableSha(pull?.pull));
 
   const latestReload = useRef(pullState.reload);
   latestReload.current = pullState.reload;
@@ -68,6 +68,10 @@ export function PullRequestView({
       editableWhole={editablePull(pull.pull)}
     />
   );
+}
+
+function markableSha(pull: PullRequestSummary | undefined): string | null {
+  return pull && pull.state === 'open' && !pull.draft ? pull.headSha : null;
 }
 
 function editablePull(pull: PullRequestSummary): PullRequestSummary | null {

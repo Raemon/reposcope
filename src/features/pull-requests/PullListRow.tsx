@@ -31,7 +31,7 @@ export const NO_PULLS = 'No matching pull requests.';
 export const TITLE_LINE = 'break-words px-2 pb-0.5 pt-1 font-serif text-[14px] leading-[1.2]';
 export const META_LINE = 'flex items-center gap-1.5 px-2 py-0.5';
 
-const ATTENTION_LABELS: Partial<Record<PullAttention, string>> = { review: 'review', new: 'new', changed: 'changed' };
+const TAGGED_ATTENTION = new Set<PullAttention>(['review', 'changed', 'new']);
 
 export function PullRowFields({
   pull,
@@ -67,13 +67,12 @@ export function PullRowFields({
 }
 
 function AttentionTag({ attention }: { attention: PullAttention }) {
-  const label = ATTENTION_LABELS[attention];
-  return label ? <RowTag accent>{label}</RowTag> : null;
+  return TAGGED_ATTENTION.has(attention) ? <RowTag accent>{attention}</RowTag> : null;
 }
 
 function RowTag({ children, accent }: { children: ReactNode; accent?: boolean }) {
   return (
-    <span className={`shrink-0 rounded bg-btn px-1 font-mono text-[9px] ${accent ? 'text-accent' : ''}`}>{children}</span>
+    <span className={`shrink-0 rounded bg-btn px-1 font-mono text-[9px]${accent ? ' text-accent' : ''}`}>{children}</span>
   );
 }
 

@@ -1,14 +1,12 @@
 'use client';
 
 import { useStandingPulls, useStandingRepoPulls } from './pullActionStore';
-import type { PullAttention } from './pullAttention';
-import { listedPulls, sortListedPulls, usePullFilters } from './pullFilterStore';
+import { attentionListing, type PullAttention } from './pullAttention';
+import { usePullFilters } from './pullFilterStore';
 import { repoPullsPath, type PullState } from './pullPaths';
 import type { CrossRepoPull, PullRequestSummary } from './pullRequests';
-import { usePullSort } from './pullSortStore';
-import { crossRepoSeenKey, pullSeenKey } from './seenPullStore';
+import { crossRepoSeenKey, pullSeenKey, useSeenPulls } from './seenPullStore';
 import { useAllPullRequests, type AllPullRequests } from './useAllPullRequests';
-import { useAttentionReader } from './usePullAttention';
 import { useIsOwnAuthor } from '@/features/github-auth/useViewerLogin';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 import { useCachedJson } from '@/features/sources/useCachedJson';
@@ -19,8 +17,8 @@ export function useRepoPullList(owner: string, repo: string) {
   const { state } = usePullFilters();
   const { data, error } = useCachedJson<PullRequestSummary[]>(repoPullsPath(owner, repo, state), token, ready);
   const standing = useStandingRepoPulls(owner, repo, data);
-  const attentionOf = useAttentionReader<PullRequestSummary>((pull) => pullSeenKey(owner, repo, pull.number));
-  return { pulls: data, listed: useListedPulls(standing, attentionOf), attentionOf, error };
+  const keyOf = (pull: PullRequestSummary) => pullSeenKey(owner, repo, pull.number);
+  return { pulls: data, ...useAttentionListing(standing, keyOf), error };
 }
 
 export function useAllPullList(): AllPullRequests & {
@@ -31,11 +29,9 @@ export function useAllPullList(): AllPullRequests & {
   const all = useAllPullRequests();
   const { state } = usePullFilters();
   const standing = useStandingPulls(all.found?.pulls);
-  const attentionOf = useAttentionReader<CrossRepoPull>(crossRepoSeenKey);
-  return { ...all, state, listed: useListedPulls(standing, attentionOf), attentionOf };
+  return { ...all, state, ...useAttentionListing(standing, crossRepoSeenKey) };
 }
 
-function useListedPulls<T extends PullRequestSummary>(pulls: T[], attentionOf: (pull: T) => PullAttention): T[] {
-  const filtered = listedPulls(pulls, usePullFilters(), useIsOwnAuthor());
-  return sortListedPulls(filtered, usePullSort(), attentionOf);
+function useAttentionListing<T extends PullRequestSummary>(pulls: T[], keyOf: (pull: T) => string) {
+  return attentionListing(pulls, keyOf, usePullFilters(), { seen: useSeenPulls(), isViewer: useIsOwnAuthor() });
 }

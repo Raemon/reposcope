@@ -3,20 +3,22 @@
 import type { ReactNode } from 'react';
 import { AllPullRequestList } from './AllPullRequestList';
 import { PullRequestList } from './PullRequestList';
-import { usePullSort } from './pullSortStore';
+import { usePullFilters } from './pullFilterStore';
 import { RepoFilesBrowser } from './RepoFilesBrowser';
 
 export function AllPullsSurface() {
+  const sortNote = useSortNote();
   return (
-    <PullsSurface heading="All pull requests" note={`across every codebase you follow, ${useSortNote()}`}>
+    <PullsSurface heading="All pull requests" note={`across every codebase you follow, ${sortNote}`}>
       <AllPullRequestList />
     </PullsSurface>
   );
 }
 
 export function RepoPullsSurface({ owner, repo }: { owner: string; repo: string }) {
+  const sortNote = useSortNote();
   return (
-    <PullsSurface heading="Pull requests" note={`in this codebase, ${useSortNote()}`}>
+    <PullsSurface heading="Pull requests" note={`in this codebase, ${sortNote}`}>
       <RepoFilesBrowser owner={owner} repo={repo}>
         <PullRequestList repo={{ owner, name: repo }} />
       </RepoFilesBrowser>
@@ -25,7 +27,7 @@ export function RepoPullsSurface({ owner, repo }: { owner: string; repo: string 
 }
 
 function useSortNote(): string {
-  return usePullSort() === 'attention' ? 'the ones needing you first' : 'most recently updated first';
+  return usePullFilters().sort === 'attention' ? 'the ones needing you first' : 'most recently updated first';
 }
 
 function PullsSurface({ heading, note, children }: { heading: string; note: string; children: ReactNode }) {

@@ -15,13 +15,18 @@ function updatedWithinLastWeek(pull: CrossRepoPull): boolean {
   return Date.now() - Date.parse(pull.updatedAt) < WEEK_MS;
 }
 
-function staysVisible(pull: CrossRepoPull, attention: PullAttention, pathname: string, cursor: string | null): boolean {
+interface AttentionRow {
+  pull: CrossRepoPull;
+  attention: PullAttention;
+}
+
+function staysVisible({ pull, attention }: AttentionRow, pathname: string, cursor: string | null): boolean {
   const route = pullRoute(pull.owner, pull.repo, pull.number);
   return attention === 'review' || updatedWithinLastWeek(pull) || pathname === route || cursor === route;
 }
 
-function widestRepoName(pulls: CrossRepoPull[]): number {
-  return pulls.reduce((widest, pull) => Math.max(widest, pull.repo.length), 0);
+function widestRepoName(rows: AttentionRow[]): number {
+  return rows.reduce((widest, { pull }) => Math.max(widest, pull.repo.length), 0);
 }
 
 export function AllPullRequestList() {
@@ -40,8 +45,9 @@ export function AllPullRequestList() {
   }
 
   const recentOnly = state === 'open' && !showingOlder;
-  const visible = listed.filter((pull) => !recentOnly || staysVisible(pull, attentionOf(pull), pathname, cursor));
-  const olderCount = listed.length - visible.length;
+  const rows = listed.map((pull) => ({ pull, attention: attentionOf(pull) }));
+  const visible = rows.filter((row) => !recentOnly || staysVisible(row, pathname, cursor));
+  const olderCount = rows.length - visible.length;
   const repoColumnCh = widestRepoName(visible);
 
   return (
@@ -49,11 +55,10 @@ export function AllPullRequestList() {
       {error && <p className={`${NOTE} text-error-ink`}>{error}</p>}
       {scanning && !error && <p className={`${NOTE} text-ink-dim`}>Reading more repositories…</p>}
       {listed.length === 0 && <p className={`${NOTE} text-ink-dim`}>{NO_PULLS}</p>}
-      {visible.map((pull) => (
+      {visible.map((row) => (
         <PullRow
-          key={`${pull.owner}/${pull.repo}#${pull.number}`}
-          pull={pull}
-          attention={attentionOf(pull)}
+          key={`${row.pull.owner}/${row.pull.repo}#${row.pull.number}`}
+          row={row}
           pathname={pathname}
           repoColumnCh={repoColumnCh}
         />
@@ -77,13 +82,11 @@ export function AllPullRequestList() {
 }
 
 function PullRow({
-  pull,
-  attention,
+  row: { pull, attention },
   pathname,
   repoColumnCh,
 }: {
-  pull: CrossRepoPull;
-  attention: PullAttention;
+  row: AttentionRow;
   pathname: string;
   repoColumnCh: number;
 }) {

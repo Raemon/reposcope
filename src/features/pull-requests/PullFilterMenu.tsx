@@ -1,12 +1,10 @@
 'use client';
 
-import { setOnlyMine, setPullState, usePullFilters } from './pullFilterStore';
-import { setPullSort, usePullSort } from './pullSortStore';
+import { setOnlyMine, setPullSort, setPullState, usePullFilters } from './pullFilterStore';
 import { PopoverMenu, type PopoverTrigger } from '@/features/surface-ui/PopoverMenu';
 
 export function PullFilterMenu() {
   const filters = usePullFilters();
-  const sort = usePullSort();
   return (
     <PopoverMenu align="right-0" panelClass="w-44 py-1" trigger={GearButton}>
       {() => (
@@ -16,7 +14,7 @@ export function PullFilterMenu() {
           <FilterCheckbox label="only my PRs" on={filters.onlyMine} onChange={setOnlyMine} />
           <FilterCheckbox
             label="sort by attention"
-            on={sort === 'attention'}
+            on={filters.sort === 'attention'}
             onChange={(on) => setPullSort(on ? 'attention' : 'updated')}
           />
         </>
