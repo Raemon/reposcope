@@ -4,6 +4,7 @@ import { Fragment, type ReactNode } from 'react';
 import { hunkHasEditableLines, type EditableBlock } from './editableBlocks';
 import { codeSegments } from './codeSegments';
 import { dimAroundName } from './foldDimming';
+import { shortenKeywords } from './keywordAbbreviations';
 import { collapsedPreview } from './collapsedPreview';
 import { diffEditModeOn } from './editModeStore';
 import { foldsCollapsed, useFoldCommand } from './foldModeStore';
@@ -194,7 +195,7 @@ function DiffLineView({
           className={folded ? `${CODE} min-w-0 overflow-hidden text-ellipsis` : CODE}
           onClick={onCodePress ? (event) => onCodePress(line, event) : undefined}
         >
-          {(dim ? dimAroundName(segments, lineTokens) : segments).map((segment, index) => (
+          {(dim ? shortenKeywords(dimAroundName(segments, lineTokens)) : segments).map((segment, index) => (
             <span
               key={index}
               className={segment.emphasized ? emphasisTone(side) : undefined}

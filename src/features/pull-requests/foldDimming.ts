@@ -1,7 +1,7 @@
 import type { CodeSegment } from './codeSegments';
 import type { ThemedToken } from './diffHighlight';
 
-const KEYWORD_OPACITY = 0.45;
+export const KEYWORD_OPACITY = 0.45;
 const TAIL_OPACITY = 0.6;
 const LEADING_SCOPES = /^(keyword|storage|punctuation|comment|meta\.brace)/;
 
