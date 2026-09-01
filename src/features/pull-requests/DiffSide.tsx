@@ -2,7 +2,7 @@
 
 import { Fragment, type ReactNode } from 'react';
 import { hunkHasEditableLines, type EditableBlock } from './editableBlocks';
-import { codeSegments, type CodeSegment } from './codeSegments';
+import { codeSegments } from './codeSegments';
 import { dimAroundName } from './foldDimming';
 import { collapsedPreview } from './collapsedPreview';
 import { diffEditModeOn } from './editModeStore';
@@ -26,7 +26,7 @@ const EDIT_BTN = `${STICKY_CHIP} uppercase tracking-[0.14em]`;
 const FOLD_BADGE = `${STICKY_CHIP} ml-1 text-[9px] italic text-ink-dim`;
 const FOLD_PREVIEW = 'diff-code max-w-[90ch] shrink-[999] overflow-hidden text-ellipsis whitespace-pre pl-2 text-[11px] text-ink-dim/70';
 const CODE = 'diff-code whitespace-pre pr-2 text-[11px]';
-// 100cqw is the visible column width; the subtraction leaves the fold badge room past the ellipsis.
+// 150px keeps the fold badge clear of the ellipsis; 100cqw is the visible column width.
 const FOLDED_TEXT = 'flex min-w-0 max-w-[calc(100cqw-150px)] overflow-hidden';
 
 export interface HunkControl {
@@ -193,7 +193,7 @@ function DiffLineView({
             <span
               key={index}
               className={segment.emphasized ? emphasisTone(side) : undefined}
-              style={segmentStyle(segment)}
+              style={{ ...segment.style, opacity: segment.opacity }}
             >
               {segment.content}
             </span>
@@ -204,10 +204,6 @@ function DiffLineView({
       {folded && anchor && <FoldBadge anchor={anchor} />}
     </div>
   );
-}
-
-function segmentStyle(segment: CodeSegment) {
-  return segment.opacity === undefined ? segment.style : { ...segment.style, opacity: segment.opacity };
 }
 
 function opensEditor(clickCount: number): boolean {
