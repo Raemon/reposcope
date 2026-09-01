@@ -1,9 +1,12 @@
 'use client';
 
 import { standingPulls, type PullTarget } from './pullActionStore';
-import { listedPulls, readPullFilters, type PullFilters } from './pullFilterStore';
+import { attentionReader } from './pullAttention';
+import { listedPulls, readPullFilters, sortListedPulls, type PullFilters } from './pullFilterStore';
 import { allPullsRoute, pullRoute, repoPullsPath } from './pullPaths';
 import type { CrossRepoPulls, PullRequestSummary } from './pullRequests';
+import { readPullSort } from './pullSortStore';
+import { crossRepoSeenKey, pullSeenKey, readSeenPulls } from './seenPullStore';
 import { allPullsCacheKey } from './useAllPullRequests';
 import { repoRoute } from '@/features/codebases/repoPaths';
 import { ownAuthorCheck } from '@/features/github-auth/useViewerLogin';
@@ -36,12 +39,18 @@ export function pullListRoute(target: PullTarget, acrossRepos: boolean): string 
 
 function cachedRepoPulls({ owner, repo }: PullTarget, token: string | null, filters: PullFilters): PullTarget[] {
   const pulls = readCachedJson<PullRequestSummary[]>(repoPullsPath(owner, repo, filters.state), token) ?? [];
-  return listedPulls(pulls, filters, ownAuthorCheck(token)).map((pull) => ({ owner, repo, number: pull.number }));
+  const listed = listedPulls(pulls, filters, ownAuthorCheck(token));
+  const ordered = orderedPulls(listed, (pull) => pullSeenKey(owner, repo, pull.number), token);
+  return ordered.map((pull) => ({ owner, repo, number: pull.number }));
 }
 
 function cachedAllPulls(token: string | null, filters: PullFilters): PullTarget[] {
   const found = readCachedJson<CrossRepoPulls>(allPullsCacheKey(filters.state), token);
-  return listedPulls(found?.pulls ?? [], filters, ownAuthorCheck(token));
+  return orderedPulls(listedPulls(found?.pulls ?? [], filters, ownAuthorCheck(token)), crossRepoSeenKey, token);
+}
+
+function orderedPulls<T extends PullRequestSummary>(pulls: T[], keyOf: (pull: T) => string, token: string | null): T[] {
+  return sortListedPulls(pulls, readPullSort(), attentionReader(keyOf, readSeenPulls(), ownAuthorCheck(token)));
 }
 
 function samePull(a: PullTarget, b: PullTarget): boolean {

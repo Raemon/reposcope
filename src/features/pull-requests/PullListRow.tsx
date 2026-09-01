@@ -7,6 +7,7 @@ import { NavListRow } from './NavListRow';
 import { collapsePullList, type PullListColumnName } from './collapsePullList';
 import type { PullTarget } from './pullActionStore';
 import { prefetchPull } from './prefetchPull';
+import type { PullAttention } from './pullAttention';
 import { pullRoute } from './pullPaths';
 import { useIsOwnAuthor } from '@/features/github-auth/useViewerLogin';
 import { useGithubToken } from '@/features/sources/sourceStore';
@@ -30,7 +31,19 @@ export const NO_PULLS = 'No matching pull requests.';
 export const TITLE_LINE = 'break-words px-2 pb-0.5 pt-1 font-serif text-[14px] leading-[1.2]';
 export const META_LINE = 'flex items-center gap-1.5 px-2 py-0.5';
 
-export function PullRowFields({ pull, repo, repoColumnCh }: { pull: PullRowSummary; repo?: string; repoColumnCh?: number }) {
+const ATTENTION_LABELS: Partial<Record<PullAttention, string>> = { review: 'review', new: 'new', changed: 'changed' };
+
+export function PullRowFields({
+  pull,
+  attention,
+  repo,
+  repoColumnCh,
+}: {
+  pull: PullRowSummary;
+  attention: PullAttention;
+  repo?: string;
+  repoColumnCh?: number;
+}) {
   const isOwnAuthor = useIsOwnAuthor();
   return (
     <>
@@ -44,6 +57,7 @@ export function PullRowFields({ pull, repo, repoColumnCh }: { pull: PullRowSumma
         <span className={ROW_META}>#{pull.number}</span>
         {!isOwnAuthor(pull.author) && <span className={ROW_META}>{pull.author}</span>}
         <span className="flex-1" />
+        <AttentionTag attention={attention} />
         {pull.draft && <RowTag>draft</RowTag>}
         {pull.state !== 'open' && <RowTag>{pull.merged ? 'merged' : 'closed'}</RowTag>}
         <RelativeTime iso={pull.updatedAt} className={ROW_META} />
@@ -52,8 +66,15 @@ export function PullRowFields({ pull, repo, repoColumnCh }: { pull: PullRowSumma
   );
 }
 
-function RowTag({ children }: { children: ReactNode }) {
-  return <span className="shrink-0 rounded bg-btn px-1 font-mono text-[9px]">{children}</span>;
+function AttentionTag({ attention }: { attention: PullAttention }) {
+  const label = ATTENTION_LABELS[attention];
+  return label ? <RowTag accent>{label}</RowTag> : null;
+}
+
+function RowTag({ children, accent }: { children: ReactNode; accent?: boolean }) {
+  return (
+    <span className={`shrink-0 rounded bg-btn px-1 font-mono text-[9px] ${accent ? 'text-accent' : ''}`}>{children}</span>
+  );
 }
 
 export function PullListRow({

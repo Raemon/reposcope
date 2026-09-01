@@ -7,6 +7,7 @@ import { ReviewWorkspace } from './ReviewWorkspace';
 import { setCurrentPull } from './currentPullStore';
 import { pullFilesPath, pullPath } from './pullPaths';
 import type { PullRequestCommits, PullRequestSummary } from './pullRequests';
+import { pullSeenKey, useMarkSeenAfterDwell } from './seenPullStore';
 import { useStickyColumn } from './stickyColumns';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 import { useCachedJson } from '@/features/sources/useCachedJson';
@@ -30,6 +31,7 @@ export function PullRequestView({
   const pull = pullState.data;
 
   usePollWhileVisible(pullState.reload, ready);
+  useMarkSeenAfterDwell(pullSeenKey(owner, repo, number), pull?.pull.headSha ?? null);
 
   const latestReload = useRef(pullState.reload);
   latestReload.current = pullState.reload;

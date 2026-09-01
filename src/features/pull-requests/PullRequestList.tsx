@@ -10,7 +10,7 @@ import type { RepoRef } from '@/features/sources/parseRepoLink';
 
 export function PullRequestList({ repo }: { repo: RepoRef }) {
   const pathname = usePathname();
-  const { pulls, listed, error } = useRepoPullList(repo.owner, repo.name);
+  const { pulls, listed, attentionOf, error } = useRepoPullList(repo.owner, repo.name);
 
   if (!pulls) {
     if (error) return <p className={`${LIST_NOTE} text-error-ink`}>{error}</p>;
@@ -32,7 +32,7 @@ export function PullRequestList({ repo }: { repo: RepoRef }) {
             closable={pull.state === 'open'}
             column="pulls"
           >
-            <PullRowFields pull={pull} />
+            <PullRowFields pull={pull} attention={attentionOf(pull)} />
           </PullListRow>
         );
       })}

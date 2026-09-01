@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { useColumnNav } from './columnNav';
 import { LIST_NOTE as NOTE, NO_PULLS, PullListRow, PullRowFields } from './PullListRow';
+import type { PullAttention } from './pullAttention';
 import { allPullsRoute, pullRoute } from './pullPaths';
 import type { CrossRepoPull } from './pullRequests';
 import { useAllPullList } from './usePullLists';
@@ -14,9 +15,9 @@ function updatedWithinLastWeek(pull: CrossRepoPull): boolean {
   return Date.now() - Date.parse(pull.updatedAt) < WEEK_MS;
 }
 
-function staysVisible(pull: CrossRepoPull, pathname: string, cursor: string | null): boolean {
+function staysVisible(pull: CrossRepoPull, attention: PullAttention, pathname: string, cursor: string | null): boolean {
   const route = pullRoute(pull.owner, pull.repo, pull.number);
-  return updatedWithinLastWeek(pull) || pathname === route || cursor === route;
+  return attention === 'review' || updatedWithinLastWeek(pull) || pathname === route || cursor === route;
 }
 
 function widestRepoName(pulls: CrossRepoPull[]): number {
@@ -24,7 +25,7 @@ function widestRepoName(pulls: CrossRepoPull[]): number {
 }
 
 export function AllPullRequestList() {
-  const { scanning, repoCount, found, error, listed, state } = useAllPullList();
+  const { scanning, repoCount, found, error, listed, attentionOf, state } = useAllPullList();
   const pathname = usePathname();
   const { cursor } = useColumnNav('pulls');
   const [showingOlder, setShowingOlder] = useState(false);
@@ -39,7 +40,7 @@ export function AllPullRequestList() {
   }
 
   const recentOnly = state === 'open' && !showingOlder;
-  const visible = listed.filter((pull) => !recentOnly || staysVisible(pull, pathname, cursor));
+  const visible = listed.filter((pull) => !recentOnly || staysVisible(pull, attentionOf(pull), pathname, cursor));
   const olderCount = listed.length - visible.length;
   const repoColumnCh = widestRepoName(visible);
 
@@ -52,6 +53,7 @@ export function AllPullRequestList() {
         <PullRow
           key={`${pull.owner}/${pull.repo}#${pull.number}`}
           pull={pull}
+          attention={attentionOf(pull)}
           pathname={pathname}
           repoColumnCh={repoColumnCh}
         />
@@ -76,10 +78,12 @@ export function AllPullRequestList() {
 
 function PullRow({
   pull,
+  attention,
   pathname,
   repoColumnCh,
 }: {
   pull: CrossRepoPull;
+  attention: PullAttention;
   pathname: string;
   repoColumnCh: number;
 }) {
@@ -91,7 +95,7 @@ function PullRow({
       closable={pull.state === 'open'}
       column="all-pulls"
     >
-      <PullRowFields pull={pull} repo={pull.repo} repoColumnCh={repoColumnCh} />
+      <PullRowFields pull={pull} attention={attention} repo={pull.repo} repoColumnCh={repoColumnCh} />
     </PullListRow>
   );
 }

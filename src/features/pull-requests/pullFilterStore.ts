@@ -1,8 +1,10 @@
 'use client';
 
 import { localPref, usePref } from './localPref';
+import { attentionRank, type PullAttention } from './pullAttention';
 import type { PullState } from './pullPaths';
 import type { PullRequestSummary } from './pullRequests';
+import type { PullSort } from './pullSortStore';
 
 export interface PullFilters {
   state: PullState;
@@ -35,6 +37,17 @@ export function listedPulls<T extends PullRequestSummary>(
   isOwnAuthor: (author: string) => boolean,
 ): T[] {
   return filters.onlyMine ? pulls.filter((pull) => isOwnAuthor(pull.author)) : pulls;
+}
+
+export function sortListedPulls<T extends PullRequestSummary>(
+  pulls: T[],
+  sort: PullSort,
+  attentionOf: (pull: T) => PullAttention,
+): T[] {
+  if (sort === 'updated') return pulls;
+  const ranked = pulls.map((pull) => ({ pull, rank: attentionRank(attentionOf(pull)) }));
+  ranked.sort((a, b) => a.rank - b.rank || b.pull.updatedAt.localeCompare(a.pull.updatedAt));
+  return ranked.map((entry) => entry.pull);
 }
 
 function decodePullFilters(stored: unknown): PullFilters | undefined {

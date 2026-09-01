@@ -21,6 +21,8 @@ export interface PullRequestSummary {
   draft: boolean;
   state: string;
   merged: boolean;
+  headSha: string;
+  requestedReviewers: string[];
 }
 
 export interface CrossRepoPull extends PullRequestSummary {
@@ -131,6 +133,8 @@ interface GithubPull {
   draft?: boolean;
   state: string;
   merged?: boolean;
+  merged_at?: string | null;
+  requested_reviewers?: { login: string }[] | null;
   base: { ref: string; sha: string };
   head: { ref: string; sha: string; repo?: { full_name: string } | null };
   additions?: number;
@@ -475,7 +479,9 @@ function summarizePull(pull: GithubPull): PullRequestSummary {
     updatedAt: pull.updated_at,
     draft: pull.draft ?? false,
     state: pull.state,
-    merged: pull.merged ?? false,
+    merged: pull.merged ?? Boolean(pull.merged_at),
+    headSha: pull.head.sha,
+    requestedReviewers: (pull.requested_reviewers ?? []).map((reviewer) => reviewer.login),
   };
 }
 
