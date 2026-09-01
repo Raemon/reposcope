@@ -21,6 +21,10 @@ export function useFoldCommand(): FoldCommand {
   return usePref(foldCommand);
 }
 
+export function foldsCollapsed(mode: FoldMode): boolean {
+  return mode !== 'expandAll' && mode !== 'gitDefault';
+}
+
 export function wholeFileFor(mode: FoldMode): boolean | null {
   if (mode === 'default') return true;
   if (mode === 'gitDefault') return false;

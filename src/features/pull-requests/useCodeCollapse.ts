@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { collapseRegions, type CollapseRegion } from './collapseRegions';
 import { rowOf } from './commentAnchors';
 import type { EditableBlock } from './editableBlocks';
-import { useFoldCommand, type FoldMode } from './foldModeStore';
+import { foldsCollapsed, useFoldCommand, type FoldMode } from './foldModeStore';
 import { allLinesDeleted, innerRows } from './foldSpan';
 import type { ReviewThread } from './reviewThreads';
 import type { DiffRow } from './splitDiff';
@@ -131,7 +131,7 @@ function regionOverlapsEdit(region: CollapseRegion, edit: EditableBlock | null):
 }
 
 function modeCollapsed(region: CollapseRegion, hiddenThreads: number, mode: FoldMode, allDeleted: boolean): boolean {
-  if (mode === 'expandAll' || mode === 'gitDefault') return false;
+  if (!foldsCollapsed(mode)) return false;
   if (mode === 'collapseAll') return true;
   return hiddenThreads === 0 && (allDeleted || region.imports || unchangedRegion(region));
 }

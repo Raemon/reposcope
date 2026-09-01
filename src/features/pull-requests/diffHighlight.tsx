@@ -46,6 +46,7 @@ export async function tokenizeCode(text: string, lang: string): Promise<ThemedTo
       lang: lang as Parameters<Highlighter['codeToTokens']>[1]['lang'],
       themes: { light: 'github-light', dark: 'github-dark' },
       defaultColor: false,
+      includeExplanation: 'scopeName',
     }).tokens;
   } catch {
     return null;

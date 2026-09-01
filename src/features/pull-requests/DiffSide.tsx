@@ -3,8 +3,10 @@
 import { Fragment, type ReactNode } from 'react';
 import { hunkHasEditableLines, type EditableBlock } from './editableBlocks';
 import { codeSegments } from './codeSegments';
+import { dimAroundName } from './foldDimming';
 import { collapsedPreview } from './collapsedPreview';
 import { diffEditModeOn } from './editModeStore';
+import { foldsCollapsed, useFoldCommand } from './foldModeStore';
 import type { DiffLine } from './diffLines';
 import type { ThemedToken } from './diffHighlight';
 import type { CharRange, IntralineRanges } from './intralineDiff';
@@ -23,7 +25,10 @@ const TOUCHED_MARK = 'bg-add-bg/60 shadow-[inset_2px_0_0_var(--add-emph)]';
 const STICKY_CHIP = 'sticky right-0 shrink-0 rounded bg-procgen px-1 hover:bg-btn-hover hover:text-ink';
 const EDIT_BTN = `${STICKY_CHIP} uppercase tracking-[0.14em]`;
 const FOLD_BADGE = `${STICKY_CHIP} ml-1 text-[9px] italic text-ink-dim`;
-const FOLD_PREVIEW = 'diff-code max-w-[90ch] shrink overflow-hidden text-ellipsis whitespace-pre pl-2 text-[11px] text-ink-dim/70';
+const FOLD_PREVIEW = 'diff-code max-w-[90ch] shrink-[999] overflow-hidden text-ellipsis whitespace-pre pl-2 text-[11px] text-ink-dim/70';
+const CODE = 'diff-code whitespace-pre pr-2 text-[11px]';
+// 150px keeps the fold badge clear of the ellipsis; 100cqw is the visible column width.
+const FOLDED_TEXT = 'flex min-w-0 max-w-[calc(100cqw-150px)] overflow-hidden';
 
 export interface HunkControl {
   expanded: boolean;
@@ -80,11 +85,12 @@ function DiffLines({
   spacer,
   onCodePress,
 }: SideProps & { from: number; to: number }) {
+  const dim = foldsCollapsed(useFoldCommand().mode);
   if (from >= to) return null;
   const spacerLine = spacer ? lastLineOfRow(lines, spacer.afterRow) : -1;
   const rowsWithRightLine = rowsShownOnRight(lines);
   return (
-    <div className="min-w-0 flex-1 overflow-x-auto">
+    <div className="@container min-w-0 flex-1 overflow-x-auto">
       <div className="w-max min-w-full">
         {lines.slice(from, to).map((line, offset) => {
           const index = from + offset;
@@ -99,6 +105,7 @@ function DiffLines({
                 ranges={rangesFor(emphasis[line.row], line.side)}
                 expand={expand}
                 anchor={anchor}
+                dim={dim}
                 editable={editable}
                 onEdit={editStarter(rows, line.row, onEditBlock)}
                 onCodePress={onCodePress}
@@ -149,6 +156,7 @@ function DiffLineView({
   expand,
   anchor,
   preview,
+  dim,
   editable,
   onEdit,
   onCodePress,
@@ -160,6 +168,7 @@ function DiffLineView({
   ranges: CharRange[] | null;
   expand: HunkControl;
   anchor: CollapseAnchor | null;
+  dim: boolean;
   editable?: boolean;
   onEdit?: () => void;
   onCodePress?: CodePress;
@@ -172,28 +181,32 @@ function DiffLineView({
   if (!cell) return <div className={`${row} bg-procgen/40`} />;
   const changed = line.kind === 'change';
   const openable = Boolean(editable && side === 'right');
+  const folded = Boolean(anchor?.collapsed);
+  const segments = codeSegments(cell.text, lineTokens, changed ? ranges : null);
   return (
     <div
       className={`group ${row} ${lineTone(side, changed, line.touched)} ${openable ? 'cursor-text' : ''}`}
       onClick={openable && onEdit ? (event) => opensEditor(event.detail) && onEdit() : undefined}
     >
       <GutterCell line={line.blank ? null : cell.line} anchor={anchor} />
-      <span
-        className="diff-code whitespace-pre pr-2 text-[11px]"
-        onClick={onCodePress ? (event) => onCodePress(line, event) : undefined}
-      >
-        {codeSegments(cell.text, lineTokens, changed ? ranges : null).map((segment, index) => (
-          <span
-            key={index}
-            className={segment.emphasized ? emphasisTone(side) : undefined}
-            style={segment.style}
-          >
-            {segment.content}
-          </span>
-        ))}
+      <span className={folded ? FOLDED_TEXT : 'contents'}>
+        <span
+          className={folded ? `${CODE} min-w-0 overflow-hidden text-ellipsis` : CODE}
+          onClick={onCodePress ? (event) => onCodePress(line, event) : undefined}
+        >
+          {(dim ? dimAroundName(segments, lineTokens) : segments).map((segment, index) => (
+            <span
+              key={index}
+              className={segment.emphasized ? emphasisTone(side) : undefined}
+              style={{ ...segment.style, opacity: segment.opacity }}
+            >
+              {segment.content}
+            </span>
+          ))}
+        </span>
+        {preview && <span className={FOLD_PREVIEW}>{preview}</span>}
       </span>
-      {preview && <span className={FOLD_PREVIEW}>{preview}</span>}
-      {anchor?.collapsed && <FoldBadge anchor={anchor} />}
+      {folded && anchor && <FoldBadge anchor={anchor} />}
     </div>
   );
 }
