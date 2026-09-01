@@ -36,6 +36,20 @@ export function localPref<T>(key: string, fallback: T, decode: (stored: unknown)
   };
 }
 
+export function enumPref<T extends string>(key: string, values: readonly T[], fallback: T): LocalPref<T> {
+  return localPref<T>(key, fallback, (stored) => (values.includes(stored as T) ? (stored as T) : undefined));
+}
+
+export function booleanPref(key: string, fallback: boolean): LocalPref<boolean> {
+  return localPref(key, fallback, (stored) => (typeof stored === 'boolean' ? stored : undefined));
+}
+
+export function clampedPref<T>(key: string, fallback: T, clamp: (value: number) => number): LocalPref<number | T> {
+  return localPref<number | T>(key, fallback, (stored) =>
+    typeof stored === 'number' && Number.isFinite(stored) ? clamp(stored) : undefined,
+  );
+}
+
 export function memoryPref<T>(initial: T): LocalPref<T> {
   const listeners = new Set<() => void>();
   let value = initial;

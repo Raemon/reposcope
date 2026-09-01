@@ -1,6 +1,7 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
+import { errorMessage } from '@/features/surface-ui/errorMessage';
 
 export type PullActionKind = 'merge' | 'close';
 
@@ -34,12 +35,9 @@ export function trackPullAction(target: PullTarget, kind: PullActionKind, refusa
   notePullAction({ ...target, kind, state: 'running', message: '' });
   refusal
     .then((refused) => notePullAction({ ...target, kind, state: refused ? 'failed' : 'done', message: refused ?? '' }))
-    .catch((issue: unknown) => notePullAction({ ...target, kind, state: 'failed', message: failureMessage(issue) }));
+    .catch((issue: unknown) => notePullAction({ ...target, kind, state: 'failed', message: errorMessage(issue) }));
 }
 
-function failureMessage(issue: unknown): string {
-  return issue instanceof Error ? issue.message : String(issue);
-}
 
 export function usePullActions(): PullAction[] {
   return useSyncExternalStore(

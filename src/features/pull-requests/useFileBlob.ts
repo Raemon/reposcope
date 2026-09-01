@@ -5,6 +5,7 @@ import type { ImageSource } from './imageView';
 import type { FileBlob } from './pullRequests';
 import { apiJson } from '@/features/sources/apiClient';
 import { useGithubToken } from '@/features/sources/sourceStore';
+import { errorMessage } from '@/features/surface-ui/errorMessage';
 
 const blobs = new Map<string, FileBlob>();
 const loading = new Map<string, Promise<FileBlob>>();
@@ -52,7 +53,7 @@ function followBlob(
   let live = true;
   loadBlob(path, token).then(
     (blob) => live && setValue(blob),
-    (issue: unknown) => live && setError(errorText(issue)),
+    (issue: unknown) => live && setError(errorMessage(issue)),
   );
   return () => {
     live = false;
@@ -86,6 +87,3 @@ function blobPath(owner: string, repo: string, source: ImageSource): string {
   return `/api/github/blob?owner=${encodeURIComponent(owner)}&name=${encodeURIComponent(repo)}&ref=${encodeURIComponent(source.ref)}&path=${encodeURIComponent(source.path)}`;
 }
 
-function errorText(issue: unknown): string {
-  return issue instanceof Error ? issue.message : String(issue);
-}

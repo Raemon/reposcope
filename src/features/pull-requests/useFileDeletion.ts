@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { deleteFilePath } from './pullPaths';
 import type { EditResult } from './pullRequests';
 import { apiPostJson } from '@/features/sources/apiClient';
+import { errorMessage } from '@/features/surface-ui/errorMessage';
 
 export interface FileDeletionControls {
   asking: string | null;
@@ -47,7 +48,7 @@ export function useFileDeletion({
     try {
       await postDeletion({ owner, repo, number, headRef, token, path: asking });
     } catch (issue: unknown) {
-      setFailure(issue instanceof Error ? issue.message : String(issue));
+      setFailure(errorMessage(issue));
       setDeleting(false);
       return;
     }

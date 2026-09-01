@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { apiJson } from './apiClient';
 import { readBrowserCache, writeBrowserCache } from './browserCache';
+import { errorMessage } from '@/features/surface-ui/errorMessage';
 
 export interface CachedJson<T> {
   data: T | null;
@@ -42,7 +43,7 @@ export function useCachedJson<T>(
         if (live) setHeld({ key, data, fresh: true, error: null });
       })
       .catch((issue: unknown) => {
-        if (live) setHeld({ key, data: stale, fresh: true, error: describe(issue) });
+        if (live) setHeld({ key, data: stale, fresh: true, error: errorMessage(issue) });
       });
     return () => {
       live = false;
@@ -97,6 +98,3 @@ function cacheName(key: string, token: string | null): string {
   return `${token ? 'signed-in' : 'anonymous'} ${key}`;
 }
 
-function describe(issue: unknown): string {
-  return issue instanceof Error ? issue.message : String(issue);
-}
