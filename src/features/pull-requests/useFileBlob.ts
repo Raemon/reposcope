@@ -5,7 +5,7 @@ import type { ImageSource } from './imageView';
 import type { FileBlob } from './pullRequests';
 import { apiJson } from '@/features/sources/apiClient';
 import { useGithubToken } from '@/features/sources/sourceStore';
-import { errorMessage } from '@/features/surface-ui/errorMessage';
+import { errorMessage } from '@/features/sources/errorMessage';
 
 const blobs = new Map<string, FileBlob>();
 const loading = new Map<string, Promise<FileBlob>>();
@@ -86,4 +86,3 @@ function readHeld(path: string | null): FileBlob | null {
 function blobPath(owner: string, repo: string, source: ImageSource): string {
   return `/api/github/blob?owner=${encodeURIComponent(owner)}&name=${encodeURIComponent(repo)}&ref=${encodeURIComponent(source.ref)}&path=${encodeURIComponent(source.path)}`;
 }
-

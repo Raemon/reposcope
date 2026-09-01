@@ -8,11 +8,11 @@ import { apiPost } from '@/features/sources/apiClient';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 import { useCachedJson } from '@/features/sources/useCachedJson';
+import { errorMessage } from '@/features/sources/errorMessage';
 import { FilterField } from '@/features/surface-ui/FilterField';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { PopoverMenu, type PopoverTrigger } from '@/features/surface-ui/PopoverMenu';
 import { RelativeTime } from '@/features/surface-ui/RelativeTime';
-import { errorMessage } from '@/features/surface-ui/errorMessage';
 
 const REF_TEXT = 'max-w-40 truncate font-mono text-[10px]';
 
@@ -174,4 +174,3 @@ function matchingBranches(branches: BranchOption[], skip: string[], filter: stri
   const wanted = filter.trim().toLowerCase();
   return branches.filter((branch) => !skip.includes(branch.name) && branch.name.toLowerCase().includes(wanted));
 }
-

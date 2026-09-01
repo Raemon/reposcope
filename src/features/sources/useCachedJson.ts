@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { apiJson } from './apiClient';
 import { readBrowserCache, writeBrowserCache } from './browserCache';
-import { errorMessage } from '@/features/surface-ui/errorMessage';
+import { errorMessage } from '@/features/sources/errorMessage';
 
 export interface CachedJson<T> {
   data: T | null;
@@ -97,4 +97,3 @@ function requestJson<T>(path: string, token: string | null, key: string): Promis
 function cacheName(key: string, token: string | null): string {
   return `${token ? 'signed-in' : 'anonymous'} ${key}`;
 }
-

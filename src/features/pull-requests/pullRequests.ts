@@ -12,7 +12,7 @@ import type { PullState } from './pullPaths';
 import { previewDeploymentUrl } from './previewDeployment';
 import { mapWithWorkers } from './workerPool';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
-import { errorMessage } from '@/features/surface-ui/errorMessage';
+import { errorMessage } from '@/features/sources/errorMessage';
 
 export interface PullRequestSummary {
   number: number;

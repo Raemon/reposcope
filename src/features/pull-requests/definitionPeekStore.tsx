@@ -8,7 +8,7 @@ import type { ChangedFileSet, FileText } from './pullRequests';
 import type { RepoFileSet } from './repoFiles';
 import { apiJson } from '@/features/sources/apiClient';
 import { useGithubToken } from '@/features/sources/sourceStore';
-import { errorMessage } from '@/features/surface-ui/errorMessage';
+import { errorMessage } from '@/features/sources/errorMessage';
 
 export interface PeekOrigin {
   path: string;
@@ -161,7 +161,6 @@ function loadingFrame(word: string): PeekFrame {
 function emptyFrame(word: string, note: string | null): PeekFrame {
   return { word, site: null, sites: [], view: null, note: note ?? `no definition found for ${word}`, loading: false };
 }
-
 
 function failedResolution(issue: unknown): { sites: DefinitionSite[]; note: string } {
   return { sites: [], note: errorMessage(issue) };

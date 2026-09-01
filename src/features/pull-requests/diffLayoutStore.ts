@@ -3,9 +3,11 @@
 import { enumPref, usePref } from './localPref';
 import { useNarrowViewport } from './narrowViewport';
 
-export type DiffLayout = 'split' | 'unified';
+const DIFF_LAYOUTS = ['split', 'unified'] as const;
 
-const layoutPref = enumPref<DiffLayout>('reposcope.diffLayout', ['split', 'unified'], 'split');
+export type DiffLayout = (typeof DIFF_LAYOUTS)[number];
+
+const layoutPref = enumPref<DiffLayout>('reposcope.diffLayout', DIFF_LAYOUTS, 'split');
 
 export function setDiffLayout(layout: DiffLayout): void {
   layoutPref.set(layout);

@@ -2,9 +2,9 @@
 
 import { enumPref, usePref } from './localPref';
 
-export type DiffSort = 'comments' | 'diff' | 'diffAll' | 'folder';
+const SORTS = ['comments', 'diff', 'diffAll', 'folder'] as const;
 
-const SORTS: DiffSort[] = ['comments', 'diff', 'diffAll', 'folder'];
+export type DiffSort = (typeof SORTS)[number];
 
 const sortPref = enumPref<DiffSort>('reposcope.diffSort', SORTS, 'comments');
 

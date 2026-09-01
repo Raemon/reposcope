@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { errorMessage } from '@/features/surface-ui/errorMessage';
+import { errorMessage } from '@/features/sources/errorMessage';
 
 export interface ThreadAction {
   busy: boolean;

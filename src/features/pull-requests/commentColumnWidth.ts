@@ -11,7 +11,7 @@ const EMPTY_WIDTH = 100;
 // Outweighs the diff's flex-shrink so the comment column gives up room first.
 const SHRINK_FIRST = 100;
 
-const widthPref = clampedPref<null>('reposcope.commentColumnWidth', null, clampWidth);
+const widthPref = clampedPref('reposcope.commentColumnWidth', null, clampWidth);
 
 export function useCommentColumnStyle(): CSSProperties {
   const { threads } = useReviewTarget();

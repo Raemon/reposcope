@@ -9,7 +9,7 @@ import { cursorHeaders, useCursorKey } from './cursorKeyStore';
 import { runFinished, WARMUP_PROMPT, type CursorLaunch, type CursorRun } from './cursorTypes';
 import { useCursorAccount, type CursorAccount } from './useCursorModels';
 import { apiKeyedPost } from '@/features/sources/apiClient';
-import { errorMessage } from '@/features/surface-ui/errorMessage';
+import { errorMessage } from '@/features/sources/errorMessage';
 
 export interface AiChatTarget {
   subject: string;

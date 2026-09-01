@@ -5,7 +5,7 @@ import { grantToParams } from '@/features/github-auth/grantParams';
 import { callbackUrl, failHome, NOT_CONFIGURED } from '@/features/github-auth/oauthRoute';
 import { consumeOauthState, parseOauthState } from '@/features/github-auth/oauthState';
 import { requestOrigin } from '@/features/github-auth/requestOrigin';
-import { errorMessage } from '@/features/surface-ui/errorMessage';
+import { errorMessage } from '@/features/sources/errorMessage';
 
 export async function GET(request: Request) {
   const origin = requestOrigin(request);

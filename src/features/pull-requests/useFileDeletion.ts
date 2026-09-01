@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { deleteFilePath } from './pullPaths';
 import type { EditResult } from './pullRequests';
 import { apiPostJson } from '@/features/sources/apiClient';
-import { errorMessage } from '@/features/surface-ui/errorMessage';
+import { errorMessage } from '@/features/sources/errorMessage';
 
 export interface FileDeletionControls {
   asking: string | null;

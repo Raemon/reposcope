@@ -6,7 +6,7 @@ import { fileTextPath } from './pullPaths';
 import type { ChangedFile, FileText } from './pullRequests';
 import { apiJson } from '@/features/sources/apiClient';
 import { useGithubToken } from '@/features/sources/sourceStore';
-import { errorMessage } from '@/features/surface-ui/errorMessage';
+import { errorMessage } from '@/features/sources/errorMessage';
 
 const TWO_SIDED = new Set(['modified', 'renamed', 'copied', 'changed', 'unchanged']);
 

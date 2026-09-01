@@ -1,6 +1,6 @@
 import { CursorError } from './cursorApi';
 import { CURSOR_KEY_HEADER } from './cursorTypes';
-import { errorMessage } from '@/features/surface-ui/errorMessage';
+import { errorMessage } from '@/features/sources/errorMessage';
 
 export function cursorKeyOf(request: Request): string {
   const key = request.headers.get(CURSOR_KEY_HEADER);

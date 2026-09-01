@@ -3,9 +3,9 @@
 import { useEffect, useState } from 'react';
 import { CURSOR_SESSION_PATH } from './aiChatPaths';
 import { cursorHeaders } from './cursorKeyStore';
-import { type CursorSessionInfo } from './cursorTypes';
+import type { CursorSessionInfo } from './cursorTypes';
 import { apiKeyedJson } from '@/features/sources/apiClient';
-import { errorMessage } from '@/features/surface-ui/errorMessage';
+import { errorMessage } from '@/features/sources/errorMessage';
 
 const PREFERRED = /composer-2\.5|composer/i;
 

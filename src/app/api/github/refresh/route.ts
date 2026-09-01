@@ -2,7 +2,7 @@ import { oauthConfig } from '@/features/github-auth/githubOAuthConfig';
 import { GrantRejectedError, refreshGrant } from '@/features/github-auth/githubOAuthTokens';
 import { forwardRefresh, oauthProxy } from '@/features/github-auth/oauthProxy';
 import { NOT_CONFIGURED } from '@/features/github-auth/oauthRoute';
-import { errorMessage } from '@/features/surface-ui/errorMessage';
+import { errorMessage } from '@/features/sources/errorMessage';
 
 export async function POST(request: Request) {
   const refreshToken = (((await request.json().catch(() => null)) as { refreshToken?: unknown } | null)?.refreshToken) ?? null;

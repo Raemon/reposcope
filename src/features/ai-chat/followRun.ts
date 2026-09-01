@@ -7,7 +7,7 @@ import { applyError, applyRun, applyRunEvent } from './runEvents';
 import { runFinished, type CursorRun } from './cursorTypes';
 import { sseEvents } from './sseEvents';
 import { apiKeyedJson, apiKeyedStream } from '@/features/sources/apiClient';
-import { errorMessage } from '@/features/surface-ui/errorMessage';
+import { errorMessage } from '@/features/sources/errorMessage';
 
 const POLL_MS = 3000;
 const STREAM_TRIES = 3;

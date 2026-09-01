@@ -7,7 +7,7 @@ import type { GithubAccess } from '@/features/github-auth/githubAccess';
 import { apiJson } from '@/features/sources/apiClient';
 import { readBrowserCache, writeBrowserCache } from '@/features/sources/browserCache';
 import { sourceKey, type CodebaseSource } from '@/features/sources/sourceTypes';
-import { errorMessage } from '@/features/surface-ui/errorMessage';
+import { errorMessage } from '@/features/sources/errorMessage';
 
 const NONE = new Map<string, SourceResult>();
 const inFlight = new Map<string, Promise<SourceResult>>();

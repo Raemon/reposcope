@@ -1,6 +1,6 @@
 import { GithubRequestError } from '@/features/codebases/githubRequest';
 import { userGithubTokenRejected, withGithubToken } from '@/features/codebases/githubToken';
-import { errorMessage } from '@/features/surface-ui/errorMessage';
+import { errorMessage } from '@/features/sources/errorMessage';
 import { GITHUB_AUTH_HEADER, GITHUB_AUTH_REJECTED } from './githubAuthHeader';
 
 export function apiRoute<T>(request: Request, work: () => Promise<T>): Promise<Response> {
@@ -36,4 +36,3 @@ function errorStatus(error: unknown): number {
   const status = (error as { status?: unknown } | null)?.status;
   return typeof status === 'number' && status >= 400 && status < 600 ? status : 500;
 }
-

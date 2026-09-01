@@ -5,7 +5,7 @@ import { commitMessageFor, editableBlockAt, type BlockBounds, type EditableBlock
 import type { PullRequestSummary } from './pullRequests';
 import type { DiffRow } from './splitDiff';
 import { apiPostJson } from '@/features/sources/apiClient';
-import { errorMessage } from '@/features/surface-ui/errorMessage';
+import { errorMessage } from '@/features/sources/errorMessage';
 
 export interface HunkEdit {
   block: EditableBlock;
