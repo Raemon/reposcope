@@ -10,7 +10,7 @@ import { useRegisterColumn } from './columnNav';
 import { PullFilterMenu } from './PullFilterMenu';
 import { PullRequestList } from './PullRequestList';
 import { collapsePullList, type PullListColumnName } from './collapsePullList';
-import { ResizableColumn, type ColumnSize } from './ResizableColumn';
+import { ResizableColumn, useCollapsibleColumn, type ColumnSize } from './ResizableColumn';
 import { branchRoute, allPullsRoute, pullRoute } from './pullPaths';
 import type { PullRequestSummary } from './pullRequests';
 import type { BranchSummary } from './branches';
@@ -90,11 +90,9 @@ function PullsColumn({
   useRegisterColumn(
     'pulls',
     {
+      ...useCollapsibleColumn(size, onSize),
       items: targets.map((target) => target.route),
       selected,
-      open: size.open,
-      collapsible: true,
-      setOpen: (open) => onSize({ ...size, open }),
       onActivate: openTarget,
     },
     useShowsColumn('pulls'),

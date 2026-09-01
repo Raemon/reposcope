@@ -12,7 +12,7 @@ import { PullFilesColumn, fileTokens } from './PullFilesColumn';
 import { isTreeItem } from './fileTreeNodes';
 import { RepoBrowseReader } from './RepoBrowseReader';
 import { useRepoFiles } from './repoFileStore';
-import { ResizableColumn, collapsibleColumn, type ColumnSize } from './ResizableColumn';
+import { ResizableColumn, useCollapsibleColumn, type ColumnSize } from './ResizableColumn';
 import { useRegisterColumn } from './columnNav';
 import { commentCountsOf, sortChangedFiles } from './diffSort';
 import { useDiffSort } from './diffSortStore';
@@ -159,13 +159,13 @@ function Workspace({
   const showsFiles = useShowsColumn('files');
   useRegisterColumn(
     'discussion',
-    { ...collapsibleColumn(discussionSize, setDiscussionSize), items: [], selected: null },
+    { ...useCollapsibleColumn(discussionSize, setDiscussionSize), items: [], selected: null },
     discussion !== null && showsDiscussion,
   );
   useRegisterColumn(
     'commits',
     {
-      ...collapsibleColumn(commitSize, setCommitSize),
+      ...useCollapsibleColumn(commitSize, setCommitSize),
       items: commitItems(change),
       selected: selection,
       onSelect: setSelection,
@@ -175,7 +175,7 @@ function Workspace({
   useRegisterColumn(
     'files',
     {
-      ...collapsibleColumn(fileSize, setFileSize),
+      ...useCollapsibleColumn(fileSize, setFileSize),
       items: [...fileItems, ...browseItems],
       selected: browsed ?? path,
       onSelect: selectFileItem,

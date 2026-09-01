@@ -10,6 +10,8 @@ import { useCachedJson } from '@/features/sources/useCachedJson';
 import { useIsOwnAuthor } from '@/features/github-auth/useViewerLogin';
 import { usePollWhileVisible } from '@/features/sources/usePollWhileVisible';
 
+const READING_WIDTH = 'max-w-[720px]';
+
 export function PullDiscussion({
   owner,
   repo,
@@ -37,6 +39,7 @@ export function PullDiscussion({
         repo={repo}
         author={author}
         body={body?.trim() ? body : 'No description.'}
+        bodyWidth={READING_WIDTH}
       />
       {comments === null ? (
         <p className={`px-1.5 py-1 text-[11px] leading-4 ${error ? 'text-error-ink' : 'text-ink-dim'}`}>
@@ -68,6 +71,7 @@ function DiscussionEntry({
   note,
   path,
   body,
+  bodyWidth = '',
 }: {
   owner: string;
   repo: string;
@@ -75,6 +79,7 @@ function DiscussionEntry({
   note?: string;
   path?: string | null;
   body: string;
+  bodyWidth?: string;
 }) {
   const isOwnAuthor = useIsOwnAuthor();
   return (
@@ -85,7 +90,7 @@ function DiscussionEntry({
         {path && <span className="min-w-0 flex-1 truncate font-serif text-[10px]">{path}</span>}
       </header>
       <HoverCardHtml
-        className="markdown-body break-words text-ink"
+        className={`markdown-body break-words text-ink ${bodyWidth}`}
         html={renderMarkdown(body, { owner, repo })}
         tooltipStyle
       />

@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
-import { PANE_WIDTH, usePaneMode } from './centralLayout';
+import { PANE_WIDTH, useForcedOpen, usePaneMode } from './centralLayout';
 import { useColumnNav, type ColumnRow } from './columnNav';
 import { COLUMN_HEADER, type ColumnId } from './navColumn';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
@@ -16,8 +16,13 @@ export interface ColumnSize {
   open: boolean;
 }
 
-export function collapsibleColumn(size: ColumnSize, onSize: (next: ColumnSize) => void) {
-  return { open: size.open, collapsible: true, setOpen: (open: boolean) => onSize({ ...size, open }) };
+export function useCollapsibleColumn(size: ColumnSize, onSize: (next: ColumnSize) => void) {
+  const forcedOpen = useForcedOpen();
+  return {
+    open: size.open || forcedOpen,
+    collapsible: !forcedOpen,
+    setOpen: (open: boolean) => onSize({ ...size, open }),
+  };
 }
 
 export type DragEdge = 'left' | 'right';
@@ -157,7 +162,7 @@ export function ColumnHeader({
   focused: boolean;
   row: ColumnRow;
   action?: ReactNode;
-  onCollapse: () => void;
+  onCollapse: (() => void) | null;
 }) {
   return (
     <div className={`flex shrink-0 items-center ${headerTone(row, focused)}`}>
@@ -167,10 +172,10 @@ export function ColumnHeader({
         title={title}
         titleTone={focused ? 'text-accent' : 'text-ink-dim'}
         note={note}
-        chevron={<span className="inline-block max-md:-rotate-90">‹</span>}
+        chevron={onCollapse === null ? null : <span className="inline-block max-md:-rotate-90">‹</span>}
         className="min-w-0 flex-1"
-        label={`Collapse ${title}`}
-        onActivate={onCollapse}
+        label={onCollapse === null ? title : `Collapse ${title}`}
+        onActivate={onCollapse ?? (() => {})}
       />
       {action}
     </div>
@@ -196,6 +201,7 @@ export function ResizableColumn(props: ColumnProps) {
   const nav = useColumnNav(navId);
   const startDrag = useDragWidth(size, onSize);
   const pane = usePaneMode(navId);
+  const forcedOpen = useForcedOpen();
   if (pane === 'hidden') return null;
   if (pane === 'pane')
     return (
@@ -206,7 +212,7 @@ export function ResizableColumn(props: ColumnProps) {
         {footer}
       </section>
     );
-  if (!size.open)
+  if (!size.open && !forcedOpen)
     return (
       <CollapsedColumn
         title={title}
@@ -232,7 +238,7 @@ export function ResizableColumn(props: ColumnProps) {
         focused={nav.focused}
         row={nav.row(COLUMN_HEADER)}
         action={action}
-        onCollapse={() => onSize({ ...size, open: false })}
+        onCollapse={forcedOpen ? null : () => onSize({ ...size, open: false })}
       />
       <div ref={nav.bodyRef} className="max-h-[50vh] overflow-auto md:max-h-none md:min-h-0 md:flex-1">{children}</div>
       {footer}
