@@ -101,7 +101,7 @@ function TabButton({ tab, label, columns }: TabEntry) {
         setTab(tab);
         nav.focus();
       }}
-      className={`${TAB_BUTTON} ${tab === active ? 'bg-btn-active text-accent' : 'text-ink-dim hover:text-ink'}`}
+      className={`${TAB_BUTTON} ${tab === active ? 'bg-btn-active text-accent' : 'text-ink-dim hover:bg-btn-hover hover:text-ink'}`}
     >
       {label}
     </button>
