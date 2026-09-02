@@ -44,21 +44,27 @@ function MarkerButton({
   thread: ReviewThread;
   onOpen: (thread: ReviewThread) => void;
 }) {
+  const count = thread.comments.length;
   return (
     <button
       type="button"
       onClick={() => onOpen(thread)}
-      aria-label={threadLabel(thread)}
+      aria-label={markerLabel(thread)}
       style={{ top, width: MARKER, height: MARKER }}
-      className="absolute left-[2px] flex items-center justify-center rounded border border-panel-edge bg-tip text-ink-dim"
+      className={`absolute left-[2px] flex items-center justify-center rounded border border-panel-edge bg-tip text-ink-dim hover:bg-btn-hover hover:text-ink ${thread.resolved ? 'opacity-70 hover:opacity-100' : ''}`}
     >
-      <CommentIcon />
+      {count > 1 ? <span className="text-[9px] leading-none">{count}</span> : <CommentIcon />}
     </button>
   );
 }
 
 function threadLabel(thread: ReviewThread): string {
   return thread.line === null ? 'Comment' : `Comment on line ${thread.line}`;
+}
+
+function markerLabel(thread: ReviewThread): string {
+  const count = thread.comments.length > 1 ? `, ${thread.comments.length} comments` : '';
+  return `${threadLabel(thread)}${thread.resolved ? ', resolved' : ''}${count}`;
 }
 
 function CommentIcon() {
