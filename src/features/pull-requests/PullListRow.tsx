@@ -53,20 +53,6 @@ export function PullRowFields({ pull, repo, repoColumnCh }: { pull: PullRowSumma
   );
 }
 
-export function NoMatchingPulls() {
-  const filters = usePullFilters();
-  return (
-    <p className={`${LIST_NOTE} text-ink-dim`}>
-      {NO_PULLS}
-      {!isDefaultPullFilters(filters) && (
-        <button type="button" onClick={clearPullFilters} className="ml-1 underline decoration-dotted hover:text-ink">
-          clear filters
-        </button>
-      )}
-    </p>
-  );
-}
-
 function RowTag({ children }: { children: ReactNode }) {
   return <span className="shrink-0 rounded bg-btn px-1 font-mono text-[9px]">{children}</span>;
 }
@@ -117,5 +103,19 @@ function ClosePullIcon({ target, token, shown }: { target: PullTarget; token: st
         ×
       </button>
     </HoverCardTrigger>
+  );
+}
+
+export function NoMatchingPulls() {
+  const filters = usePullFilters();
+  return (
+    <p className={`${LIST_NOTE} text-ink-dim`}>
+      {NO_PULLS}
+      {!isDefaultPullFilters(filters) && (
+        <button type="button" onClick={clearPullFilters} className="ml-1 underline decoration-dotted hover:text-ink">
+          clear filters
+        </button>
+      )}
+    </p>
   );
 }
