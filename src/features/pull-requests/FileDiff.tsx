@@ -5,7 +5,7 @@ import { CodeBlockEditor } from './CodeBlockEditor';
 import { CommitEditModal } from './CommitEditModal';
 import { DiffSide, type HunkControl } from './DiffSide';
 import { useDiffLayout } from './diffLayoutStore';
-import { columnLines, unifiedLines, visibleLines, type DiffLine } from './diffLines';
+import { columnLines, resultLines, unifiedLines, visibleLines, type DiffLine } from './diffLines';
 import { langForPath } from './diffHighlight';
 import { linesHeight, ROW_HEIGHT, SAVE_BAR } from './diffMetrics';
 import { EditTarget } from './editTarget';
@@ -15,6 +15,7 @@ import { useFoldCommand, wholeFileFor, wholeFileWanted, type FoldMode } from './
 import { InlineThreads } from './InlineThreads';
 import { setDiffPaneWidth, useDiffPaneWidth } from './diffPaneWidth';
 import { DragHandle, useDragWidth } from './ResizableColumn';
+import { rowOf } from './commentAnchors';
 import { useFileThreads } from './reviewThreadStore';
 import { splitDiff, type DiffRow } from './splitDiff';
 import { useCodeCollapse } from './useCodeCollapse';
@@ -43,7 +44,8 @@ export function FileDiff({
   const token = useGithubToken();
   const target = useContext(EditTarget);
   const entireFile = file.status === WHOLE_FILE_STATUS;
-  const unified = useDiffLayout() === 'unified' || entireFile;
+  const layout = useDiffLayout();
+  const singleColumn = layout !== 'split' || entireFile;
   const removedSize = { width: useDiffPaneWidth(), open: true };
   const startDrag = useDragWidth(removedSize, setDiffPaneWidth);
   const [wantWholeFile, setWantWholeFile] = useState(wholeFileWanted);
@@ -69,7 +71,11 @@ export function FileDiff({
   const editBlock = hunkEdit.edit?.block ?? null;
   const threads = useFileThreads(file.filename);
   const collapse = useCodeCollapse(rows, showingWholeFile, file.filename, threads, editBlock);
-  const lines = useMemo(() => foldedLines(rows, collapse.hidden), [rows, collapse.hidden]);
+  const commentedRows = useMemo(() => new Set(threads.map((thread) => rowOf(thread, rows))), [threads, rows]);
+  const lines = useMemo(() => foldedLines(rows, collapse.hidden, commentedRows), [rows, collapse.hidden, commentedRows]);
+  const resultView = layout === 'result' && !entireFile && anyLineSurvives(rows);
+  const oneColumnLines = resultView ? lines.result : lines.unified;
+  const mainLines = singleColumn ? oneColumnLines : lines.right;
   const growing = useHeightTransition(rows, collapse.hidden);
   const expand = expandControl(wholeFile, showingWholeFile, hunkEdit, setWantWholeFile);
   const onCodePress = useDefinitionClick(file, baseRef, headRef);
@@ -79,13 +85,13 @@ export function FileDiff({
     editable: pull !== null,
     onEditBlock: (rowIndex: number) => hunkEdit.begin(rowIndex, bounds),
     editedRows: editBlock,
-    editor: hunkEditor(file.filename, hunkEdit, unified ? lines.unified : lines.right),
+    editor: hunkEditor(file.filename, hunkEdit, mainLines),
   };
   return (
     <div ref={growing} className="flex" style={{ paddingBottom: threadOverflow }}>
-      <div className="min-w-0 flex-1" style={{ flexBasis: unified ? 0 : removedSize.width * 2 }}>
-        {unified ? (
-          <DiffSide {...shared} lines={lines.unified} labels {...editing} />
+      <div className="min-w-0 flex-1" style={{ flexBasis: singleColumn ? 0 : removedSize.width * 2 }}>
+        {singleColumn ? (
+          <DiffSide {...shared} lines={mainLines} labels {...editing} />
         ) : (
           <div className="flex">
             <section className="relative flex shrink-0 flex-col border-r border-panel-edge" style={{ width: removedSize.width }}>
@@ -101,7 +107,7 @@ export function FileDiff({
       <InlineThreads
         threads={threads}
         rows={rows}
-        lines={unified ? lines.unified : lines.right}
+        lines={mainLines}
         onOverflow={setThreadOverflow}
       />
       {hunkEdit.message !== null && hunkEdit.edit !== null && (
@@ -140,11 +146,17 @@ function rowsForDisplay(patchRows: DiffRow[], lines: WholeFile['lines'], entireF
   return entireFile ? patchRows.filter((row) => row.kind !== 'hunk') : patchRows;
 }
 
-function foldedLines(rows: DiffRow[], hidden: Set<number>) {
+// A wholly deleted file has no surviving lines, so its result view falls back to the diff.
+function anyLineSurvives(rows: DiffRow[]): boolean {
+  return rows.some((row) => row.right !== null);
+}
+
+function foldedLines(rows: DiffRow[], hidden: Set<number>, commentedRows: Set<number>) {
   return {
     left: visibleLines(columnLines(rows, 'left'), hidden),
     right: visibleLines(columnLines(rows, 'right'), hidden),
     unified: visibleLines(unifiedLines(rows), hidden),
+    result: visibleLines(resultLines(rows, commentedRows), hidden),
   };
 }
 

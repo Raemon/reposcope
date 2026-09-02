@@ -1,18 +1,20 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { iconButtonClass } from './buttonStyles';
+import { iconButtonClass, type IconButtonTone } from './buttonStyles';
 import { HoverCardTrigger } from './HoverCard';
 
 export function ChoiceButton({
   label,
   active,
   onSelect,
+  tone,
   children,
 }: {
   label: string;
   active: boolean;
   onSelect: () => void;
+  tone?: IconButtonTone;
   children: ReactNode;
 }) {
   return (
@@ -22,7 +24,7 @@ export function ChoiceButton({
         onClick={onSelect}
         aria-pressed={active}
         aria-label={label}
-        className={iconButtonClass(active)}
+        className={iconButtonClass(active, tone)}
       >
         {children}
       </button>

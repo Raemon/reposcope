@@ -23,6 +23,15 @@ export function unifiedLines(rows: DiffRow[]): DiffLine[] {
   return changeRuns(rows).flatMap(runLines);
 }
 
+// Commented removed lines stay: hiding them would make an open thread vanish silently.
+export function resultLines(rows: DiffRow[], commented: Set<number>): DiffLine[] {
+  return columnLines(rows, 'right').filter((line) => keptInResult(line, commented));
+}
+
+function keptInResult(line: DiffLine, commented: Set<number>): boolean {
+  return line.kind === 'hunk' || line.cell !== null || commented.has(line.row);
+}
+
 export function visibleLines(lines: DiffLine[], hidden: Set<number>): DiffLine[] {
   if (hidden.size === 0) return lines;
   return lines.filter((line) => line.kind === 'hunk' || !hidden.has(line.row));
