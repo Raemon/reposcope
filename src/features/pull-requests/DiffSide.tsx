@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, type ReactNode } from 'react';
+import { Fragment, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { hunkHasEditableLines, type EditableBlock } from './editableBlocks';
 import { codeSegments } from './codeSegments';
 import { dimAroundName } from './foldDimming';
@@ -15,7 +15,7 @@ import type { CollapseAnchor } from './useCodeCollapse';
 import type { CodePress } from './useDefinitionClick';
 import type { SideTokens } from './useDiffSideHighlight';
 import { lineHeight, type RowHeights } from './diffMetrics';
-import { hangingIndent } from './wrapHeights';
+import { hangingIndent, measureRowHeights, sameRowHeights, WRAPPED_CELL } from './rowHeights';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 
@@ -30,8 +30,8 @@ const EDIT_BTN = `${STICKY_CHIP} uppercase tracking-[0.14em]`;
 const FOLD_BADGE = `${STICKY_CHIP} ml-1 text-[9px] italic text-ink-dim`;
 const FOLD_PREVIEW = 'diff-code max-w-[90ch] shrink-[999] overflow-hidden text-ellipsis whitespace-pre pl-2 text-[11px] text-ink-dim/70';
 const CODE = 'diff-code whitespace-pre pr-2 text-[11px]';
-// break-all, not word wrapping: only a greedy column fill matches wrapHeights' row sizing.
-const WRAPPED_CODE = 'diff-code min-w-0 flex-1 whitespace-pre-wrap [word-break:break-all] [tab-size:8] pr-2 text-[11px]';
+// break-word, so only a word too long for a whole line is ever split.
+const WRAPPED_CODE = 'diff-code min-w-0 flex-1 whitespace-pre-wrap [overflow-wrap:break-word] [tab-size:8] pr-2 text-[11px]';
 // 150px keeps the fold badge clear of the ellipsis; 100cqw is the visible column width.
 const FOLDED_TEXT = 'flex min-w-0 max-w-[calc(100cqw-150px)] overflow-hidden';
 
@@ -55,20 +55,53 @@ export interface SideProps {
   editedRows?: EditableBlock | null;
   spacer?: { afterRow: number; height: number } | null;
   onCodePress?: CodePress;
+  wrap: boolean;
   heights: RowHeights;
+  onMeasured: (heights: RowHeights) => void;
 }
 
 export function DiffSide(props: SideProps) {
+  const pane = useRef<HTMLDivElement | null>(null);
+  useMeasuredRows(pane, props.wrap, props.onMeasured);
+  return (
+    <div ref={pane} className="min-w-0 flex-1">
+      <PaneLines {...props} />
+    </div>
+  );
+}
+
+function PaneLines(props: SideProps) {
   const { lines, editedRows, editor } = props;
   if (!editedRows) return <DiffLines {...props} from={0} to={lines.length} />;
   const edited = editedLineRange(lines, editedRows);
   return (
-    <div className="min-w-0 flex-1">
+    <>
       <DiffLines {...props} from={0} to={edited.first} />
       {editor}
       <DiffLines {...props} from={edited.last + 1} to={lines.length} />
-    </div>
+    </>
   );
+}
+
+/** No dep array: every render can rewrap, and a resize does so without one. */
+function useMeasuredRows(pane: React.RefObject<HTMLElement | null>, wrapping: boolean, onMeasured: (heights: RowHeights) => void) {
+  const held = useRef<RowHeights>(null);
+  const report = (next: RowHeights) => {
+    if (sameRowHeights(held.current, next)) return;
+    held.current = next;
+    onMeasured(next);
+  };
+  const latest = useRef(report);
+  latest.current = report;
+  useLayoutEffect(() => {
+    const element = pane.current;
+    if (!element || !wrapping) return latest.current(null);
+    const measure = () => latest.current(measureRowHeights(element));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  });
 }
 
 function editedLineRange(lines: DiffLine[], block: EditableBlock): { first: number; last: number } {
@@ -90,6 +123,7 @@ function DiffLines({
   onEditBlock,
   spacer,
   onCodePress,
+  wrap,
   heights,
 }: SideProps & { from: number; to: number }) {
   const dim = foldsCollapsed(useFoldCommand().mode);
@@ -97,8 +131,8 @@ function DiffLines({
   const spacerLine = spacer ? lastLineOfRow(lines, spacer.afterRow) : -1;
   const rowsWithRightLine = rowsShownOnRight(lines);
   return (
-    <div className={`@container min-w-0 flex-1 ${heights ? '' : 'overflow-x-auto'}`}>
-      <div className={heights ? 'w-full' : 'w-max min-w-full'}>
+    <div className={`@container min-w-0 flex-1 ${wrap ? '' : 'overflow-x-auto'}`}>
+      <div className={wrap ? 'w-full' : 'w-max min-w-full'}>
         {lines.slice(from, to).map((line, offset) => {
           const index = from + offset;
           const anchor = anchorOf(line, anchors, rowsWithRightLine);
@@ -114,6 +148,7 @@ function DiffLines({
                 anchor={anchor}
                 collapsed={anchors.get(line.row)?.collapsed ?? false}
                 dim={dim}
+                wrap={wrap}
                 height={heights ? lineHeight(line, heights) : null}
                 editable={editable}
                 onEdit={editStarter(rows, line.row, onEditBlock)}
@@ -167,6 +202,7 @@ function DiffLineView({
   collapsed,
   preview,
   dim,
+  wrap,
   height,
   editable,
   onEdit,
@@ -181,6 +217,7 @@ function DiffLineView({
   anchor: CollapseAnchor | null;
   collapsed: boolean;
   dim: boolean;
+  wrap: boolean;
   height: number | null;
   editable?: boolean;
   onEdit?: () => void;
@@ -190,21 +227,23 @@ function DiffLineView({
   if (line.kind === 'hunk') {
     return <HunkLine label={labels ? line.label : ''} expand={expand} onEdit={editable && side === 'right' ? onEdit : undefined} />;
   }
-  const wrapping = height !== null && !line.blank;
+  const wrapping = wrap && !line.blank;
   const row = line.blank ? BLANK_ROW : wrapping ? WRAPPED_ROW : ROW;
-  if (!cell) return <div className={`${row} bg-procgen/40`} style={wrapping ? { minHeight: height } : undefined} />;
+  const sized = wrapping && height !== null ? { minHeight: height } : undefined;
+  if (!cell) return <div className={`${row} bg-procgen/40`} style={sized} />;
   const changed = line.kind === 'change';
   const openable = Boolean(editable && side === 'right');
   const segments = codeSegments(cell.text, lineTokens, changed ? ranges : null);
   return (
     <div
       className={`group ${row} ${lineTone(side, changed, line.touched)} ${openable ? 'cursor-text' : ''}`}
-      style={wrapping ? { minHeight: height } : undefined}
+      style={sized}
       onClick={openable && onEdit ? (event) => opensEditor(event.detail) && onEdit() : undefined}
     >
       <GutterCell line={line.blank ? null : cell.line} anchor={anchor} />
       <span className={collapsed ? FOLDED_TEXT : 'contents'}>
         <span
+          {...{ [WRAPPED_CELL]: `${side}:${line.row}` }}
           className={codeClass(collapsed, wrapping)}
           style={wrapping && !collapsed ? hangingIndentStyle(cell.text) : undefined}
           onClick={onCodePress ? (event) => onCodePress(line, event) : undefined}
@@ -266,7 +305,8 @@ function GutterCell({ line, anchor }: { line: number | null; anchor: CollapseAnc
   return (
     <span className={GUTTER}>
       <span className="min-w-0 flex-1 text-right">{line}</span>
-      <span className="w-3 shrink-0 text-center">{anchor && <CollapseChevron anchor={anchor} />}</span>
+      {/* flex, not inline: an inline-block button leaves a baseline gap that unsettles a wrapped row. */}
+      <span className="flex w-3 shrink-0 justify-center">{anchor && <CollapseChevron anchor={anchor} />}</span>
     </span>
   );
 }

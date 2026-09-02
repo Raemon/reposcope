@@ -1,6 +1,6 @@
 'use client';
 
-import { useContext, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { CodeBlockEditor } from './CodeBlockEditor';
 import { CommitEditModal } from './CommitEditModal';
 import { DiffSide, type HunkControl } from './DiffSide';
@@ -9,8 +9,7 @@ import { columnLines, resultLines, unifiedLines, visibleLines, type DiffLine } f
 import { langForPath } from './diffHighlight';
 import { linesHeight, ROW_HEIGHT, SAVE_BAR, type RowHeights } from './diffMetrics';
 import { useDiffWrap } from './diffWrapStore';
-import { useCodeCharWidth, useWrapColumns, wrappedRowHeights, type WrapColumns } from './wrapHeights';
-import { useElementWidth } from './useElementWidth';
+import { evenedRowHeights } from './rowHeights';
 import { EditTarget } from './editTarget';
 import { type EditableBlock } from './editableBlocks';
 import { expandDiff } from './expandDiff';
@@ -21,7 +20,7 @@ import { DragHandle, useDragWidth } from './ResizableColumn';
 import { rowOf } from './commentAnchors';
 import { useFileThreads } from './reviewThreadStore';
 import { splitDiff, type DiffRow } from './splitDiff';
-import { useCodeCollapse, type CollapseAnchor } from './useCodeCollapse';
+import { useCodeCollapse } from './useCodeCollapse';
 import { useDefinitionClick } from './useDefinitionClick';
 import { useDiffTokens, useIntralineEmphasis } from './useDiffSideHighlight';
 import { useHeightTransition } from './useHeightTransition';
@@ -51,7 +50,8 @@ export function FileDiff({
   const singleColumn = layout !== 'split' || entireFile;
   const removedSize = { width: useDiffPaneWidth(), open: true };
   const startDrag = useDragWidth(removedSize, setDiffPaneWidth);
-  const diffArea = useRef<HTMLDivElement | null>(null);
+  const wrap = useDiffWrap();
+  const measured = useMeasuredSides();
   const [wantWholeFile, setWantWholeFile] = useState(wholeFileWanted);
   const [threadOverflow, setThreadOverflow] = useState(0);
   const wholeFile = useWholeFile(owner, repo, file, baseRef, headRef, wantWholeFile);
@@ -77,15 +77,14 @@ export function FileDiff({
   const collapse = useCodeCollapse(rows, showingWholeFile, file.filename, threads, editBlock);
   const commentedRows = useMemo(() => new Set(threads.map((thread) => rowOf(thread, rows))), [threads, rows]);
   const lines = useMemo(() => foldedLines(rows, collapse.hidden, commentedRows), [rows, collapse.hidden, commentedRows]);
-  const columns = useDiffWrapColumns(diffArea, singleColumn, removedSize.width);
-  const rowHeights = useWrappedRowHeights(rows, columns, collapse.anchors, !singleColumn);
+  const rowHeights = singleColumn ? measured.right : evenedRowHeights(measured.left, measured.right);
   const resultView = layout === 'result' && !entireFile && anyLineSurvives(rows);
   const oneColumnLines = resultView ? lines.result : lines.unified;
   const mainLines = singleColumn ? oneColumnLines : lines.right;
   const growing = useHeightTransition(rows, collapse.hidden, rowHeights);
   const expand = expandControl(wholeFile, showingWholeFile, hunkEdit, setWantWholeFile);
   const onCodePress = useDefinitionClick(file, baseRef, headRef);
-  const shared = { rows, tokens, emphasis, expand, anchors: collapse.anchors, onCodePress, heights: rowHeights };
+  const shared = { rows, tokens, emphasis, expand, anchors: collapse.anchors, onCodePress, wrap, heights: rowHeights };
   const bounds = { hidden: collapse.hidden, stopAtBlankLines: showingWholeFile };
   const editing = {
     editable: pull !== null,
@@ -95,17 +94,23 @@ export function FileDiff({
   };
   return (
     <div ref={growing} className="flex" style={{ paddingBottom: threadOverflow }}>
-      <div ref={diffArea} className="min-w-0 flex-1" style={{ flexBasis: singleColumn ? 0 : removedSize.width * 2 }}>
+      <div className="min-w-0 flex-1" style={{ flexBasis: singleColumn ? 0 : removedSize.width * 2 }}>
         {singleColumn ? (
-          <DiffSide {...shared} lines={mainLines} labels {...editing} />
+          <DiffSide {...shared} lines={mainLines} labels onMeasured={measured.onRight} {...editing} />
         ) : (
           <div className="flex">
             <section className="relative flex shrink-0 flex-col border-r border-panel-edge" style={{ width: removedSize.width }}>
-              <DiffSide {...shared} lines={lines.left} labels spacer={spacerFor(hunkEdit.edit, lines.right, rowHeights)} />
+              <DiffSide
+                {...shared}
+                lines={lines.left}
+                labels
+                onMeasured={measured.onLeft}
+                spacer={spacerFor(hunkEdit.edit, lines.right, rowHeights)}
+              />
               <DragHandle onPointerDown={startDrag} />
             </section>
             <section className="flex min-w-0 flex-1 flex-col">
-              <DiffSide {...shared} lines={lines.right} labels={false} {...editing} />
+              <DiffSide {...shared} lines={lines.right} labels={false} onMeasured={measured.onRight} {...editing} />
             </section>
           </div>
         )}
@@ -133,29 +138,18 @@ export function FileDiff({
   );
 }
 
-function useDiffWrapColumns(
-  diffArea: RefObject<HTMLDivElement | null>,
-  singleColumn: boolean,
-  leftWidth: number,
-): WrapColumns | null {
-  const areaWidth = useElementWidth(diffArea);
-  const wrapping = useDiffWrap();
-  return useWrapColumns(wrapping ? areaWidth : 0, singleColumn ? 0 : leftWidth, useCodeCharWidth());
+interface MeasuredSides {
+  left: RowHeights;
+  right: RowHeights;
+  onLeft: (heights: RowHeights) => void;
+  onRight: (heights: RowHeights) => void;
 }
 
-// Collapsed rows draw one truncated line, so their full text must not size them.
-function useWrappedRowHeights(
-  rows: DiffRow[],
-  columns: WrapColumns | null,
-  anchors: Map<number, CollapseAnchor>,
-  splitPanes: boolean,
-): RowHeights {
-  const collapsed = useMemo(() => collapsedRows(anchors), [anchors]);
-  return useMemo(() => wrappedRowHeights(rows, columns, collapsed, splitPanes), [rows, columns, collapsed, splitPanes]);
-}
-
-function collapsedRows(anchors: Map<number, CollapseAnchor>): Set<number> {
-  return new Set([...anchors].filter(([, anchor]) => anchor.collapsed).map(([row]) => row));
+// A single-column layout reports as the right side, the one every layout draws.
+function useMeasuredSides(): MeasuredSides {
+  const [left, onLeft] = useState<RowHeights>(null);
+  const [right, onRight] = useState<RowHeights>(null);
+  return { left, right, onLeft, onRight };
 }
 
 function useFoldCommandWholeFile(hunkEdit: HunkEditControls, setWantWholeFile: (next: boolean) => void) {
