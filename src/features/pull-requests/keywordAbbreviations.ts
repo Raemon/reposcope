@@ -2,10 +2,10 @@ import type { DimmedSegment } from './codeSegments';
 
 // Abbreviations must be prefixes: the hidden tail keeps DOM offsets equal to the source.
 const SHORT: Record<string, string> = {
-  export: 'exp', import: 'imp', function: 'func', async: 'asy', interface: 'interf', default: 'def',
+  export: 'exp', import: 'imp', function: 'func', async: 'asy', interface: 'interf', default: 'defau',
   abstract: 'abs', implements: 'impl', extends: 'ext', namespace: 'namesp', readonly: 'readon',
   private: 'priv', protected: 'prot', public: 'pub', static: 'stat', declare: 'decl',
-  constructor: 'constr', package: 'pack', module: 'mod', defmodule: 'defmod', defmacro: 'defmac',
+  constructor: 'constr', package: 'pack', module: 'modu', defmodule: 'defmod', defmacro: 'defmac',
   internal: 'intern', override: 'overr', virtual: 'virt', template: 'templ', typename: 'typen',
   unsafe: 'unsaf',
 };
