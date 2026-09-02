@@ -9,6 +9,10 @@ import type { DiffRow } from './splitDiff';
 const CODE_INSET = 60;
 const PROBE_CHARS = 100;
 const TAB_SIZE = 8;
+// Continuations hang under the line's own indent, plus a step that marks them as continuations.
+const HANGING_STEP = 4;
+const MAX_HANGING_INDENT = 40;
+const MIN_WRAPPED_COLUMNS = 16;
 const WIDE_CHAR = /[\u1100-\u115F\u2E80-\uA4CF\uAC00-\uD7A3\uF900-\uFAFF\uFE30-\uFE6F\uFF00-\uFF60\uFFE0-\uFFE6]/u;
 
 export interface WrapColumns {
@@ -53,8 +57,24 @@ function evenSides(height: number): RowHeight {
   return { left: height, right: height };
 }
 
+/** Only the first visual line gets the full width; the rest start at the hanging indent. */
 function visualLines(text: string, columns: number): number {
-  return Math.max(1, Math.ceil(renderedColumns(text) / columns));
+  const width = renderedColumns(text);
+  if (width <= columns) return 1;
+  return 1 + Math.ceil((width - columns) / wrappedColumns(text, columns));
+}
+
+function wrappedColumns(text: string, columns: number): number {
+  return Math.max(MIN_WRAPPED_COLUMNS, columns - hangingIndent(text));
+}
+
+/** Read by both the height maths and the rendered padding, which have to agree. */
+export function hangingIndent(text: string): number {
+  return Math.min(MAX_HANGING_INDENT, renderedColumns(leadingSpace(text)) + HANGING_STEP);
+}
+
+function leadingSpace(text: string): string {
+  return text.match(/^[ \t]*/u)?.[0] ?? '';
 }
 
 /** Tabs and full-width glyphs cover several columns each, so length alone under-counts. */

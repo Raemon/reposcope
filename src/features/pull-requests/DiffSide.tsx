@@ -15,6 +15,7 @@ import type { CollapseAnchor } from './useCodeCollapse';
 import type { CodePress } from './useDefinitionClick';
 import type { SideTokens } from './useDiffSideHighlight';
 import { lineHeight, type RowHeights } from './diffMetrics';
+import { hangingIndent } from './wrapHeights';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 
@@ -203,6 +204,7 @@ function DiffLineView({
       <span className={folded ? FOLDED_TEXT : 'contents'}>
         <span
           className={codeClass(folded, wrapping)}
+          style={wrapping ? hangingIndentStyle(cell.text) : undefined}
           onClick={onCodePress ? (event) => onCodePress(line, event) : undefined}
         >
           {(dim ? dimAroundName(segments, lineTokens) : segments).map((segment, index) => (
@@ -225,6 +227,12 @@ function DiffLineView({
 function codeClass(folded: boolean, wrapping: boolean): string {
   if (folded) return `${CODE} min-w-0 overflow-hidden text-ellipsis`;
   return wrapping ? WRAPPED_CODE : CODE;
+}
+
+// Negative text-indent pulls the first line back out of the padding the continuations sit in.
+function hangingIndentStyle(text: string): { paddingLeft: string; textIndent: string } {
+  const indent = hangingIndent(text);
+  return { paddingLeft: `${indent}ch`, textIndent: `-${indent}ch` };
 }
 
 function opensEditor(clickCount: number): boolean {
