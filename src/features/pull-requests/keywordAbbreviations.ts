@@ -1,6 +1,6 @@
-import type { CodeSegment } from './codeSegments';
+import type { DimmedSegment } from './codeSegments';
 
-// Truncations only: the clipped tail stays in the DOM unrendered, so text offsets still match the source.
+// Abbreviations must be prefixes: the hidden tail keeps DOM offsets equal to the source.
 const SHORT: Record<string, string> = {
   export: 'exp', import: 'imp', function: 'func', async: 'asy', interface: 'interf', default: 'def',
   abstract: 'abs', implements: 'impl', extends: 'ext', namespace: 'namesp', readonly: 'readon',
@@ -10,11 +10,7 @@ const SHORT: Record<string, string> = {
   unsafe: 'unsaf',
 };
 
-export function shortenKeywords(segments: CodeSegment[]): CodeSegment[] {
-  return segments.flatMap((segment) => (segment.prefix ? shortened(segment) : [segment]));
-}
-
-function shortened(segment: CodeSegment): CodeSegment[] {
+export function abbreviated(segment: DimmedSegment): DimmedSegment[] {
   if (!/^[A-Za-z\s]+$/.test(segment.content)) return [segment];
   return wordsOf(segment.content).flatMap(clipped).map((piece) => ({ ...segment, ...piece }));
 }
