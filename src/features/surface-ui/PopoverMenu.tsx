@@ -2,10 +2,29 @@
 
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { iconButtonClass } from './buttonStyles';
+import { HoverCardTrigger } from './HoverCard';
 
 export interface PopoverTrigger {
   open: boolean;
   toggle: () => void;
+}
+
+export function MenuIconButton({ label, open, toggle, children }: PopoverTrigger & { label: string; children: ReactNode }) {
+  return (
+    <HoverCardTrigger label={label} focusable={false} tooltipStyle>
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={label}
+        onClick={toggle}
+        className={iconButtonClass(open)}
+      >
+        {children}
+      </button>
+    </HoverCardTrigger>
+  );
 }
 
 export function PopoverMenu({

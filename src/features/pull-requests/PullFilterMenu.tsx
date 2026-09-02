@@ -1,16 +1,23 @@
 'use client';
 
+import { FilterIcon } from './diffToolbarIcons';
 import { setOnlyMine, setPullState, usePullFilters } from './pullFilterStore';
-import { iconButtonClass } from '@/features/surface-ui/buttonStyles';
-import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
-import { PopoverMenu, type PopoverTrigger } from '@/features/surface-ui/PopoverMenu';
+import { MenuIconButton, PopoverMenu } from '@/features/surface-ui/PopoverMenu';
 
 const FILTER_LABEL = 'Filter pull requests';
 
 export function PullFilterMenu() {
   const filters = usePullFilters();
   return (
-    <PopoverMenu align="right-0" panelClass="w-44 py-1" trigger={FilterButton}>
+    <PopoverMenu
+      align="right-0"
+      panelClass="w-44 py-1"
+      trigger={(state) => (
+        <MenuIconButton label={FILTER_LABEL} {...state}>
+          <FilterIcon />
+        </MenuIconButton>
+      )}
+    >
       {() => (
         <>
           <FilterCheckbox label="only open PRs" on={filters.state === 'open'} onChange={(on) => setPullState('open', on)} />
@@ -19,31 +26,6 @@ export function PullFilterMenu() {
         </>
       )}
     </PopoverMenu>
-  );
-}
-
-function FilterButton({ open, toggle }: PopoverTrigger) {
-  return (
-    <HoverCardTrigger label={FILTER_LABEL} focusable={false} tooltipStyle>
-      <button
-        type="button"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-label={FILTER_LABEL}
-        onClick={toggle}
-        className={`${iconButtonClass(open)} px-1`}
-      >
-        <FilterIcon />
-      </button>
-    </HoverCardTrigger>
-  );
-}
-
-function FilterIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M3.5 5h17l-6.5 7.6V20l-4-2.6v-4.8Z" />
-    </svg>
   );
 }
 

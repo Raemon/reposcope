@@ -3,8 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCurrentRowInView } from './NavListRow';
-import { LIST_NOTE, NO_PULLS, PullListRow, PullRowFields } from './PullListRow';
-import { clearPullFilters, isDefaultPullFilters, usePullFilters } from './pullFilterStore';
+import { LIST_NOTE, NoMatchingPulls, PullListRow, PullRowFields } from './PullListRow';
 import { pullRoute } from './pullPaths';
 import { useRepoPullList } from './usePullLists';
 import { repoRoute } from '@/features/codebases/repoPaths';
@@ -51,23 +50,5 @@ function DefaultBranchSpace({ owner, repo }: { owner: string; repo: string }) {
       aria-label="Show the default branch"
       className="min-h-6 flex-1 cursor-default"
     />
-  );
-}
-
-export function NoMatchingPulls() {
-  const filters = usePullFilters();
-  return (
-    <p className={`${LIST_NOTE} text-ink-dim`}>
-      {NO_PULLS}
-      {!isDefaultPullFilters(filters) && <ClearFiltersButton />}
-    </p>
-  );
-}
-
-function ClearFiltersButton() {
-  return (
-    <button type="button" onClick={clearPullFilters} className="ml-1 underline decoration-dotted hover:text-ink">
-      clear filters
-    </button>
   );
 }
