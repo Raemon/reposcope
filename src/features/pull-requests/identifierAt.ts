@@ -23,7 +23,16 @@ export function identifierAtPoint(event: { clientX: number; clientY: number }, c
   const caret = caretAt(event.clientX, event.clientY);
   if (!caret || !code.contains(caret.node)) return null;
   const offset = offsetWithin(code, caret);
-  return offset === null ? null : identifierAround(code.textContent ?? '', offset);
+  if (offset === null) return null;
+  return atSourceColumn(identifierAround(code.textContent ?? '', offset), code);
+}
+
+// Rendered keywords may be abbreviated, so columns past them sit left of their source position.
+function atSourceColumn(found: ClickedIdentifier | null, code: HTMLElement): ClickedIdentifier | null {
+  const shrunk = Number(code.dataset.shrunk ?? 0);
+  if (!found || shrunk === 0) return found;
+  if (found.column < Number(code.dataset.prefixEnd ?? 0)) return null;
+  return { ...found, column: found.column + shrunk };
 }
 
 function identifierAround(text: string, offset: number): ClickedIdentifier | null {

@@ -44,6 +44,7 @@ function dimSegment(segment: CodeSegment, start: number, name: NameSpan): CodeSe
     ...segment,
     content: segment.content.slice(from, starts[index + 1]),
     opacity: opacityAt(start + from, name),
+    prefix: start + from < name.start,
   }));
 }
 
