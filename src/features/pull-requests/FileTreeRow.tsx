@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { useColumnNav } from './columnNav';
 import { fileKindColor, splitExtension } from './fileKind';
 import { baseName, folderOf } from './fileTree';
+import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { rowShowsAccent, rowStateClass } from '@/features/surface-ui/rowState';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 
@@ -37,10 +38,12 @@ export function FileTreeRow({
       style={inset.style}
       className={`${ROW} ${inset.className} ${action === null ? rowStateClass(row.state) : ''}`}
     >
-      <span className="min-w-0 flex-1 truncate filename-text">
-        {inset.showsParent && <ParentFolder path={path} />}
-        <FileName path={path} tinted={!rowShowsAccent(row.state)} />
-      </span>
+      <HoverCardTrigger label={path} className="min-w-0 flex-1" focusable={false} tooltipStyle>
+        <span className="min-w-0 flex-1 truncate filename-text">
+          {inset.showsParent && <ParentFolder path={path} />}
+          <FileName path={path} tinted={!rowShowsAccent(row.state)} />
+        </span>
+      </HoverCardTrigger>
       {children}
     </SelectableRow>
   );
