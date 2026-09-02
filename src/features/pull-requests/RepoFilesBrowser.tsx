@@ -6,7 +6,7 @@ import { useRegisterColumn } from './columnNav';
 import { RepoBrowseReader } from './RepoBrowseReader';
 import { RepoFileList } from './RepoFileList';
 import { useRepoFiles } from './repoFileStore';
-import { ResizableColumn, collapsibleColumn } from './ResizableColumn';
+import { ResizableColumn, useCollapsibleColumn } from './ResizableColumn';
 import { useStickyColumn } from './stickyColumns';
 import { useRepoFileTree } from './useRepoFileTree';
 
@@ -19,7 +19,7 @@ export function RepoFilesBrowser({ owner, repo, children }: { owner: string; rep
   useRegisterColumn(
     'files',
     {
-      ...collapsibleColumn(fileSize, setFileSize),
+      ...useCollapsibleColumn(fileSize, setFileSize),
       items: tree.navItems,
       selected: browsed,
       onSelect: tree.selectItem,

@@ -7,11 +7,13 @@ import { setDiffEditMode, useDiffEditMode } from './editModeStore';
 import { DiffSortMenu } from './DiffSortMenu';
 import { FoldModeButtons } from './FoldModeButtons';
 import { ChoiceButton } from '@/features/surface-ui/ChoiceButton';
-import { EditIcon, SplitViewIcon, UnifiedViewIcon } from './diffToolbarIcons';
+import type { IconButtonTone } from '@/features/surface-ui/buttonStyles';
+import { EditIcon, ResultViewIcon, SplitViewIcon, UnifiedViewIcon } from './diffToolbarIcons';
 
-const CHOICES: { layout: DiffLayout; icon: ReactNode; label: string }[] = [
-  { layout: 'split', icon: <SplitViewIcon />, label: 'two-column' },
-  { layout: 'unified', icon: <UnifiedViewIcon />, label: 'one-column' },
+const CHOICES: { layout: DiffLayout; icon: ReactNode; label: string; tone?: IconButtonTone }[] = [
+  { layout: 'split', icon: <SplitViewIcon />, label: 'Show diffs in a two-column view' },
+  { layout: 'unified', icon: <UnifiedViewIcon />, label: 'Show diffs in a one-column view' },
+  { layout: 'result', icon: <ResultViewIcon />, label: 'Show the file as it will be, with removed lines hidden', tone: 'add' },
 ];
 
 export function DiffLayoutToggle() {
@@ -20,11 +22,12 @@ export function DiffLayoutToggle() {
     <div className="relative z-30 flex shrink-0 items-center gap-2 border-b border-panel-edge bg-panel px-2 py-[2px]">
       <FoldModeButtons />
       <span className="ml-auto flex items-center gap-2">
-        {CHOICES.map(({ layout, icon, label }) => (
+        {CHOICES.map(({ layout, icon, label, tone }) => (
           <ChoiceButton
             key={layout}
-            label={`Show diffs in a ${label} view`}
+            label={label}
             active={current === layout}
+            tone={tone}
             onSelect={() => setDiffLayout(layout)}
           >
             {icon}

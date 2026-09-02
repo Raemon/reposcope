@@ -36,6 +36,16 @@ export function UnifiedViewIcon() {
   );
 }
 
+export function ResultViewIcon() {
+  return (
+    <ToolbarIcon>
+      <rect x="2.5" y="4" width="19" height="16" rx="1.5" />
+      <path d="M6.5 9.5h11M6.5 14.5h7" />
+      <path d="M17.5 15v5M15 17.5h5" />
+    </ToolbarIcon>
+  );
+}
+
 export function SmartFoldIcon() {
   return (
     <ToolbarIcon>

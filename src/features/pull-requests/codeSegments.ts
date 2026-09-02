@@ -6,6 +6,7 @@ export interface CodeSegment {
   content: string;
   style?: CSSProperties;
   emphasized: boolean;
+  opacity?: number;
 }
 
 export function codeSegments(

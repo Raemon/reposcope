@@ -3,7 +3,7 @@
 import { enumPref, usePref } from './localPref';
 import { useNarrowViewport } from './narrowViewport';
 
-const DIFF_LAYOUTS = ['split', 'unified'] as const;
+const DIFF_LAYOUTS = ['split', 'unified', 'result'] as const;
 
 export type DiffLayout = (typeof DIFF_LAYOUTS)[number];
 
@@ -15,5 +15,5 @@ export function setDiffLayout(layout: DiffLayout): void {
 
 export function useDiffLayout(): DiffLayout {
   const stored = usePref(layoutPref);
-  return useNarrowViewport() ? 'unified' : stored;
+  return useNarrowViewport() && stored === 'split' ? 'unified' : stored;
 }
