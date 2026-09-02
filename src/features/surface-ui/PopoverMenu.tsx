@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type RefObject } from 'react';
-import { focusFirstItem, focusableItems, holdsFocus } from './focusables';
+import { focusFirstItem, focusableItems, holdsFocus, holdsKeyboardFocus } from './focusables';
 
 export interface PopoverTrigger {
   open: boolean;
@@ -26,13 +26,18 @@ export function PopoverMenu({
   const menu = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLDivElement>(null);
 
+  const closeToTrigger = useCallback(() => {
+    focusTrigger(menu.current);
+    setOpen(false);
+  }, []);
+
   const close = useCallback(() => {
-    if (holdsFocus(panel.current)) focusTrigger(menu.current);
+    if (holdsKeyboardFocus(panel.current)) focusTrigger(menu.current);
     setOpen(false);
   }, []);
 
   useCloseOnNavigation(setOpen);
-  useDismiss(menu, open, close);
+  useDismiss(menu, open, close, closeToTrigger);
   useEnterPanel(panel, open);
 
   return (
@@ -41,7 +46,7 @@ export function PopoverMenu({
       {open && (
         <div
           ref={panel}
-          onKeyDown={(event) => stepFocus(event, panel.current)}
+          onKeyDown={(event) => handlePanelKey(event, panel.current)}
           className={`absolute ${align} top-full z-20 mt-1 rounded bg-panel shadow-card ${panelClass}`}
         >
           {children(close)}
@@ -60,6 +65,11 @@ function useEnterPanel(panel: RefObject<HTMLDivElement | null>, open: boolean): 
     if (!open || holdsFocus(panel.current)) return;
     focusFirstItem(panel.current);
   }, [open, panel]);
+}
+
+function handlePanelKey(event: ReactKeyboardEvent<HTMLDivElement>, panel: HTMLElement | null): void {
+  if (event.key === 'Enter') event.stopPropagation();
+  else stepFocus(event, panel);
 }
 
 function stepFocus(event: ReactKeyboardEvent<HTMLDivElement>, panel: HTMLElement | null): void {
@@ -83,12 +93,17 @@ function useCloseOnNavigation(setOpen: (open: false) => void): void {
   }, [pathname, setOpen]);
 }
 
-function useDismiss(menu: RefObject<HTMLDivElement | null>, open: boolean, close: () => void): void {
+function useDismiss(
+  menu: RefObject<HTMLDivElement | null>,
+  open: boolean,
+  close: () => void,
+  closeToTrigger: () => void,
+): void {
   useEffect(() => {
     if (!open) return;
-    const stops = [dismissOnOutsidePress(menu.current, close), dismissOnEscape(close)];
+    const stops = [dismissOnOutsidePress(menu.current, close), dismissOnEscape(closeToTrigger)];
     return () => stops.forEach((stop) => stop());
-  }, [open, menu, close]);
+  }, [open, menu, close, closeToTrigger]);
 }
 
 function dismissOnOutsidePress(menu: HTMLElement | null, close: () => void): () => void {
