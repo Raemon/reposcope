@@ -14,10 +14,12 @@ import type { DiffRow } from './splitDiff';
 import type { CollapseAnchor } from './useCodeCollapse';
 import type { CodePress } from './useDefinitionClick';
 import type { SideTokens } from './useDiffSideHighlight';
+import { lineHeight, type RowHeights } from './diffMetrics';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 
 const ROW = 'flex h-[15px] items-center gap-1 leading-[15px]';
+const WRAPPED_ROW = 'flex min-h-[15px] items-start gap-1 leading-[15px]';
 // Literal px; Tailwind can't compile computed classes. Sync with BLANK_ROW_HEIGHT.
 const BLANK_ROW = 'flex h-[4px] items-center gap-1 leading-[4px]';
 const GUTTER = 'flex w-[46px] shrink-0 select-none items-center text-[9px] text-ink-dim';
@@ -27,6 +29,8 @@ const EDIT_BTN = `${STICKY_CHIP} uppercase tracking-[0.14em]`;
 const FOLD_BADGE = `${STICKY_CHIP} ml-1 text-[9px] italic text-ink-dim`;
 const FOLD_PREVIEW = 'diff-code max-w-[90ch] shrink-[999] overflow-hidden text-ellipsis whitespace-pre pl-2 text-[11px] text-ink-dim/70';
 const CODE = 'diff-code whitespace-pre pr-2 text-[11px]';
+// break-all, not word wrapping: only a greedy column fill matches wrapHeights' row sizing.
+const WRAPPED_CODE = 'diff-code min-w-0 flex-1 whitespace-pre-wrap [word-break:break-all] pr-2 text-[11px]';
 // 150px keeps the fold badge clear of the ellipsis; 100cqw is the visible column width.
 const FOLDED_TEXT = 'flex min-w-0 max-w-[calc(100cqw-150px)] overflow-hidden';
 
@@ -50,6 +54,7 @@ export interface SideProps {
   editedRows?: EditableBlock | null;
   spacer?: { afterRow: number; height: number } | null;
   onCodePress?: CodePress;
+  heights: RowHeights;
 }
 
 export function DiffSide(props: SideProps) {
@@ -84,14 +89,15 @@ function DiffLines({
   onEditBlock,
   spacer,
   onCodePress,
+  heights,
 }: SideProps & { from: number; to: number }) {
   const dim = foldsCollapsed(useFoldCommand().mode);
   if (from >= to) return null;
   const spacerLine = spacer ? lastLineOfRow(lines, spacer.afterRow) : -1;
   const rowsWithRightLine = rowsShownOnRight(lines);
   return (
-    <div className="@container min-w-0 flex-1 overflow-x-auto">
-      <div className="w-max min-w-full">
+    <div className={`@container min-w-0 flex-1 ${heights ? '' : 'overflow-x-auto'}`}>
+      <div className={heights ? 'w-full' : 'w-max min-w-full'}>
         {lines.slice(from, to).map((line, offset) => {
           const index = from + offset;
           const anchor = anchorOf(line, anchors, rowsWithRightLine);
@@ -106,6 +112,7 @@ function DiffLines({
                 expand={expand}
                 anchor={anchor}
                 dim={dim}
+                height={heights && lineHeight(line, heights)}
                 editable={editable}
                 onEdit={editStarter(rows, line.row, onEditBlock)}
                 onCodePress={onCodePress}
@@ -157,6 +164,7 @@ function DiffLineView({
   anchor,
   preview,
   dim,
+  height,
   editable,
   onEdit,
   onCodePress,
@@ -169,6 +177,7 @@ function DiffLineView({
   expand: HunkControl;
   anchor: CollapseAnchor | null;
   dim: boolean;
+  height: number | null;
   editable?: boolean;
   onEdit?: () => void;
   onCodePress?: CodePress;
@@ -177,8 +186,9 @@ function DiffLineView({
   if (line.kind === 'hunk') {
     return <HunkLine label={labels ? line.label : ''} expand={expand} onEdit={editable && side === 'right' ? onEdit : undefined} />;
   }
-  const row = line.blank ? BLANK_ROW : ROW;
-  if (!cell) return <div className={`${row} bg-procgen/40`} />;
+  const wrapping = height !== null && !line.blank;
+  const row = line.blank ? BLANK_ROW : wrapping ? WRAPPED_ROW : ROW;
+  if (!cell) return <div className={`${row} bg-procgen/40`} style={wrapping ? { minHeight: height } : undefined} />;
   const changed = line.kind === 'change';
   const openable = Boolean(editable && side === 'right');
   const folded = Boolean(anchor?.collapsed);
@@ -186,12 +196,13 @@ function DiffLineView({
   return (
     <div
       className={`group ${row} ${lineTone(side, changed, line.touched)} ${openable ? 'cursor-text' : ''}`}
+      style={wrapping ? { minHeight: height } : undefined}
       onClick={openable && onEdit ? (event) => opensEditor(event.detail) && onEdit() : undefined}
     >
       <GutterCell line={line.blank ? null : cell.line} anchor={anchor} />
       <span className={folded ? FOLDED_TEXT : 'contents'}>
         <span
-          className={folded ? `${CODE} min-w-0 overflow-hidden text-ellipsis` : CODE}
+          className={codeClass(folded, wrapping)}
           onClick={onCodePress ? (event) => onCodePress(line, event) : undefined}
         >
           {(dim ? dimAroundName(segments, lineTokens) : segments).map((segment, index) => (
@@ -209,6 +220,11 @@ function DiffLineView({
       {folded && anchor && <FoldBadge anchor={anchor} />}
     </div>
   );
+}
+
+function codeClass(folded: boolean, wrapping: boolean): string {
+  if (folded) return `${CODE} min-w-0 overflow-hidden text-ellipsis`;
+  return wrapping ? WRAPPED_CODE : CODE;
 }
 
 function opensEditor(clickCount: number): boolean {

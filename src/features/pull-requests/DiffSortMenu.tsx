@@ -26,7 +26,7 @@ function SortButton({ current, open, toggle }: PopoverTrigger & { current: DiffS
   const held = CHOICES.find((choice) => choice.sort === current) ?? CHOICES[0]!;
   const label = `Sort files by ${held.label}`;
   return (
-    <HoverCardTrigger label={label} focusable={false} tooltipStyle>
+    <HoverCardTrigger label={label} focusable={false} tooltipStyle placement="top-end">
       <button
         type="button"
         aria-haspopup="menu"

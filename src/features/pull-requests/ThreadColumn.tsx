@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { placeThreads, type AnchoredThread, type PlacedThread } from './commentAnchors';
 import { DEFAULT_COMMENT_WIDTH, setCommentColumnWidth, useCommentColumnStyle } from './commentColumnWidth';
-import { linesHeight, ROW_HEIGHT } from './diffMetrics';
+import { linesHeight, ROW_HEIGHT, type RowHeights } from './diffMetrics';
 import type { DiffLine } from './diffLines';
 import { DragHandle, useDragWidth } from './ResizableColumn';
 import { ThreadCard } from './ThreadCard';
@@ -17,10 +17,12 @@ const MIN_SLOT = CARD_HEADER + EXPAND_BAR;
 export function ThreadColumn({
   anchors,
   lines,
+  heights: rowHeights,
   onOverflow,
 }: {
   anchors: AnchoredThread[];
   lines: DiffLine[];
+  heights: RowHeights;
   onOverflow: (pixels: number) => void;
 }) {
   const column = useRef<HTMLDivElement | null>(null);
@@ -31,7 +33,7 @@ export function ThreadColumn({
     setHeights((held) => (held[rootId] === height ? held : { ...held, [rootId]: height }));
   }, []);
   const cards = placeThreads(anchors, heights, CARD_GAP, MIN_SLOT);
-  const overflow = overflowBelow(cards, heights, expanded, linesHeight(lines));
+  const overflow = overflowBelow(cards, heights, expanded, linesHeight(lines, rowHeights));
 
   useEffect(() => onOverflow(overflow), [overflow, onOverflow]);
 

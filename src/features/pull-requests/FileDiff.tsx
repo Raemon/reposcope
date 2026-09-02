@@ -1,13 +1,15 @@
 'use client';
 
-import { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { CodeBlockEditor } from './CodeBlockEditor';
 import { CommitEditModal } from './CommitEditModal';
 import { DiffSide, type HunkControl } from './DiffSide';
 import { useDiffLayout } from './diffLayoutStore';
 import { columnLines, resultLines, unifiedLines, visibleLines, type DiffLine } from './diffLines';
 import { langForPath } from './diffHighlight';
-import { linesHeight, ROW_HEIGHT, SAVE_BAR } from './diffMetrics';
+import { linesHeight, ROW_HEIGHT, SAVE_BAR, type RowHeights } from './diffMetrics';
+import { useDiffWrap } from './diffWrapStore';
+import { useCodeCharWidth, useElementWidth, useWrapColumns, wrappedRowHeights, type WrapColumns } from './wrapHeights';
 import { EditTarget } from './editTarget';
 import { type EditableBlock } from './editableBlocks';
 import { expandDiff } from './expandDiff';
@@ -18,7 +20,7 @@ import { DragHandle, useDragWidth } from './ResizableColumn';
 import { rowOf } from './commentAnchors';
 import { useFileThreads } from './reviewThreadStore';
 import { splitDiff, type DiffRow } from './splitDiff';
-import { useCodeCollapse } from './useCodeCollapse';
+import { useCodeCollapse, type CollapseAnchor } from './useCodeCollapse';
 import { useDefinitionClick } from './useDefinitionClick';
 import { useDiffTokens, useIntralineEmphasis } from './useDiffSideHighlight';
 import { useHeightTransition } from './useHeightTransition';
@@ -48,6 +50,7 @@ export function FileDiff({
   const singleColumn = layout !== 'split' || entireFile;
   const removedSize = { width: useDiffPaneWidth(), open: true };
   const startDrag = useDragWidth(removedSize, setDiffPaneWidth);
+  const diffArea = useRef<HTMLDivElement | null>(null);
   const [wantWholeFile, setWantWholeFile] = useState(wholeFileWanted);
   const [threadOverflow, setThreadOverflow] = useState(0);
   const wholeFile = useWholeFile(owner, repo, file, baseRef, headRef, wantWholeFile);
@@ -73,29 +76,31 @@ export function FileDiff({
   const collapse = useCodeCollapse(rows, showingWholeFile, file.filename, threads, editBlock);
   const commentedRows = useMemo(() => new Set(threads.map((thread) => rowOf(thread, rows))), [threads, rows]);
   const lines = useMemo(() => foldedLines(rows, collapse.hidden, commentedRows), [rows, collapse.hidden, commentedRows]);
+  const columns = useDiffWrapColumns(diffArea, singleColumn, removedSize.width);
+  const rowHeights = useWrappedRowHeights(rows, columns, collapse.anchors);
   const resultView = layout === 'result' && !entireFile && anyLineSurvives(rows);
   const oneColumnLines = resultView ? lines.result : lines.unified;
   const mainLines = singleColumn ? oneColumnLines : lines.right;
   const growing = useHeightTransition(rows, collapse.hidden);
   const expand = expandControl(wholeFile, showingWholeFile, hunkEdit, setWantWholeFile);
   const onCodePress = useDefinitionClick(file, baseRef, headRef);
-  const shared = { rows, tokens, emphasis, expand, anchors: collapse.anchors, onCodePress };
+  const shared = { rows, tokens, emphasis, expand, anchors: collapse.anchors, onCodePress, heights: rowHeights };
   const bounds = { hidden: collapse.hidden, stopAtBlankLines: showingWholeFile };
   const editing = {
     editable: pull !== null,
     onEditBlock: (rowIndex: number) => hunkEdit.begin(rowIndex, bounds),
     editedRows: editBlock,
-    editor: hunkEditor(file.filename, hunkEdit, mainLines),
+    editor: hunkEditor(file.filename, hunkEdit, mainLines, rowHeights),
   };
   return (
     <div ref={growing} className="flex" style={{ paddingBottom: threadOverflow }}>
-      <div className="min-w-0 flex-1" style={{ flexBasis: singleColumn ? 0 : removedSize.width * 2 }}>
+      <div ref={diffArea} className="min-w-0 flex-1" style={{ flexBasis: singleColumn ? 0 : removedSize.width * 2 }}>
         {singleColumn ? (
           <DiffSide {...shared} lines={mainLines} labels {...editing} />
         ) : (
           <div className="flex">
             <section className="relative flex shrink-0 flex-col border-r border-panel-edge" style={{ width: removedSize.width }}>
-              <DiffSide {...shared} lines={lines.left} labels spacer={spacerFor(hunkEdit.edit, lines.right)} />
+              <DiffSide {...shared} lines={lines.left} labels spacer={spacerFor(hunkEdit.edit, lines.right, rowHeights)} />
               <DragHandle onPointerDown={startDrag} />
             </section>
             <section className="flex min-w-0 flex-1 flex-col">
@@ -108,6 +113,7 @@ export function FileDiff({
         threads={threads}
         rows={rows}
         lines={mainLines}
+        heights={rowHeights}
         onOverflow={setThreadOverflow}
       />
       {hunkEdit.message !== null && hunkEdit.edit !== null && (
@@ -124,6 +130,26 @@ export function FileDiff({
       )}
     </div>
   );
+}
+
+function useDiffWrapColumns(
+  diffArea: RefObject<HTMLDivElement | null>,
+  singleColumn: boolean,
+  leftWidth: number,
+): WrapColumns | null {
+  const areaWidth = useElementWidth(diffArea);
+  const wrapping = useDiffWrap();
+  return useWrapColumns(wrapping ? areaWidth : 0, singleColumn ? 0 : leftWidth, useCodeCharWidth());
+}
+
+// Collapsed rows draw one truncated line, so their full text must not size them.
+function useWrappedRowHeights(rows: DiffRow[], columns: WrapColumns | null, anchors: Map<number, CollapseAnchor>): RowHeights {
+  const collapsed = useMemo(() => collapsedRows(anchors), [anchors]);
+  return useMemo(() => wrappedRowHeights(rows, columns, collapsed), [rows, columns, collapsed]);
+}
+
+function collapsedRows(anchors: Map<number, CollapseAnchor>): Set<number> {
+  return new Set([...anchors].filter(([, anchor]) => anchor.collapsed).map(([row]) => row));
 }
 
 function useFoldCommandWholeFile(hunkEdit: HunkEditControls, setWantWholeFile: (next: boolean) => void) {
@@ -183,7 +209,7 @@ function leaveEdit(hunkEdit: HunkEditControls): boolean {
   return true;
 }
 
-function hunkEditor(filename: string, hunkEdit: HunkEditControls, shown: DiffLine[]) {
+function hunkEditor(filename: string, hunkEdit: HunkEditControls, shown: DiffLine[], heights: RowHeights) {
   const edit = hunkEdit.edit;
   if (!edit) return null;
   return (
@@ -192,7 +218,7 @@ function hunkEditor(filename: string, hunkEdit: HunkEditControls, shown: DiffLin
       value={edit.draft}
       lang={langForPath(filename)}
       caretLine={edit.block.caretLine}
-      minHeight={coveredHeight(shown, edit.block)}
+      minHeight={coveredHeight(shown, edit.block, heights)}
       saving={hunkEdit.committing}
       onChange={hunkEdit.setDraft}
       onSave={hunkEdit.askToCommit}
@@ -202,13 +228,13 @@ function hunkEditor(filename: string, hunkEdit: HunkEditControls, shown: DiffLin
 }
 
 // Rendered lines, not rows: a unified change row draws its before and after line.
-function coveredHeight(shown: DiffLine[], block: EditableBlock): number {
-  return linesHeight(shown.filter((line) => line.row >= block.firstRow && line.row <= block.lastRow));
+function coveredHeight(shown: DiffLine[], block: EditableBlock, heights: RowHeights): number {
+  return linesHeight(shown.filter((line) => line.row >= block.firstRow && line.row <= block.lastRow), heights);
 }
 
-function spacerFor(edit: HunkEdit | null, shown: DiffLine[]): { afterRow: number; height: number } | null {
+function spacerFor(edit: HunkEdit | null, shown: DiffLine[], heights: RowHeights): { afterRow: number; height: number } | null {
   if (!edit) return null;
-  const covered = coveredHeight(shown, edit.block);
+  const covered = coveredHeight(shown, edit.block, heights);
   const drawn = Math.max(covered, edit.draft.split('\n').length * ROW_HEIGHT + SAVE_BAR);
   return { afterRow: edit.block.lastRow, height: drawn - covered };
 }

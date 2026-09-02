@@ -101,3 +101,13 @@ export function SortIcon() {
     </ToolbarIcon>
   );
 }
+
+export function WrapLinesIcon() {
+  return (
+    <ToolbarIcon>
+      <path d="M3.5 5.5h17M3.5 18.5h6" />
+      <path d="M3.5 12h13a3.5 3.5 0 0 1 0 6.5h-2.5" />
+      <path d="M16 15.5 13.5 18.5 16 21.5" />
+    </ToolbarIcon>
+  );
+}
