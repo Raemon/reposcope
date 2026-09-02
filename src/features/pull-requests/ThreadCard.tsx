@@ -150,7 +150,7 @@ function ThreadActions({
           </button>
         </HoverCardTrigger>
       )}
-      {first?.url && <OpenOnGithub url={first.url} />}
+      <OpenOnGithub url={first?.url} />
     </div>
   );
 }
