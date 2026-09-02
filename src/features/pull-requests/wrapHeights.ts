@@ -4,9 +4,12 @@ import { useLayoutEffect, useMemo, useState } from 'react';
 import { ROW_HEIGHT, type RowHeight, type RowHeights } from './diffMetrics';
 import type { DiffRow } from './splitDiff';
 
-// Gutter (46px) plus the code cell's right padding: the width a wrapped line cannot use.
-const CODE_INSET = 54;
+// Gutter, the row's gap, the code cell's padding, and the left pane's border, rounded up:
+// too few columns only wraps early, too many lets a row outgrow the height both panes share.
+const CODE_INSET = 60;
 const PROBE_CHARS = 100;
+const TAB_SIZE = 8;
+const WIDE_CHAR = /[\u1100-\u115F\u2E80-\uA4CF\uAC00-\uD7A3\uF900-\uFAFF\uFE30-\uFE6F\uFF00-\uFF60\uFFE0-\uFFE6]/u;
 
 export interface WrapColumns {
   left: number;
@@ -51,7 +54,19 @@ function evenSides(height: number): RowHeight {
 }
 
 function visualLines(text: string, columns: number): number {
-  return Math.max(1, Math.ceil(text.length / columns));
+  return Math.max(1, Math.ceil(renderedColumns(text) / columns));
+}
+
+/** Tabs and full-width glyphs cover several columns each, so length alone under-counts. */
+function renderedColumns(text: string): number {
+  let width = 0;
+  for (const char of text) width += charColumns(char, width);
+  return width;
+}
+
+function charColumns(char: string, atColumn: number): number {
+  if (char === '\t') return TAB_SIZE - (atColumn % TAB_SIZE);
+  return WIDE_CHAR.test(char) || char.codePointAt(0)! > 0xffff ? 2 : 1;
 }
 
 export function columnsInPane(paneWidth: number, charWidth: number): number {

@@ -30,7 +30,7 @@ const FOLD_BADGE = `${STICKY_CHIP} ml-1 text-[9px] italic text-ink-dim`;
 const FOLD_PREVIEW = 'diff-code max-w-[90ch] shrink-[999] overflow-hidden text-ellipsis whitespace-pre pl-2 text-[11px] text-ink-dim/70';
 const CODE = 'diff-code whitespace-pre pr-2 text-[11px]';
 // break-all, not word wrapping: only a greedy column fill matches wrapHeights' row sizing.
-const WRAPPED_CODE = 'diff-code min-w-0 flex-1 whitespace-pre-wrap [word-break:break-all] pr-2 text-[11px]';
+const WRAPPED_CODE = 'diff-code min-w-0 flex-1 whitespace-pre-wrap [word-break:break-all] [tab-size:8] pr-2 text-[11px]';
 // 150px keeps the fold badge clear of the ellipsis; 100cqw is the visible column width.
 const FOLDED_TEXT = 'flex min-w-0 max-w-[calc(100cqw-150px)] overflow-hidden';
 

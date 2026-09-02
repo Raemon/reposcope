@@ -82,7 +82,7 @@ export function FileDiff({
   const resultView = layout === 'result' && !entireFile && anyLineSurvives(rows);
   const oneColumnLines = resultView ? lines.result : lines.unified;
   const mainLines = singleColumn ? oneColumnLines : lines.right;
-  const growing = useHeightTransition(rows, collapse.hidden);
+  const growing = useHeightTransition(rows, collapse.hidden, rowHeights);
   const expand = expandControl(wholeFile, showingWholeFile, hunkEdit, setWantWholeFile);
   const onCodePress = useDefinitionClick(file, baseRef, headRef);
   const shared = { rows, tokens, emphasis, expand, anchors: collapse.anchors, onCodePress, heights: rowHeights };
