@@ -11,7 +11,7 @@ export function PaneStatusLine({
   children,
 }: {
   tone: 'dim' | 'error';
-  onRetry?: () => void;
+  onRetry?: () => void | Promise<unknown>;
   className?: string;
   children: ReactNode;
 }) {
@@ -19,7 +19,7 @@ export function PaneStatusLine({
     <p className={`px-2 py-1 text-[11px] leading-4 ${TONE[tone]} ${className}`}>
       {children}
       {onRetry && (
-        <button type="button" onClick={onRetry} className="ml-2 underline">
+        <button type="button" onClick={retryClick(onRetry)} className="ml-2 underline">
           try again
         </button>
       )}
@@ -27,6 +27,7 @@ export function PaneStatusLine({
   );
 }
 
-export function retryHandler(reload: () => Promise<unknown>): () => void {
-  return () => void reload().catch(() => {});
+// A failed retry leaves the error already on screen; catching only avoids console noise.
+function retryClick(onRetry: () => void | Promise<unknown>): () => void {
+  return () => void Promise.resolve(onRetry()).catch(() => {});
 }

@@ -9,7 +9,7 @@ import { ReviewThreadProvider } from './reviewThreadStore';
 import { wholeFileSet } from './wholeFileEntry';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 import { useCachedJson } from '@/features/sources/useCachedJson';
-import { PaneStatusLine, retryHandler } from '@/features/surface-ui/PaneStatusLine';
+import { PaneStatusLine } from '@/features/surface-ui/PaneStatusLine';
 
 export function RepoFileReader({
   owner,
@@ -29,7 +29,7 @@ export function RepoFileReader({
   const { data, error, reload } = useCachedJson<FileText>(route, token, ready);
   const fileSet = useMemo(() => readableFileSet(refName, path, wantsText, data), [refName, path, wantsText, data]);
 
-  if (error) return <PaneStatusLine tone="error" className="flex-1" onRetry={retryHandler(reload)}>{error}</PaneStatusLine>;
+  if (error) return <PaneStatusLine tone="error" className="flex-1" onRetry={reload}>{error}</PaneStatusLine>;
   if (wantsText && data?.text === null) return <PaneStatusLine tone="dim" className="flex-1">File too large to show.</PaneStatusLine>;
   return (
     <ReviewThreadProvider owner={owner} repo={repo} number={null}>

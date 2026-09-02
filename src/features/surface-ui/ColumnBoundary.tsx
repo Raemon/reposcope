@@ -3,7 +3,7 @@
 import { Component, type ReactNode } from 'react';
 import { PaneStatusLine } from './PaneStatusLine';
 
-// Without this, one render error anywhere in a column replaces the whole page with Next.js's error screen.
+// Without this, one render error in a column replaces the page with Next's error screen.
 export class ColumnBoundary extends Component<{ children: ReactNode }, { failure: string | null }> {
   state = { failure: null as string | null };
 

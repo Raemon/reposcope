@@ -7,6 +7,7 @@ import { ImageDiff } from './ImageDiff';
 import { isImagePath } from './imageFiles';
 import { imageSides } from './imageView';
 import type { ChangedFile } from './pullRequests';
+import { PaneStatusLine } from '@/features/surface-ui/PaneStatusLine';
 import { rowStateClass, type RowState } from '@/features/surface-ui/rowState';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 
@@ -83,9 +84,9 @@ function FileBody({
     );
   }
   if (diff) return diff;
-  return <PaneStatusLine text={`${file.status} — no textual diff`} />;
-}
-
-function PaneStatusLine({ text }: { text: string }) {
-  return <p className="flex-1 px-2 py-1 text-[11px] text-ink-dim">{text}</p>;
+  return (
+    <PaneStatusLine tone="dim" className="flex-1">
+      {file.status} — no textual diff
+    </PaneStatusLine>
+  );
 }
