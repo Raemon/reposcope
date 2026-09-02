@@ -1,6 +1,6 @@
 'use client';
 
-import { CHOICE } from '@/features/surface-ui/buttonStyles';
+import { ACCENT_CHOICE, CHOICE } from '@/features/surface-ui/buttonStyles';
 import { MONO_FIELD } from '@/features/surface-ui/fieldStyles';
 import { ModalShell } from '@/features/surface-ui/ModalShell';
 
@@ -45,7 +45,7 @@ export function CommitEditModal({
           type="button"
           onClick={onCommit}
           disabled={committing || message.trim() === ''}
-          className={`${CHOICE} text-accent`}
+          className={ACCENT_CHOICE}
         >
           {committing ? 'Committing…' : 'Yes'}
         </button>

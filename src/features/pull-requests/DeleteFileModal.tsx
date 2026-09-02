@@ -1,6 +1,6 @@
 'use client';
 
-import { CHOICE } from '@/features/surface-ui/buttonStyles';
+import { ACCENT_CHOICE, CHOICE } from '@/features/surface-ui/buttonStyles';
 import { ModalShell } from '@/features/surface-ui/ModalShell';
 
 export function DeleteFileModal({
@@ -25,7 +25,7 @@ export function DeleteFileModal({
         <button type="button" onClick={onCancel} disabled={deleting} className={CHOICE}>
           Cancel
         </button>
-        <button type="button" onClick={onConfirm} disabled={deleting} className={`${CHOICE} text-accent`}>
+        <button type="button" onClick={onConfirm} disabled={deleting} className={ACCENT_CHOICE}>
           {deleting ? 'Deleting…' : 'Yes, delete'}
         </button>
       </div>
