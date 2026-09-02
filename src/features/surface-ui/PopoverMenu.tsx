@@ -71,10 +71,9 @@ function stepFocus(event: ReactKeyboardEvent<HTMLDivElement>, panel: HTMLElement
 }
 
 function focusNeighbour(items: HTMLElement[], from: EventTarget, step: number): void {
-  if (items.length === 0) return;
   const at = items.indexOf(from as HTMLElement);
-  if (at < 0) return items[step > 0 ? 0 : items.length - 1]?.focus();
-  items[(at + step + items.length) % items.length]?.focus();
+  const next = at < 0 ? (step > 0 ? 0 : items.length - 1) : (at + step + items.length) % items.length;
+  items[next]?.focus();
 }
 
 function useCloseOnNavigation(setOpen: (open: false) => void): void {
