@@ -6,6 +6,7 @@ import { mergePull } from './mergePull';
 import { latestPullFailure, pullActionFor, usePullActions } from './pullActionStore';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
 import { useGithubToken } from '@/features/sources/sourceStore';
+import { CHOICE } from '@/features/surface-ui/buttonStyles';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 
 export function MergePullButton({ repo, number }: { repo: RepoRef; number: number }) {
@@ -50,7 +51,7 @@ export function MergePullButton({ repo, number }: { repo: RepoRef; number: numbe
           type="button"
           onClick={() => mergePull({ owner: repo.owner, repo: repo.name, number }, token, (href) => router.push(href))}
           disabled={merging || pull === null || closed || conflicted}
-          className="shrink-0 rounded bg-btn px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-ink-dim hover:bg-btn-hover hover:text-ink disabled:opacity-40 disabled:hover:bg-btn disabled:hover:text-ink-dim"
+          className={`${CHOICE} shrink-0`}
         >
           {merging ? 'Merging…' : conflicted ? 'Merge Conflicts' : 'Merge'}
         </button>

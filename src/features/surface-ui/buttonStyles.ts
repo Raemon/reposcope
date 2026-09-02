@@ -3,6 +3,14 @@ export const BUTTON =
 
 export const CHOICE = `${BUTTON} px-2 py-1 text-[10px]`;
 
+export const SMALL_CHOICE = `${BUTTON} px-1.5 py-[2px] text-[9px]`;
+
+export const MENU_ITEM = 'block w-full px-2 py-1 text-left text-[11px] leading-4 hover:bg-btn-hover';
+
+export const TEXT_ACTION = 'rounded text-ink-dim hover:bg-btn-hover hover:text-ink';
+
+export const TEXT_ACTION_ACTIVE = 'rounded bg-btn-hover text-ink';
+
 const ICON_BUTTON = 'flex items-center justify-center rounded';
 
 export type IconButtonTone = 'accent' | 'add';

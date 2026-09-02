@@ -7,9 +7,10 @@ import { baseName } from './fileTree';
 import type { ChangedFile } from './pullRequests';
 import type { ImageGallery } from './imageView';
 import { holdClick, useFocusOnIndex, useViewerKeys, wrapImageIndex } from './viewerKeys';
+import { TEXT_ACTION } from '@/features/surface-ui/buttonStyles';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 
-const SHIFT = 'shrink-0 px-2 py-8 text-[22px] leading-none text-ink-dim hover:bg-btn-hover hover:text-ink';
+const SHIFT = `${TEXT_ACTION} shrink-0 px-2 py-8 text-[22px] leading-none`;
 
 interface ViewerProps {
   gallery: ImageGallery;
@@ -115,7 +116,7 @@ function CaptionIndex({ index, count }: { index: number; count: number }) {
 
 function CloseViewer({ onClose }: { onClose: () => void }) {
   return (
-    <button type="button" onClick={onClose} className="shrink-0 text-ink-dim hover:bg-btn-hover hover:text-ink">
+    <button type="button" onClick={onClose} className={`${TEXT_ACTION} shrink-0 px-1`}>
       close
     </button>
   );

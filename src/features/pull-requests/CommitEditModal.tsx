@@ -1,6 +1,7 @@
 'use client';
 
 import { CHOICE } from '@/features/surface-ui/buttonStyles';
+import { MONO_FIELD } from '@/features/surface-ui/fieldStyles';
 import { ModalShell } from '@/features/surface-ui/ModalShell';
 
 export function CommitEditModal({
@@ -30,7 +31,7 @@ export function CommitEditModal({
         rows={3}
         aria-label="Commit message"
         onChange={(event) => onMessage(event.target.value)}
-        className="mt-2 w-full resize-y rounded bg-field p-1.5 font-mono text-[11px] leading-4 text-ink outline-none focus:ring-1 focus:ring-accent"
+        className={`${MONO_FIELD} mt-2 resize-y leading-4`}
       />
       {error !== null && <p className="mt-1 text-[10px] text-error-ink">{error}</p>}
       <div className="mt-3 flex flex-wrap justify-end gap-2">

@@ -16,6 +16,7 @@ import { unifiedLines, type DiffLine } from './diffLines';
 import { lineTone } from './DiffSide';
 import { originAtPress } from './useDefinitionClick';
 import { useDiffTokens } from './useDiffSideHighlight';
+import { TEXT_ACTION, TEXT_ACTION_ACTIVE } from '@/features/surface-ui/buttonStyles';
 
 export function DefinitionPeek() {
   const shown = useDefinitionPeekShown();
@@ -96,7 +97,7 @@ function PeekHeader({
 
 function HeaderButton({ label, onClick, text }: { label: string; onClick: () => void; text: string }) {
   return (
-    <button type="button" aria-label={label} onClick={onClick} className="shrink-0 rounded px-1 text-ink-dim hover:bg-btn-hover hover:text-ink">
+    <button type="button" aria-label={label} onClick={onClick} className={`${TEXT_ACTION} shrink-0 px-1`}>
       {text}
     </button>
   );
@@ -110,7 +111,7 @@ function CandidateRow({ frame, onPick }: { frame: PeekFrame; onPick: (site: Defi
           key={`${site.ref}:${site.path}:${site.nameLine}`}
           type="button"
           onClick={() => onPick(site)}
-          className={`rounded px-1 ${sameSite(site, frame.site) ? 'bg-btn-hover text-ink' : 'text-ink-dim hover:bg-btn-hover hover:text-ink'}`}
+          className={`${sameSite(site, frame.site) ? TEXT_ACTION_ACTIVE : TEXT_ACTION} px-1`}
         >
           {site.path}:{site.nameLine}
         </button>

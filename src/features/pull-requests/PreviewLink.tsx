@@ -2,6 +2,7 @@
 
 import { useCurrentPull } from './currentPullStore';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
+import { CHOICE } from '@/features/surface-ui/buttonStyles';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 
 export function PreviewLink({ repo, number }: { repo: RepoRef; number: number }) {
@@ -13,8 +14,8 @@ export function PreviewLink({ repo, number }: { repo: RepoRef; number: number })
       <a
         href={previewUrl}
         target="_blank"
-        rel="noreferrer"
-        className="block shrink-0 rounded bg-btn px-2 py-1 text-[10px] uppercase tracking-[0.18em] text-ink-dim hover:bg-btn-hover hover:text-ink"
+        rel="noopener noreferrer"
+        className={`${CHOICE} block shrink-0`}
       >
         Preview
       </a>

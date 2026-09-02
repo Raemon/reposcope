@@ -12,10 +12,10 @@ import { useRegisterColumn } from '@/features/pull-requests/columnNav';
 import { usePaneMode } from '@/features/pull-requests/centralLayout';
 import { useCollapsibleColumn, ResizableColumn } from '@/features/pull-requests/ResizableColumn';
 import { useStickyColumn } from '@/features/pull-requests/stickyColumns';
-import { BUTTON } from '@/features/surface-ui/buttonStyles';
+import { SMALL_CHOICE } from '@/features/surface-ui/buttonStyles';
 
 const ICON = '✳';
-const ACTION = `${BUTTON} mr-1 shrink-0 px-1 py-[1px] text-[9px]`;
+const ACTION = `${SMALL_CHOICE} mr-1 shrink-0`;
 
 export function AiChatColumn({ owner, repo, subject, headRef }: { owner: string; repo: string; subject: string; headRef: string | null }) {
   const [size, setSize] = useStickyColumn('ai-chat');

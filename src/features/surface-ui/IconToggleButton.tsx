@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { iconButtonClass } from './buttonStyles';
 import { HoverCardTrigger } from './HoverCard';
 
 export function IconToggleButton({ label, onClick, children }: { label: string; onClick: () => void; children: ReactNode }) {
@@ -10,7 +11,7 @@ export function IconToggleButton({ label, onClick, children }: { label: string; 
         type="button"
         onClick={onClick}
         aria-label={label}
-        className="rounded text-ink-dim hover:bg-btn-hover hover:text-ink"
+        className={iconButtonClass(false)}
       >
         {children}
       </button>
