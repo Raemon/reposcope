@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { PullDiscussion } from './PullDiscussion';
 import { AllPullsColumn, RepoPullsColumn } from './PullListColumn';
+import { ReviewLoadNotice } from './ReviewLoadNotice';
 import { ReviewWorkspace } from './ReviewWorkspace';
 import { setCurrentPull } from './currentPullStore';
 import { pullFilesPath, pullPath } from './pullPaths';
@@ -39,10 +40,7 @@ export function PullRequestView({
     setCurrentPull(pull && { owner, repo, pull, reload: () => latestReload.current() });
   }, [pull, owner, repo]);
 
-  if (!pull) {
-    if (pullState.error) return <p className="px-2 py-1 text-[11px] text-error-ink">{pullState.error}</p>;
-    return <p className="px-2 py-1 text-[11px] text-ink-dim">Loading #{number}…</p>;
-  }
+  if (!pull) return <ReviewLoadNotice label={`#${number}`} error={pullState.error} reload={pullState.reload} />;
 
   return (
     <ReviewWorkspace

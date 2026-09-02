@@ -1,7 +1,7 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
-import type { PullRequestCommits } from './pullRequests';
+import type { CommitSummary, PullRequestCommits } from './pullRequests';
 
 export interface CurrentPull {
   owner: string;
@@ -10,30 +10,53 @@ export interface CurrentPull {
   reload: () => Promise<unknown>;
 }
 
-let current: CurrentPull | null = null;
-const listeners = new Set<() => void>();
+export interface CurrentBranch {
+  owner: string;
+  repo: string;
+  branch: string;
+  head: CommitSummary | null;
+}
+
+function subjectStore<T>() {
+  let current: T | null = null;
+  const listeners = new Set<() => void>();
+  return {
+    set(next: T | null): void {
+      current = next;
+      listeners.forEach((notify) => notify());
+    },
+    read: () => current,
+    subscribe(listener: () => void): () => void {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+  };
+}
+
+const pulls = subjectStore<CurrentPull>();
+const branches = subjectStore<CurrentBranch>();
+const nothingHeld = () => null;
 
 export function setCurrentPull(next: CurrentPull | null): void {
-  current = next;
-  listeners.forEach((notify) => notify());
+  pulls.set(next);
+}
+
+export function setCurrentBranch(next: CurrentBranch | null): void {
+  branches.set(next);
 }
 
 export function reloadCurrentPull(): Promise<unknown> {
-  return current?.reload() ?? Promise.resolve();
+  return pulls.read()?.reload() ?? Promise.resolve();
 }
 
 export function useCurrentPull(owner: string, repo: string, number: number): PullRequestCommits | null {
-  const held = useSyncExternalStore(
-    subscribe,
-    () => current,
-    () => null,
-  );
+  const held = useSyncExternalStore(pulls.subscribe, pulls.read, nothingHeld);
   return held && held.owner === owner && held.repo === repo && held.pull.pull.number === number ? held.pull : null;
 }
 
-function subscribe(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
+export function useCurrentBranchHead(owner: string, repo: string, branch: string): CommitSummary | null {
+  const held = useSyncExternalStore(branches.subscribe, branches.read, nothingHeld);
+  return held && held.owner === owner && held.repo === repo && held.branch === branch ? held.head : null;
 }
