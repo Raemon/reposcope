@@ -112,6 +112,7 @@ function DiffLines({
                 ranges={rangesFor(emphasis[line.row], line.side)}
                 expand={expand}
                 anchor={anchor}
+                collapsed={anchors.get(line.row)?.collapsed ?? false}
                 dim={dim}
                 height={heights ? lineHeight(line, heights) : null}
                 editable={editable}
@@ -163,6 +164,7 @@ function DiffLineView({
   ranges,
   expand,
   anchor,
+  collapsed,
   preview,
   dim,
   height,
@@ -177,6 +179,7 @@ function DiffLineView({
   ranges: CharRange[] | null;
   expand: HunkControl;
   anchor: CollapseAnchor | null;
+  collapsed: boolean;
   dim: boolean;
   height: number | null;
   editable?: boolean;
@@ -192,7 +195,6 @@ function DiffLineView({
   if (!cell) return <div className={`${row} bg-procgen/40`} style={wrapping ? { minHeight: height } : undefined} />;
   const changed = line.kind === 'change';
   const openable = Boolean(editable && side === 'right');
-  const folded = Boolean(anchor?.collapsed);
   const segments = codeSegments(cell.text, lineTokens, changed ? ranges : null);
   return (
     <div
@@ -201,10 +203,10 @@ function DiffLineView({
       onClick={openable && onEdit ? (event) => opensEditor(event.detail) && onEdit() : undefined}
     >
       <GutterCell line={line.blank ? null : cell.line} anchor={anchor} />
-      <span className={folded ? FOLDED_TEXT : 'contents'}>
+      <span className={collapsed ? FOLDED_TEXT : 'contents'}>
         <span
-          className={codeClass(folded, wrapping)}
-          style={wrapping ? hangingIndentStyle(cell.text) : undefined}
+          className={codeClass(collapsed, wrapping)}
+          style={wrapping && !collapsed ? hangingIndentStyle(cell.text) : undefined}
           onClick={onCodePress ? (event) => onCodePress(line, event) : undefined}
         >
           {(dim ? dimAroundName(segments, lineTokens) : segments).map((segment, index) => (
@@ -219,13 +221,14 @@ function DiffLineView({
         </span>
         {preview && <span className={FOLD_PREVIEW}>{preview}</span>}
       </span>
-      {folded && anchor && <FoldBadge anchor={anchor} />}
+      {collapsed && anchor && <FoldBadge anchor={anchor} />}
     </div>
   );
 }
 
-function codeClass(folded: boolean, wrapping: boolean): string {
-  if (folded) return `${CODE} min-w-0 overflow-hidden text-ellipsis`;
+// A collapsed row shows one ellipsised line, so it neither wraps nor hangs.
+function codeClass(collapsed: boolean, wrapping: boolean): string {
+  if (collapsed) return `${CODE} min-w-0 overflow-hidden text-ellipsis`;
   return wrapping ? WRAPPED_CODE : CODE;
 }
 
