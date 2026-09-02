@@ -58,9 +58,9 @@ export function DiffFileSection({
             {file.filename}
           </span>
           <span className="shrink-0 text-[9px] uppercase tracking-[0.18em] text-ink-dim">{file.status}</span>
+          <ChangeCounts additions={file.additions} deletions={file.deletions} />
         </SelectableRow>
         <HeaderActions path={file.filename} href={blobUrl(owner, repo, headRef, file.filename)} />
-        <ChangeCounts additions={file.additions} deletions={file.deletions} />
       </div>
       {open && <FileBody owner={owner} repo={repo} file={file} baseRef={baseRef} headRef={headRef} />}
     </section>
