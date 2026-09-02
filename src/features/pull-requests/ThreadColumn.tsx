@@ -1,11 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { placeThreads, type AnchoredThread, type PlacedThread } from './commentAnchors';
 import { DEFAULT_COMMENT_WIDTH, setCommentColumnWidth, useCommentColumnStyle } from './commentColumnWidth';
 import { linesHeight, ROW_HEIGHT, type RowHeights } from './diffMetrics';
 import type { DiffLine } from './diffLines';
 import { DragHandle, useDragWidth } from './ResizableColumn';
+import { useElementWidth } from './useElementWidth';
 import { ThreadCard } from './ThreadCard';
 
 const CARD_GAP = 4;
@@ -26,7 +27,7 @@ export function ThreadColumn({
   onOverflow: (pixels: number) => void;
 }) {
   const column = useRef<HTMLDivElement | null>(null);
-  const startDrag = useDragWidth({ width: useMeasuredWidth(column), open: true }, setCommentColumnWidth, 'left');
+  const startDrag = useDragWidth({ width: useElementWidth(column, DEFAULT_COMMENT_WIDTH), open: true }, setCommentColumnWidth, 'left');
   const [heights, setHeights] = useState<Record<number, number>>({});
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
   const measure = useCallback((rootId: number, height: number) => {
@@ -54,19 +55,6 @@ export function ThreadColumn({
       <DragHandle onPointerDown={startDrag} edge="left" />
     </div>
   );
-}
-
-// Flex-sized until first dragged, so a drag must start from the rendered width.
-function useMeasuredWidth(node: RefObject<HTMLElement | null>): number {
-  const [width, setWidth] = useState(DEFAULT_COMMENT_WIDTH);
-  useLayoutEffect(() => {
-    const element = node.current;
-    if (!element) return;
-    const observer = new ResizeObserver(() => setWidth(element.offsetWidth));
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [node]);
-  return width;
 }
 
 function clampFor(card: PlacedThread, heights: Record<number, number>): number | null {

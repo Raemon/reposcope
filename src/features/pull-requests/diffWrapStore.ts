@@ -1,10 +1,8 @@
 'use client';
 
-import { localPref, usePref } from './localPref';
+import { boolPref, usePref } from './localPref';
 
-const wrapPref = localPref<boolean>('reposcope.diffWrap', true, (stored) =>
-  typeof stored === 'boolean' ? stored : undefined,
-);
+const wrapPref = boolPref('reposcope.diffWrap', true);
 
 export function setDiffWrap(wrap: boolean): void {
   wrapPref.set(wrap);

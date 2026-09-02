@@ -9,7 +9,8 @@ import { columnLines, resultLines, unifiedLines, visibleLines, type DiffLine } f
 import { langForPath } from './diffHighlight';
 import { linesHeight, ROW_HEIGHT, SAVE_BAR, type RowHeights } from './diffMetrics';
 import { useDiffWrap } from './diffWrapStore';
-import { useCodeCharWidth, useElementWidth, useWrapColumns, wrappedRowHeights, type WrapColumns } from './wrapHeights';
+import { useCodeCharWidth, useWrapColumns, wrappedRowHeights, type WrapColumns } from './wrapHeights';
+import { useElementWidth } from './useElementWidth';
 import { EditTarget } from './editTarget';
 import { type EditableBlock } from './editableBlocks';
 import { expandDiff } from './expandDiff';
@@ -77,7 +78,7 @@ export function FileDiff({
   const commentedRows = useMemo(() => new Set(threads.map((thread) => rowOf(thread, rows))), [threads, rows]);
   const lines = useMemo(() => foldedLines(rows, collapse.hidden, commentedRows), [rows, collapse.hidden, commentedRows]);
   const columns = useDiffWrapColumns(diffArea, singleColumn, removedSize.width);
-  const rowHeights = useWrappedRowHeights(rows, columns, collapse.anchors);
+  const rowHeights = useWrappedRowHeights(rows, columns, collapse.anchors, !singleColumn);
   const resultView = layout === 'result' && !entireFile && anyLineSurvives(rows);
   const oneColumnLines = resultView ? lines.result : lines.unified;
   const mainLines = singleColumn ? oneColumnLines : lines.right;
@@ -143,9 +144,14 @@ function useDiffWrapColumns(
 }
 
 // Collapsed rows draw one truncated line, so their full text must not size them.
-function useWrappedRowHeights(rows: DiffRow[], columns: WrapColumns | null, anchors: Map<number, CollapseAnchor>): RowHeights {
+function useWrappedRowHeights(
+  rows: DiffRow[],
+  columns: WrapColumns | null,
+  anchors: Map<number, CollapseAnchor>,
+  splitPanes: boolean,
+): RowHeights {
   const collapsed = useMemo(() => collapsedRows(anchors), [anchors]);
-  return useMemo(() => wrappedRowHeights(rows, columns, collapsed), [rows, columns, collapsed]);
+  return useMemo(() => wrappedRowHeights(rows, columns, collapsed, splitPanes), [rows, columns, collapsed, splitPanes]);
 }
 
 function collapsedRows(anchors: Map<number, CollapseAnchor>): Set<number> {

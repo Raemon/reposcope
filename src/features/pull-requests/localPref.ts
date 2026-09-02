@@ -36,6 +36,10 @@ export function localPref<T>(key: string, fallback: T, decode: (stored: unknown)
   };
 }
 
+export function boolPref(key: string, fallback: boolean): LocalPref<boolean> {
+  return localPref<boolean>(key, fallback, (stored) => (typeof stored === 'boolean' ? stored : undefined));
+}
+
 export function memoryPref<T>(initial: T): LocalPref<T> {
   const listeners = new Set<() => void>();
   let value = initial;

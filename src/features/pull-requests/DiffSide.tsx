@@ -112,7 +112,7 @@ function DiffLines({
                 expand={expand}
                 anchor={anchor}
                 dim={dim}
-                height={heights && lineHeight(line, heights)}
+                height={heights ? lineHeight(line, heights) : null}
                 editable={editable}
                 onEdit={editStarter(rows, line.row, onEditBlock)}
                 onCodePress={onCodePress}
