@@ -13,6 +13,7 @@ const DEFAULTS: Record<string, ColumnSize> = {
   files: { width: 280, open: true },
   'all-files': { width: 280, open: false },
   'repo-files': { width: 320, open: true },
+  'repo-pulls': { width: 360, open: true },
   'ai-chat': { width: 360, open: false },
 };
 
