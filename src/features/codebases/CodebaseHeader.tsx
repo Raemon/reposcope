@@ -29,6 +29,7 @@ export function CodebaseHeader() {
   const pullNumber = pullBeingRead(pathname);
   const branch = branchBeingRead(pathname);
   const readingPullList = reading !== null && pathname === repoRoute(reading.owner, reading.name);
+  const readingChange = reading !== null && (pullNumber !== null || branch !== null);
   return (
     <header className="relative z-40 flex items-center gap-2 border-b border-panel-edge bg-panel px-2 py-5">
       <Link href="/" aria-label="reposcope home" className="shrink-0">
@@ -43,11 +44,9 @@ export function CodebaseHeader() {
             <PullBranchRefs repo={reading} number={pullNumber} />
             <PreviewLink repo={reading} number={pullNumber} />
             <MergePullButton repo={reading} number={pullNumber} />
-            <span className="hidden md:contents">
-              <ViewModeToggle />
-            </span>
           </>
         )}
+        {readingChange && <ViewModeToggle />}
         <ThemeToggle />
       </div>
     </header>
@@ -56,7 +55,7 @@ export function CodebaseHeader() {
 
 function HeaderSubject({ repo, pullNumber, branch }: { repo: RepoRef; pullNumber: number | null; branch: string | null }) {
   if (pullNumber !== null) return <CurrentPullTitle repo={repo} number={pullNumber} />;
-  if (branch !== null) return <CurrentBranchTitle branch={branch} />;
+  if (branch !== null) return <CurrentBranchTitle repo={repo} branch={branch} />;
   return <PullRequestMenu repo={repo} />;
 }
 
