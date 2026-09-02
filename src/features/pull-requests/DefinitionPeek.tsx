@@ -16,7 +16,7 @@ import { unifiedLines, type DiffLine } from './diffLines';
 import { lineTone } from './DiffSide';
 import { originAtPress } from './useDefinitionClick';
 import { useDiffTokens } from './useDiffSideHighlight';
-import { TEXT_ACTION, TEXT_ACTION_ACTIVE } from '@/features/surface-ui/buttonStyles';
+import { TEXT_ACTION } from '@/features/surface-ui/buttonStyles';
 
 export function DefinitionPeek() {
   const shown = useDefinitionPeekShown();
@@ -111,7 +111,7 @@ function CandidateRow({ frame, onPick }: { frame: PeekFrame; onPick: (site: Defi
           key={`${site.ref}:${site.path}:${site.nameLine}`}
           type="button"
           onClick={() => onPick(site)}
-          className={`${sameSite(site, frame.site) ? TEXT_ACTION_ACTIVE : TEXT_ACTION} px-1`}
+          className={`${sameSite(site, frame.site) ? 'rounded bg-btn-hover text-ink' : TEXT_ACTION} px-1`}
         >
           {site.path}:{site.nameLine}
         </button>

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import type { CursorModel } from './cursorTypes';
 import { SMALL_CHOICE } from '@/features/surface-ui/buttonStyles';
-import { FIELD_FOCUS, PROSE_FIELD } from '@/features/surface-ui/fieldStyles';
+import { FIELD_FOCUS, TEXT_FIELD } from '@/features/surface-ui/fieldStyles';
 
 export function ChatComposer({
   busy,
@@ -35,7 +35,7 @@ export function ChatComposer({
         placeholder={busy ? 'Queue the next instruction…' : 'Ask the cloud agent to change this branch…'}
         onChange={(event) => setDraft(event.target.value)}
         onKeyDown={(event) => event.key === 'Enter' && (event.metaKey || event.ctrlKey) && send()}
-        className={`${PROSE_FIELD} resize-y`}
+        className={`${TEXT_FIELD} resize-y px-1.5 py-1 font-serif text-[13px] leading-[1.5]`}
       />
       <div className="mt-0.5 flex items-center gap-1">
         <ModelSelect models={models} model={model} onModel={onModel} />

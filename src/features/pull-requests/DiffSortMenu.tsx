@@ -1,7 +1,7 @@
 'use client';
 
 import { setDiffSort, useDiffSort, type DiffSort } from './diffSortStore';
-import { iconButtonClass, MENU_ITEM } from '@/features/surface-ui/buttonStyles';
+import { iconButtonClass } from '@/features/surface-ui/buttonStyles';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { PopoverMenu, type PopoverTrigger } from '@/features/surface-ui/PopoverMenu';
 import { SortIcon } from './diffToolbarIcons';
@@ -51,7 +51,7 @@ function SortChoice({ sort, label, current, close }: { sort: DiffSort; label: st
         setDiffSort(sort);
         close();
       }}
-      className={`${MENU_ITEM} ${active ? 'text-accent' : 'text-ink'}`}
+      className={`block w-full px-2 py-1 text-left text-[11px] leading-4 hover:bg-btn-hover ${active ? 'text-accent' : 'text-ink'}`}
     >
       {label}
     </button>

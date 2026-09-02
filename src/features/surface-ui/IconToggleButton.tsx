@@ -11,7 +11,7 @@ export function IconToggleButton({ label, onClick, children }: { label: string; 
         type="button"
         onClick={onClick}
         aria-label={label}
-        className={iconButtonClass(false)}
+        className={`${iconButtonClass(false)} hover:bg-btn-hover`}
       >
         {children}
       </button>
