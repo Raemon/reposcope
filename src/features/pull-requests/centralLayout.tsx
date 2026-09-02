@@ -71,7 +71,7 @@ export function useForcedOpen(): boolean {
   return useCentralLayout().central;
 }
 
-export function CentralTabBar() {
+export function CentralTabBar({ hasDiscussion }: { hasDiscussion: boolean }) {
   const { central } = useCentralLayout();
   if (!central) return null;
   return (
@@ -81,13 +81,17 @@ export function CentralTabBar() {
           <TabButton {...PULLS_TAB} />
         </div>
         <div className="mx-auto flex items-center gap-1">
-          {SUBJECT_TABS.map((entry) => (
+          {subjectTabs(hasDiscussion).map((entry) => (
             <TabButton key={entry.tab} {...entry} />
           ))}
         </div>
       </div>
     </div>
   );
+}
+
+function subjectTabs(hasDiscussion: boolean): TabEntry[] {
+  return hasDiscussion ? SUBJECT_TABS : SUBJECT_TABS.filter((entry) => entry.tab !== 'discussion');
 }
 
 function TabButton({ tab, label, columns }: TabEntry) {

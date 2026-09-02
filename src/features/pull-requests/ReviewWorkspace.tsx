@@ -209,7 +209,7 @@ function Workspace({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <CentralTabBar />
+      <CentralTabBar hasDiscussion={discussion !== null} />
       <div className="flex min-h-0 flex-1 max-md:flex-col max-md:overflow-y-auto">
         {listColumn}
         {discussion !== null && (
