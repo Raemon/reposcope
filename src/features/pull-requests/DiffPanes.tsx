@@ -9,6 +9,7 @@ import { EditTarget } from './editTarget';
 import { ImageThumbnailStrip } from './ImageThumbnailStrip';
 import { imageFilesOf, isImagePath } from './imageFiles';
 import type { ChangedFile, ChangedFileSet, PullRequestSummary } from './pullRequests';
+import { Note } from '@/features/surface-ui/Note';
 
 const SCROLL_MS = 100;
 
@@ -24,6 +25,7 @@ export function DiffPanes({
   files,
   selected,
   editablePull = null,
+  sortable = true,
   onCommitted,
   ref,
 }: {
@@ -33,6 +35,7 @@ export function DiffPanes({
   files: ChangedFile[];
   selected: string | null;
   editablePull?: PullRequestSummary | null;
+  sortable?: boolean;
   onCommitted?: () => void | Promise<void>;
   ref?: Ref<DiffPanesHandle>;
 }) {
@@ -53,13 +56,13 @@ export function DiffPanes({
     toggleFile,
   }));
 
-  if (!fileSet) return <p className="flex-1 px-2 py-1 text-[11px] text-ink-dim">Loading…</p>;
-  if (files.length === 0) return <p className="flex-1 px-2 py-1 text-[11px] text-ink-dim">No files changed</p>;
+  if (!fileSet) return <Note tone="dim" className="flex-1">Loading…</Note>;
+  if (files.length === 0) return <Note tone="dim" className="flex-1">No files changed.</Note>;
   return (
     <EditTarget value={editablePull && { pull: editablePull, headRef: fileSet.headRef, onCommitted }}>
       <DefinitionPeekProvider owner={owner} repo={repo} fileSet={fileSet}>
         <div className="flex min-h-0 flex-1 flex-col">
-          <DiffLayoutToggle />
+          <DiffLayoutToggle sortable={sortable} />
           <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto bg-code">
             <ImageStrip
               key={`${fileSet.baseRef}:${fileSet.headRef}`}

@@ -9,9 +9,8 @@ import { ReviewThreadProvider } from './reviewThreadStore';
 import { wholeFileEntry, wholeFileSetOf } from './wholeFileEntry';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 import { useCachedJson } from '@/features/sources/useCachedJson';
+import { Note } from '@/features/surface-ui/Note';
 
-const NOTE = 'flex-1 px-2 py-1 text-[11px] text-ink-dim';
-const FOOT = 'shrink-0 px-2 py-1 text-[11px] text-ink-dim';
 const AT_ONCE = 40;
 
 export function RepoFolderReader({
@@ -31,14 +30,15 @@ export function RepoFolderReader({
   const files = useMemo(() => readableFiles(shown, texts), [shown, texts]);
   const waiting = read.filter((path) => !texts.has(path)).length;
 
-  if (paths.length === 0) return <p className={NOTE}>No files directly in this folder — open a subfolder.</p>;
+  if (paths.length === 0)
+    return <Note tone="dim" className="flex-1">No files directly in this folder — open a subfolder.</Note>;
   return (
     <ReviewThreadProvider owner={owner} repo={repo} number={null}>
       {read.map((path) => (
         <FileTextLoader key={path} owner={owner} repo={repo} refName={refName} path={path} onText={hold} />
       ))}
       {waiting > 0 ? (
-        <p className={NOTE}>Loading {waiting} of {read.length} files…</p>
+        <Note tone="dim" className="flex-1">Loading {waiting} of {read.length} files…</Note>
       ) : (
         <FolderPanes owner={owner} repo={repo} refName={refName} files={files} />
       )}
@@ -59,15 +59,15 @@ function FolderPanes({
   files: ChangedFile[];
 }) {
   const fileSet = useMemo(() => wholeFileSetOf(refName, files), [refName, files]);
-  if (files.length === 0) return <p className={NOTE}>None of these files can be shown here.</p>;
-  return <DiffPanes owner={owner} repo={repo} fileSet={fileSet} files={files} selected={null} />;
+  if (files.length === 0) return <Note tone="dim" className="flex-1">None of these files can be shown here.</Note>;
+  return <DiffPanes owner={owner} repo={repo} fileSet={fileSet} files={files} selected={null} sortable={false} />;
 }
 
 function FolderNotes({ left, skipped }: { left: number; skipped: number }) {
   return (
     <>
-      {left > 0 && <p className={FOOT}>{left} more files in this folder — open them one at a time.</p>}
-      {skipped > 0 && <p className={FOOT}>{skipped} files left out — too large to show, or unreadable.</p>}
+      {left > 0 && <Note tone="dim" className="shrink-0">{left} more files in this folder — open them one at a time.</Note>}
+      {skipped > 0 && <Note tone="dim" className="shrink-0">{skipped} files left out — too large to show, or unreadable.</Note>}
     </>
   );
 }

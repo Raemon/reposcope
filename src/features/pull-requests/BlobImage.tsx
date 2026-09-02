@@ -5,6 +5,7 @@ import type { ChangedFile } from './pullRequests';
 import type { ImageFileView, ImageGallery, ImageSource } from './imageView';
 import { previewSource } from './imageView';
 import { useFileBlob } from './useFileBlob';
+import { Note } from '@/features/surface-ui/Note';
 
 export const CHECKERBOARD = {
   backgroundImage:
@@ -38,7 +39,12 @@ export function BlobImage({
   compact?: boolean;
 }) {
   const blob = useFileBlob(owner, repo, source);
-  if (!blob.value?.dataUrl) return <p className="text-[9px] text-ink-dim">{blobStatus(blob, compact)}</p>;
+  if (!blob.value?.dataUrl)
+    return (
+      <Note tone={blob.error ? 'error' : 'dim'} className="text-center">
+        {blobStatus(blob, compact)}
+      </Note>
+    );
   return <CheckerImg src={blob.value.dataUrl} alt={alt} className={className} />;
 }
 
@@ -62,7 +68,7 @@ export function CheckerImg({
 }
 
 function blobStatus(blob: ReturnType<typeof useFileBlob>, compact: boolean): string {
-  if (blob.error) return compact ? '!' : blob.error;
-  if (!blob.value) return compact ? '…' : 'Loading…';
-  return compact ? 'big' : 'too large to preview';
+  if (blob.error) return compact ? 'Failed' : blob.error;
+  if (!blob.value) return 'Loading…';
+  return compact ? 'Too big' : 'Too large to preview.';
 }
