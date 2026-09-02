@@ -7,11 +7,10 @@ import { ImageDiff } from './ImageDiff';
 import { isImagePath } from './imageFiles';
 import { imageSides } from './imageView';
 import type { ChangedFile } from './pullRequests';
-import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
+import { CopyButton } from '@/features/surface-ui/CopyButton';
 import { OpenOnGithubLink } from '@/features/surface-ui/OpenOnGithubLink';
 import { rowStateClass, type RowState } from '@/features/surface-ui/rowState';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
-import { useCopiedFlag } from '@/features/surface-ui/useCopiedFlag';
 
 const ACTION = 'rounded px-1 leading-4 text-ink-dim hover:bg-btn-hover hover:text-ink';
 const ACTION_BAR = 'flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100';
@@ -60,10 +59,7 @@ export function DiffFileSection({
           </span>
           <span className="shrink-0 text-[9px] uppercase tracking-[0.18em] text-ink-dim">{file.status}</span>
         </SelectableRow>
-        <span className={ACTION_BAR}>
-          <CopyPath path={file.filename} />
-          <OpenOnGithubLink href={blobUrl(owner, repo, headRef, file.filename)} what={file.filename} className={ACTION} />
-        </span>
+        <HeaderActions path={file.filename} href={blobUrl(owner, repo, headRef, file.filename)} />
         <ChangeCounts additions={file.additions} deletions={file.deletions} />
       </div>
       {open && <FileBody owner={owner} repo={repo} file={file} baseRef={baseRef} headRef={headRef} />}
@@ -75,15 +71,14 @@ function blobUrl(owner: string, repo: string, headRef: string, filename: string)
   return `https://github.com/${owner}/${repo}/blob/${headRef}/${filename}`;
 }
 
-function CopyPath({ path }: { path: string }) {
-  const [copied, markCopied] = useCopiedFlag();
-  const copy = () => void navigator.clipboard?.writeText(path).then(markCopied, () => {});
+function HeaderActions({ path, href }: { path: string; href: string }) {
   return (
-    <HoverCardTrigger label={copied ? 'copied path' : 'copy path'} focusable={false} tooltipStyle>
-      <button type="button" aria-label={`Copy path ${path}`} onClick={copy} className={`${ACTION} ${copied ? 'text-accent' : ''}`}>
+    <span className={ACTION_BAR}>
+      <CopyButton value={path} what="path" ariaLabel={`Copy path ${path}`} className={ACTION}>
         ⧉
-      </button>
-    </HoverCardTrigger>
+      </CopyButton>
+      <OpenOnGithubLink href={href} label={path} className={ACTION} />
+    </span>
   );
 }
 

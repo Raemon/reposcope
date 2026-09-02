@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { CodebaseHeader } from '@/features/codebases/CodebaseHeader';
-import { DEFAULT_TITLE, DocumentTitle } from '@/features/codebases/DocumentTitle';
+import { DocumentTitle } from '@/features/codebases/DocumentTitle';
+import { DEFAULT_TITLE } from '@/features/codebases/documentTitles';
 import { ThemeScript } from '@/features/theme/ThemeScript';
 import './globals.css';
 
