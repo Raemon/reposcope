@@ -1,7 +1,9 @@
 'use client';
 
 import { setDiffSort, useDiffSort, type DiffSort } from './diffSortStore';
-import { MenuIconButton, PopoverMenu } from '@/features/surface-ui/PopoverMenu';
+import { iconButtonClass } from '@/features/surface-ui/buttonStyles';
+import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
+import { PopoverMenu, type PopoverTrigger } from '@/features/surface-ui/PopoverMenu';
 import { SortIcon } from './diffToolbarIcons';
 
 const CHOICES: { sort: DiffSort; label: string }[] = [
@@ -14,22 +16,29 @@ const CHOICES: { sort: DiffSort; label: string }[] = [
 export function DiffSortMenu() {
   const current = useDiffSort();
   return (
-    <PopoverMenu
-      align="right-0"
-      panelClass="w-52 py-1"
-      trigger={(state) => (
-        <MenuIconButton label={sortLabel(current)} {...state}>
-          <SortIcon />
-        </MenuIconButton>
-      )}
-    >
+    <PopoverMenu align="right-0" panelClass="w-52 py-1" trigger={(state) => <SortButton current={current} {...state} />}>
       {(close) => CHOICES.map((choice) => <SortChoice key={choice.sort} {...choice} current={current} close={close} />)}
     </PopoverMenu>
   );
 }
 
-function sortLabel(current: DiffSort): string {
-  return `Sort files by ${(CHOICES.find((choice) => choice.sort === current) ?? CHOICES[0]!).label}`;
+function SortButton({ current, open, toggle }: PopoverTrigger & { current: DiffSort }) {
+  const held = CHOICES.find((choice) => choice.sort === current) ?? CHOICES[0]!;
+  const label = `Sort files by ${held.label}`;
+  return (
+    <HoverCardTrigger label={label} focusable={false} tooltipStyle>
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={label}
+        onClick={toggle}
+        className={iconButtonClass(open)}
+      >
+        <SortIcon />
+      </button>
+    </HoverCardTrigger>
+  );
 }
 
 function SortChoice({ sort, label, current, close }: { sort: DiffSort; label: string; current: DiffSort; close: () => void }) {

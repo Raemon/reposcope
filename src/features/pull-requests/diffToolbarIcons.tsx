@@ -101,11 +101,3 @@ export function SortIcon() {
     </ToolbarIcon>
   );
 }
-
-export function FilterIcon() {
-  return (
-    <ToolbarIcon>
-      <path d="M3.5 5h17l-6.5 7.6V20l-4-2.6v-4.8Z" />
-    </ToolbarIcon>
-  );
-}
