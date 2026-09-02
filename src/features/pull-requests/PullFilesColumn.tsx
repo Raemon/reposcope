@@ -4,7 +4,7 @@ import { ChangedFileTree } from './ChangedFileTree';
 import type { PreviewToken } from './ColumnPreview';
 import { baseName } from './fileTree';
 import type { ChangedFile } from './pullRequests';
-import { Note } from '@/features/surface-ui/Note';
+import { PaneStatusLine } from '@/features/surface-ui/PaneStatusLine';
 
 export function PullFilesColumn({
   files,
@@ -19,8 +19,8 @@ export function PullFilesColumn({
   onSelect: (filename: string) => void;
   onDelete: ((filename: string) => void) | null;
 }) {
-  if (files === null) return <Note tone={fileError ? 'error' : 'dim'}>{fileError ?? 'Loading…'}</Note>;
-  if (files.length === 0) return <Note tone="dim">No files changed.</Note>;
+  if (files === null) return <PaneStatusLine tone={fileError ? 'error' : 'dim'}>{fileError ?? 'Loading…'}</PaneStatusLine>;
+  if (files.length === 0) return <PaneStatusLine tone="dim">No files changed.</PaneStatusLine>;
   return <ChangedFileTree files={files} selected={path} onSelect={onSelect} onDelete={onDelete} />;
 }
 

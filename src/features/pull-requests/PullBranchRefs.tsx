@@ -10,7 +10,7 @@ import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 import { useCachedJson, type CachedJson } from '@/features/sources/useCachedJson';
 import { FilterField } from '@/features/surface-ui/FilterField';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
-import { Note, retryHandler } from '@/features/surface-ui/Note';
+import { PaneStatusLine, retryHandler } from '@/features/surface-ui/PaneStatusLine';
 import { PopoverMenu, type PopoverTrigger } from '@/features/surface-ui/PopoverMenu';
 import { RelativeTime } from '@/features/surface-ui/RelativeTime';
 
@@ -156,9 +156,9 @@ function BranchList({
   onChoose: (base: string) => void;
 }) {
   const { data, error, reload } = branches;
-  if (error !== null) return <Note tone="error" onRetry={retryHandler(reload)}>{error}</Note>;
-  if (data === null) return <Note tone="dim">Loading branches…</Note>;
-  if (shown.length === 0) return <Note tone="dim">No matching branches.</Note>;
+  if (error !== null) return <PaneStatusLine tone="error" onRetry={retryHandler(reload)}>{error}</PaneStatusLine>;
+  if (data === null) return <PaneStatusLine tone="dim">Loading branches…</PaneStatusLine>;
+  if (shown.length === 0) return <PaneStatusLine tone="dim">No matching branches.</PaneStatusLine>;
   return <>{shown.map((branch) => <BranchChoice key={branch.name} branch={branch} onChoose={onChoose} />)}</>;
 }
 

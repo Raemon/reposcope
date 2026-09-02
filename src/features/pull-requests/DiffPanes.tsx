@@ -9,7 +9,7 @@ import { EditTarget } from './editTarget';
 import { ImageThumbnailStrip } from './ImageThumbnailStrip';
 import { imageFilesOf, isImagePath } from './imageFiles';
 import type { ChangedFile, ChangedFileSet, PullRequestSummary } from './pullRequests';
-import { Note } from '@/features/surface-ui/Note';
+import { PaneStatusLine } from '@/features/surface-ui/PaneStatusLine';
 
 const SCROLL_MS = 100;
 
@@ -56,8 +56,8 @@ export function DiffPanes({
     toggleFile,
   }));
 
-  if (!fileSet) return <Note tone="dim" className="flex-1">Loading…</Note>;
-  if (files.length === 0) return <Note tone="dim" className="flex-1">No files changed.</Note>;
+  if (!fileSet) return <PaneStatusLine tone="dim" className="flex-1">Loading…</PaneStatusLine>;
+  if (files.length === 0) return <PaneStatusLine tone="dim" className="flex-1">No files changed.</PaneStatusLine>;
   return (
     <EditTarget value={editablePull && { pull: editablePull, headRef: fileSet.headRef, onCommitted }}>
       <DefinitionPeekProvider owner={owner} repo={repo} fileSet={fileSet}>

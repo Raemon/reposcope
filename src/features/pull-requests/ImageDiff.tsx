@@ -8,7 +8,7 @@ import { type ImageSource } from './imageView';
 import { openImageTab } from './openImageTab';
 import { useFileBlob } from './useFileBlob';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
-import { Note } from '@/features/surface-ui/Note';
+import { PaneStatusLine } from '@/features/surface-ui/PaneStatusLine';
 
 export function ImageDiff({
   owner,
@@ -61,13 +61,13 @@ function ImagePane({
       </div>
       <div className="flex min-h-[80px] flex-1 items-center justify-center p-3">
         {!source ? (
-          <Note tone="dim">{label === 'before' ? 'Added in this change.' : 'Deleted in this change.'}</Note>
+          <PaneStatusLine tone="dim">{label === 'before' ? 'Added in this change.' : 'Deleted in this change.'}</PaneStatusLine>
         ) : blob.error ? (
-          <Note tone="error">{blob.error}</Note>
+          <PaneStatusLine tone="error">{blob.error}</PaneStatusLine>
         ) : !blob.value ? (
-          <Note tone="dim">Loading…</Note>
+          <PaneStatusLine tone="dim">Loading…</PaneStatusLine>
         ) : !blob.value.dataUrl ? (
-          <Note tone="dim">Too large to preview ({byteLabel(blob.value.byteSize)}).</Note>
+          <PaneStatusLine tone="dim">Too large to preview ({byteLabel(blob.value.byteSize)}).</PaneStatusLine>
         ) : (
           <HoverCardTrigger label="Open image in a new tab" focusable={false} tooltipStyle>
             <button

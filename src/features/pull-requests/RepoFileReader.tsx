@@ -9,7 +9,7 @@ import { ReviewThreadProvider } from './reviewThreadStore';
 import { wholeFileSet } from './wholeFileEntry';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 import { useCachedJson } from '@/features/sources/useCachedJson';
-import { Note, retryHandler } from '@/features/surface-ui/Note';
+import { PaneStatusLine, retryHandler } from '@/features/surface-ui/PaneStatusLine';
 
 export function RepoFileReader({
   owner,
@@ -29,8 +29,8 @@ export function RepoFileReader({
   const { data, error, reload } = useCachedJson<FileText>(route, token, ready);
   const fileSet = useMemo(() => readableFileSet(refName, path, wantsText, data), [refName, path, wantsText, data]);
 
-  if (error) return <Note tone="error" className="flex-1" onRetry={retryHandler(reload)}>{error}</Note>;
-  if (wantsText && data?.text === null) return <Note tone="dim" className="flex-1">File too large to show.</Note>;
+  if (error) return <PaneStatusLine tone="error" className="flex-1" onRetry={retryHandler(reload)}>{error}</PaneStatusLine>;
+  if (wantsText && data?.text === null) return <PaneStatusLine tone="dim" className="flex-1">File too large to show.</PaneStatusLine>;
   return (
     <ReviewThreadProvider owner={owner} repo={repo} number={null}>
       <DiffPanes owner={owner} repo={repo} fileSet={fileSet} files={fileSet?.files ?? []} selected={path} sortable={false} />

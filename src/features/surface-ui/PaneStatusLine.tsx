@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 
 const TONE = { dim: 'text-ink-dim', error: 'text-error-ink' };
 
-export function Note({
+export function PaneStatusLine({
   tone,
   onRetry,
   className = '',

@@ -5,7 +5,7 @@ import type { ChangedFile } from './pullRequests';
 import type { ImageFileView, ImageGallery, ImageSource } from './imageView';
 import { previewSource } from './imageView';
 import { useFileBlob } from './useFileBlob';
-import { Note } from '@/features/surface-ui/Note';
+import { PaneStatusLine } from '@/features/surface-ui/PaneStatusLine';
 
 export const CHECKERBOARD = {
   backgroundImage:
@@ -41,9 +41,9 @@ export function BlobImage({
   const blob = useFileBlob(owner, repo, source);
   if (!blob.value?.dataUrl)
     return (
-      <Note tone={blob.error ? 'error' : 'dim'} className="text-center">
+      <PaneStatusLine tone={blob.error ? 'error' : 'dim'} className="text-center">
         {blobStatus(blob, compact)}
-      </Note>
+      </PaneStatusLine>
     );
   return <CheckerImg src={blob.value.dataUrl} alt={alt} className={className} />;
 }

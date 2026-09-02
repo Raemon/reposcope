@@ -6,7 +6,7 @@ import { parseGithubAccess } from '@/features/github-auth/githubAccess';
 import { grantFromParams } from '@/features/github-auth/grantParams';
 import { sessionFromGrant } from '@/features/sources/githubSession';
 import { addSource, writeGithubSession } from '@/features/sources/sourceStore';
-import { Note } from '@/features/surface-ui/Note';
+import { PaneStatusLine } from '@/features/surface-ui/PaneStatusLine';
 
 export default function ConnectPage() {
   const router = useRouter();
@@ -20,5 +20,5 @@ export default function ConnectPage() {
     window.history.replaceState(null, '', '/connect');
     router.replace(token ? '/' : `/?error=${encodeURIComponent('GitHub sign-in returned no token')}`);
   }, [router]);
-  return <Note tone="dim" className="m-4">Connecting to GitHub…</Note>;
+  return <PaneStatusLine tone="dim" className="m-4">Connecting to GitHub…</PaneStatusLine>;
 }

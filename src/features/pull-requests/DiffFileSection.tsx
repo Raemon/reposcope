@@ -83,9 +83,9 @@ function FileBody({
     );
   }
   if (diff) return diff;
-  return <Note text={`${file.status} — no textual diff`} />;
+  return <PaneStatusLine text={`${file.status} — no textual diff`} />;
 }
 
-function Note({ text }: { text: string }) {
+function PaneStatusLine({ text }: { text: string }) {
   return <p className="flex-1 px-2 py-1 text-[11px] text-ink-dim">{text}</p>;
 }
