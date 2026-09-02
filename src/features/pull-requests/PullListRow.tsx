@@ -44,15 +44,23 @@ export function PullRowFields({ pull, repo, repoColumnCh }: { pull: PullRowSumma
         <span className={ROW_META}>#{pull.number}</span>
         {!isOwnAuthor(pull.author) && <span className={ROW_META}>{pull.author}</span>}
         <span className="flex-1" />
-        {pull.draft && <RowTag>draft</RowTag>}
-        {pull.state !== 'open' && <RowTag>{pull.merged ? 'merged' : 'closed'}</RowTag>}
+        <StateTags pull={pull} />
         <RelativeTime iso={pull.updatedAt} className={ROW_META} />
       </div>
     </>
   );
 }
 
-export function RowTag({ children }: { children: ReactNode }) {
+export function StateTags({ pull }: { pull: { draft: boolean; state: string; merged: boolean } }) {
+  return (
+    <>
+      {pull.draft && <RowTag>draft</RowTag>}
+      {pull.state !== 'open' && <RowTag>{pull.merged ? 'merged' : 'closed'}</RowTag>}
+    </>
+  );
+}
+
+function RowTag({ children }: { children: ReactNode }) {
   return <span className="shrink-0 rounded bg-btn px-1 font-mono text-[9px]">{children}</span>;
 }
 

@@ -1,8 +1,7 @@
 'use client';
 
-import { RowTag } from './PullListRow';
+import { StateTags } from './PullListRow';
 import { useCurrentBranchHead, useCurrentPull } from './currentPullStore';
-import type { PullRequestSummary } from './pullRequests';
 import { useIsOwnAuthor } from '@/features/github-auth/useViewerLogin';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
@@ -37,9 +36,14 @@ export function CurrentBranchTitle({ repo, branch }: { repo: RepoRef; branch: st
       </span>
       <TruncatedName text={branch} className="font-mono text-[13px] leading-6 text-ink" />
       {head && <AuthorAndTime author={head.author} iso={head.date} />}
-      <GithubLink href={`https://github.com/${repo.owner}/${repo.name}/tree/${encodeURI(branch)}`} label="Open branch on GitHub" />
+      <GithubLink href={branchTreeUrl(repo, branch)} label="Open branch on GitHub" />
     </div>
   );
+}
+
+function branchTreeUrl(repo: RepoRef, branch: string): string {
+  const path = branch.split('/').map(encodeURIComponent).join('/');
+  return `https://github.com/${repo.owner}/${repo.name}/tree/${path}`;
 }
 
 function TruncatedName({ text, className, serif = false }: { text: string; className: string; serif?: boolean }) {
@@ -47,15 +51,6 @@ function TruncatedName({ text, className, serif = false }: { text: string; class
     <HoverCardTrigger label={text} serifLabel={serif} className="min-w-0" focusable={false} tooltipStyle>
       <span className={`min-w-0 truncate ${className}`}>{text}</span>
     </HoverCardTrigger>
-  );
-}
-
-function StateTags({ pull }: { pull: PullRequestSummary }) {
-  return (
-    <>
-      {pull.draft && <RowTag>draft</RowTag>}
-      {pull.state !== 'open' && <RowTag>{pull.merged ? 'merged' : 'closed'}</RowTag>}
-    </>
   );
 }
 
