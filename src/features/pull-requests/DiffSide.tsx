@@ -2,7 +2,7 @@
 
 import { Fragment, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { hunkHasEditableLines, type EditableBlock } from './editableBlocks';
-import { codeSegments, type CodeSegment } from './codeSegments';
+import { codeSegments } from './codeSegments';
 import { dimAroundName } from './foldDimming';
 import { shortenKeywords } from './keywordAbbreviations';
 import { collapsedPreview } from './collapsedPreview';
@@ -249,11 +249,11 @@ function DiffLineView({
           className={codeClass(collapsed, wrapping)}
           style={wrapping && !collapsed ? hangingIndentStyle(cell.text) : undefined}
           onClick={onCodePress ? (event) => onCodePress(line, event) : undefined}
-          {...sourceOffsets(segments)}
         >
           {segments.map((segment, index) => (
             <span
               key={index}
+              hidden={segment.elided}
               className={segment.emphasized ? emphasisTone(side) : undefined}
               style={{ ...segment.style, opacity: segment.opacity }}
             >
@@ -278,14 +278,6 @@ function codeClass(collapsed: boolean, wrapping: boolean): string {
 function hangingIndentStyle(text: string): { paddingLeft: string; textIndent: string } {
   const indent = hangingIndent(text);
   return { paddingLeft: `${indent}ch`, textIndent: `-${indent}ch` };
-}
-
-// Abbreviated keywords shift later columns; definition lookups read these back.
-function sourceOffsets(segments: CodeSegment[]): { 'data-shrunk'?: number; 'data-prefix-end'?: number } {
-  const shrunk = segments.reduce((total, segment) => total + (segment.shortenedBy ?? 0), 0);
-  if (shrunk === 0) return {};
-  const prefix = segments.filter((segment) => segment.prefix);
-  return { 'data-shrunk': shrunk, 'data-prefix-end': prefix.reduce((total, one) => total + one.content.length, 0) };
 }
 
 function opensEditor(clickCount: number): boolean {

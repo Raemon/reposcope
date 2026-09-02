@@ -8,7 +8,7 @@ export interface CodeSegment {
   emphasized: boolean;
   opacity?: number;
   prefix?: boolean;
-  shortenedBy?: number;
+  elided?: boolean;
 }
 
 export function codeSegments(
