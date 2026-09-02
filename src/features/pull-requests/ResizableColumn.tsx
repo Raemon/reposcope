@@ -11,6 +11,7 @@ const HEADER_ROW = 'flex w-full shrink-0 items-center gap-1.5 border-panel-edge 
 
 const STRIP =
   'flex w-full shrink-0 cursor-pointer items-center gap-1.5 border-b px-1.5 py-1 text-[10px] uppercase tracking-[0.18em] text-ink-dim hover:text-ink md:w-7 md:min-h-0 md:flex-col md:gap-2.5 md:border-b-0 md:px-0';
+// Buttons don't inherit text-transform, so the strip's uppercase repeats here.
 const STRIP_EXPAND =
   'flex shrink-0 items-center gap-1.5 overflow-hidden rounded-[3px] uppercase outline-none focus-visible:ring-1 focus-visible:ring-accent md:max-h-[40%] md:flex-col md:gap-2.5';
 
@@ -203,6 +204,7 @@ function PaneColumn({ navId, title, icon, note, action, footer, children }: Colu
 function StripColumn({ navId, title, icon, preview, size, onSize, side = 'left' }: ColumnProps) {
   const nav = useColumnNav(navId);
   return (
+    // The whole strip expands on click; the button adds the label and keyboard access.
     <div
       onClick={() => onSize({ ...size, open: true })}
       onPointerDown={nav.focus}
@@ -211,7 +213,7 @@ function StripColumn({ navId, title, icon, preview, size, onSize, side = 'left' 
     >
       <button type="button" aria-label={`Expand ${title}`} className={STRIP_EXPAND}>
         <span aria-hidden className="shrink-0 text-[11px] leading-none">{icon}</span>
-        <span className="shrink-0 overflow-hidden md:[writing-mode:vertical-rl]">{title}</span>
+        <span className="shrink-0 md:[writing-mode:vertical-rl]">{title}</span>
       </button>
       {preview}
     </div>
