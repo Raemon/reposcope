@@ -13,7 +13,7 @@ import { CurrentBranchTitle, CurrentPullTitle } from '@/features/pull-requests/C
 import { MergePullButton } from '@/features/pull-requests/MergePullButton';
 import { PreviewLink } from '@/features/pull-requests/PreviewLink';
 import { PullBranchRefs } from '@/features/pull-requests/PullBranchRefs';
-import { PULL_AUTHOR_LABELS, setPullAuthor, usePullFilters, type PullAuthor } from '@/features/pull-requests/pullFilterStore';
+import { ALL_PULLS_ROWS, PULL_AUTHORS, setPullAuthor, usePullFilters, type PullAuthor } from '@/features/pull-requests/pullFilterStore';
 import { PullRequestMenu } from '@/features/pull-requests/PullRequestMenu';
 import { ViewModeToggle } from '@/features/pull-requests/ViewModeToggle';
 import { type RepoRef } from '@/features/sources/parseRepoLink';
@@ -24,14 +24,6 @@ import { disconnectGithub, useGithubAccess, useGithubToken, useSources, useStore
 import { GithubSignedOutNotice } from '@/features/sources/GithubSignedOutNotice';
 
 const ALL_PULLS = '/pulls';
-const AUTHOR_NOTES: Record<PullAuthor, string> = {
-  mine: 'your open PRs from every codebase',
-  anyone: "everyone's open PRs from every codebase",
-};
-
-function allPullsLabel(author: PullAuthor): string {
-  return `All (${PULL_AUTHOR_LABELS[author]})`;
-}
 
 export function CodebaseHeader() {
   const pathname = usePathname();
@@ -82,7 +74,7 @@ function CodebaseMenu({ reading }: { reading: RepoRef | null }) {
 
   return (
     <HeaderMenu
-      label={readingAllPulls ? allPullsLabel(author) : reading ? <RepoLabel reading={reading} /> : 'Codebases'}
+      label={readingAllPulls ? ALL_PULLS_ROWS[author].label : reading ? <RepoLabel reading={reading} /> : 'Codebases'}
       width="w-80"
     >
       {(close) => (
@@ -131,24 +123,20 @@ function MenuNotice({ ready, reading }: { ready: boolean; reading: RepoRef | nul
 
 function AllPullsRows({ active, close }: { active: boolean; close: () => void }) {
   const { author } = usePullFilters();
-  const choose = (chosen: PullAuthor, event: ReactMouseEvent<HTMLAnchorElement>) => {
-    setPullAuthor(chosen);
+  return PULL_AUTHORS.map((choice) => (
+    <AllPullsRow key={choice} choice={choice} active={active && author === choice} close={close} />
+  ));
+}
+
+function AllPullsRow({ choice, active, close }: { choice: PullAuthor; active: boolean; close: () => void }) {
+  const select = (event: ReactMouseEvent<HTMLAnchorElement>) => {
+    setPullAuthor(choice);
     if (!opensAnotherTab(event)) close();
   };
   return (
-    <>
-      {(['mine', 'anyone'] as const).map((choice) => (
-        <MenuRow
-          key={choice}
-          href={ALL_PULLS}
-          active={active && author === choice}
-          label={allPullsLabel(choice)}
-          onSelect={(event) => choose(choice, event)}
-        >
-          {AUTHOR_NOTES[choice]}
-        </MenuRow>
-      ))}
-    </>
+    <MenuRow href={ALL_PULLS} active={active} label={ALL_PULLS_ROWS[choice].label} onSelect={select}>
+      {ALL_PULLS_ROWS[choice].note}
+    </MenuRow>
   );
 }
 

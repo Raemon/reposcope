@@ -5,23 +5,30 @@ import { readCachedJson, useCachedJson } from '@/features/sources/useCachedJson'
 
 const VIEWER_PATH = '/api/github/me';
 
+type Viewer = { login: string };
+
 export type AuthorCheck = (author: string) => boolean;
 
 export function useIsOwnAuthor(): AuthorCheck {
-  const token = useGithubToken();
-  const ready = useStoreReady();
-  const { data } = useCachedJson<{ login: string }>(token ? VIEWER_PATH : null, token, ready);
-  return matchesLogin(data?.login);
+  return matchesLogin(useViewerLogin());
 }
 
 export function useOwnAuthorFilter(): AuthorCheck | null {
-  const token = useGithubToken();
-  const isOwnAuthor = useIsOwnAuthor();
-  return token ? isOwnAuthor : null;
+  return ownAuthorFilter(useGithubToken(), useViewerLogin());
 }
 
-export function ownAuthorFilter(token: string | null): AuthorCheck | null {
-  return token ? matchesLogin(readCachedJson<{ login: string }>(VIEWER_PATH, token)?.login) : null;
+export function cachedOwnAuthorFilter(token: string | null): AuthorCheck | null {
+  return ownAuthorFilter(token, readCachedJson<Viewer>(VIEWER_PATH, token)?.login);
+}
+
+function ownAuthorFilter(token: string | null, login: string | undefined): AuthorCheck | null {
+  return token ? matchesLogin(login) : null;
+}
+
+function useViewerLogin(): string | undefined {
+  const token = useGithubToken();
+  const ready = useStoreReady();
+  return useCachedJson<Viewer>(token ? VIEWER_PATH : null, token, ready).data?.login;
 }
 
 function matchesLogin(login: string | undefined): AuthorCheck {
