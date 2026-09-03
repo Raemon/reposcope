@@ -5,7 +5,7 @@ import { listedPulls, usePullFilters } from './pullFilterStore';
 import { repoPullsPath, type PullState } from './pullPaths';
 import type { CrossRepoPull, PullRequestSummary } from './pullRequests';
 import { useAllPullRequests, type AllPullRequests } from './useAllPullRequests';
-import { useIsOwnAuthor } from '@/features/github-auth/useViewerLogin';
+import { useOwnAuthorFilter } from '@/features/github-auth/useViewerLogin';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 import { useCachedJson } from '@/features/sources/useCachedJson';
 
@@ -26,5 +26,5 @@ export function useAllPullList(): AllPullRequests & { state: PullState; listed: 
 }
 
 function useListedPulls<T extends PullRequestSummary>(pulls: T[]): T[] {
-  return listedPulls(pulls, usePullFilters(), useIsOwnAuthor());
+  return listedPulls(pulls, usePullFilters(), useOwnAuthorFilter());
 }
