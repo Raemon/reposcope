@@ -10,8 +10,13 @@ import { isImagePath } from './imageFiles';
 import { imageSides } from './imageView';
 import { useNearViewport } from './nearViewportStore';
 import type { ChangedFile } from './pullRequests';
+import { CopyButton } from '@/features/surface-ui/CopyButton';
+import { OpenOnGithubLink } from '@/features/surface-ui/OpenOnGithubLink';
 import { rowStateClass, type RowState } from '@/features/surface-ui/rowState';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
+
+const ACTION = 'rounded px-1 leading-4 hover:bg-btn-hover hover:text-ink';
+const ACTION_BAR = 'flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100';
 
 export function DiffFileSection({
   owner,
@@ -50,22 +55,29 @@ export function DiffFileSection({
   );
   return (
     <section ref={holdSection} className="border-b border-panel-edge">
-      <SelectableRow
-        {...row.props}
-        onActivate={onToggle}
-        expanded={open}
-        className={`sticky top-0 z-20 flex w-full items-baseline gap-2 border-b border-panel-edge px-2 py-[2px] text-left text-[11px] leading-4 ${sectionTone(row.state)}`}
+      <div
+        data-nav-cursor={row.props.cursor || undefined}
+        onPointerEnter={row.props.onPointerEnter}
+        className={`group sticky top-0 z-20 flex items-baseline gap-2 border-b border-panel-edge pr-2 text-[11px] leading-4 ${sectionTone(row.state)}`}
       >
-        <span aria-hidden className="w-3 shrink-0 text-[11px] text-ink-dim">
-          {open ? '▾' : '▸'}
-        </span>
-        <span className="min-w-0 flex-1 truncate filename-text">
-          {file.previousFilename && <span className="text-ink-dim">{file.previousFilename} → </span>}
-          {file.filename}
-        </span>
-        <span className="shrink-0 text-[9px] uppercase tracking-[0.18em] text-ink-dim">{file.status}</span>
-        <ChangeCounts additions={file.additions} deletions={file.deletions} />
-      </SelectableRow>
+        <SelectableRow
+          {...row.props}
+          onActivate={onToggle}
+          expanded={open}
+          className="flex min-w-0 flex-1 items-baseline gap-2 py-[2px] pl-2 text-left"
+        >
+          <span aria-hidden className="w-3 shrink-0 text-[11px] text-ink-dim">
+            {open ? '▾' : '▸'}
+          </span>
+          <span className="min-w-0 flex-1 truncate filename-text">
+            {file.previousFilename && <span className="text-ink-dim">{file.previousFilename} → </span>}
+            {file.filename}
+          </span>
+          <span className="shrink-0 text-[9px] uppercase tracking-[0.18em] text-ink-dim">{file.status}</span>
+          <ChangeCounts additions={file.additions} deletions={file.deletions} />
+        </SelectableRow>
+        <HeaderActions path={file.filename} href={blobUrl(owner, repo, headRef, file.filename)} />
+      </div>
       {open &&
         (near ? (
           <FileBody owner={owner} repo={repo} file={file} baseRef={baseRef} headRef={headRef} />
@@ -73,6 +85,21 @@ export function DiffFileSection({
           <div style={{ height: unreadHeight(file) }} />
         ))}
     </section>
+  );
+}
+
+function blobUrl(owner: string, repo: string, headRef: string, filename: string): string {
+  return `https://github.com/${owner}/${repo}/blob/${headRef}/${filename}`;
+}
+
+function HeaderActions({ path, href }: { path: string; href: string }) {
+  return (
+    <span className={ACTION_BAR}>
+      <CopyButton value={path} what="path" ariaLabel={`Copy path ${path}`} className={ACTION} idleClassName="text-ink-dim">
+        ⧉
+      </CopyButton>
+      <OpenOnGithubLink href={href} label={path} className={`${ACTION} text-ink-dim`} />
+    </span>
   );
 }
 

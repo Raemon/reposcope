@@ -233,7 +233,7 @@ function Workspace({
           size={commitSize}
           onSize={setCommitSize}
         >
-          <PullCommitColumn change={change} selection={selection} onSelect={setSelection} />
+          <PullCommitColumn owner={owner} repo={repo} change={change} selection={selection} onSelect={setSelection} />
         </ResizableColumn>
         <ResizableColumn
           navId="files"
