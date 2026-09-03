@@ -36,10 +36,15 @@ export function DiffFileSection({
 }) {
   const row = useColumnNav('diff').row(file.filename, selected);
   const [watchNear, near] = useNearViewport();
+  // React takes this cleanup instead of calling the ref with null: let go of both here.
   const holdSection = useCallback(
     (element: HTMLElement | null) => {
       sectionRef(element);
-      return watchNear(element);
+      const unwatch = watchNear(element);
+      return () => {
+        unwatch?.();
+        sectionRef(null);
+      };
     },
     [sectionRef, watchNear],
   );

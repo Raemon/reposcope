@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useImperativeHandle, useRef, useState, type Ref, type RefObject } from 'react';
+import { useCallback, useEffect, useImperativeHandle, useRef, useState, type Ref, type RefObject } from 'react';
 import { NearViewportProvider } from './nearViewportStore';
 import { DefinitionPeek } from './DefinitionPeek';
 import { DefinitionPeekProvider } from './definitionPeekStore';
@@ -13,7 +13,8 @@ import type { ChangedFile, ChangedFileSet, PullRequestSummary } from './pullRequ
 
 const SCROLL_MS = 100;
 const REALIGN_MS = 150;
-const REALIGN_TRIES = 4;
+const REALIGN_TRIES = 12;
+const HAND_EVENTS = ['wheel', 'touchstart', 'pointerdown', 'keydown'] as const;
 
 export interface DiffPanesHandle {
   scrollToFile: (path: string) => void;
@@ -43,6 +44,7 @@ export function DiffPanes({
   const sections = useRef(new Map<string, HTMLElement>());
   const holdSection = useSectionRegistry(sections);
   const realigning = useRef<(() => void) | null>(null);
+  useEffect(() => () => realigning.current?.(), []);
   const [toggled, setToggled] = useState<Record<string, boolean>>({});
   const toggleFile = useCallback((path: string) => {
     setToggled((held) => ({ ...held, [path]: !openFile(held, path) }));
@@ -139,25 +141,25 @@ function remember(refs: Map<string, (node: HTMLElement | null) => void>, path: s
   return hold;
 }
 
-// Files above the target draw as they near, moving it; re-align until heights settle.
+// Files above the target draw as they near, moving it; hold it there until they settle.
 function realignAfterDrawing(container: HTMLElement, section: () => HTMLElement | null): () => void {
-  let placed: number | null = null;
   let tries = 0;
+  const stop = () => {
+    clearInterval(settle);
+    handEvents((type) => window.removeEventListener(type, stop, true));
+  };
   const settle = setInterval(() => {
     const target = section();
-    if (!target || movedByHand(container, placed) || (tries += 1) > REALIGN_TRIES) clearInterval(settle);
-    else placed = alignTo(container, target);
+    if (!target || (tries += 1) > REALIGN_TRIES) stop();
+    else container.scrollTop = scrollerOffset(container, target);
   }, REALIGN_MS);
-  return () => clearInterval(settle);
+  handEvents((type) => window.addEventListener(type, stop, true));
+  return stop;
 }
 
-function alignTo(container: HTMLElement, section: HTMLElement): number {
-  container.scrollTop = scrollerOffset(container, section);
-  return container.scrollTop;
-}
-
-function movedByHand(container: HTMLElement, placed: number | null): boolean {
-  return placed !== null && Math.abs(container.scrollTop - placed) > 1;
+// Scroll anchoring moves the scroller too, so only real input counts as taking over.
+function handEvents(each: (type: (typeof HAND_EVENTS)[number]) => void) {
+  for (const type of HAND_EVENTS) each(type);
 }
 
 function animateScrollTop(container: HTMLElement, target: number) {
