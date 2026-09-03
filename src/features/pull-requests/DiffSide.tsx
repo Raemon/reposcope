@@ -2,8 +2,8 @@
 
 import { Fragment, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { hunkHasEditableLines, type EditableBlock } from './editableBlocks';
-import { codeSegments } from './codeSegments';
-import { dimAroundName } from './foldDimming';
+import { codeSegments, type DimmedSegment } from './codeSegments';
+import { collapsedSegments } from './foldDimming';
 import { collapsedPreview } from './collapsedPreview';
 import { diffEditModeOn } from './editModeStore';
 import { foldsCollapsed, useFoldCommand } from './foldModeStore';
@@ -233,7 +233,8 @@ function DiffLineView({
   if (!cell) return <div className={`${row} bg-procgen/40`} style={sized} />;
   const changed = line.kind === 'change';
   const openable = Boolean(editable && side === 'right');
-  const segments = codeSegments(cell.text, lineTokens, changed ? ranges : null);
+  const raw = codeSegments(cell.text, lineTokens, changed ? ranges : null);
+  const segments: DimmedSegment[] = dim ? collapsedSegments(raw, lineTokens) : raw;
   return (
     <div
       className={`group ${row} ${lineTone(side, changed, line.touched)} ${openable ? 'cursor-text' : ''}`}
@@ -248,21 +249,27 @@ function DiffLineView({
           style={wrapping && !collapsed ? hangingIndentStyle(cell.text) : undefined}
           onClick={onCodePress ? (event) => onCodePress(line, event) : undefined}
         >
-          {(dim ? dimAroundName(segments, lineTokens) : segments).map((segment, index) => (
-            <span
-              key={index}
-              className={segment.emphasized ? emphasisTone(side) : undefined}
-              style={{ ...segment.style, opacity: segment.opacity }}
-            >
-              {segment.content}
-            </span>
-          ))}
+          <CodeText segments={segments} side={side} />
         </span>
         {preview && <span className={FOLD_PREVIEW}>{preview}</span>}
       </span>
       {collapsed && anchor && <FoldBadge anchor={anchor} />}
     </div>
   );
+}
+
+// Elided keyword tails stay in the DOM unrendered so click offsets still match the source line.
+function CodeText({ segments, side }: { segments: DimmedSegment[]; side: 'left' | 'right' }) {
+  return segments.map((segment, index) => (
+    <span
+      key={index}
+      hidden={segment.elided}
+      className={segment.emphasized ? emphasisTone(side) : undefined}
+      style={{ ...segment.style, opacity: segment.opacity }}
+    >
+      {segment.content}
+    </span>
+  ));
 }
 
 // A collapsed row shows one ellipsised line, so it neither wraps nor hangs.
