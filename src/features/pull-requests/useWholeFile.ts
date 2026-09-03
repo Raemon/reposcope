@@ -6,6 +6,7 @@ import { fileTextPath } from './pullPaths';
 import type { ChangedFile, FileText } from './pullRequests';
 import { apiJson } from '@/features/sources/apiClient';
 import { useGithubToken } from '@/features/sources/sourceStore';
+import { errorMessage } from '@/features/sources/errorMessage';
 
 const TWO_SIDED = new Set(['modified', 'renamed', 'copied', 'changed', 'unchanged']);
 
@@ -48,7 +49,7 @@ export function useWholeFile(
       })
       .catch((issue: unknown) => {
         if (controller.signal.aborted) return;
-        setFailure({ identity, message: issue instanceof Error ? issue.message : String(issue) });
+        setFailure({ identity, message: errorMessage(issue) });
       });
     return () => controller.abort();
   }, [wanted, available, identity, owner, repo, token]);

@@ -12,6 +12,7 @@ import type { PullState } from './pullPaths';
 import { previewDeploymentUrl } from './previewDeployment';
 import { mapWithWorkers } from './workerPool';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
+import { errorMessage } from '@/features/sources/errorMessage';
 
 export interface PullRequestSummary {
   number: number;
@@ -207,7 +208,7 @@ export async function listPullRequestsAcross(repos: RepoRef[], state: PullState 
       } catch (error) {
         failures.push({
           repo: `${repo.owner}/${repo.name}`,
-          message: error instanceof Error ? error.message : String(error),
+          message: errorMessage(error),
         });
       }
     }

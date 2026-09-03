@@ -26,6 +26,7 @@ import { useRepoFileTree } from './useRepoFileTree';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 import { useCachedJson } from '@/features/sources/useCachedJson';
 import { usePollWhileVisible } from '@/features/sources/usePollWhileVisible';
+import { errorMessage } from '@/features/sources/errorMessage';
 
 interface ReviewWorkspaceProps {
   owner: string;
@@ -354,5 +355,5 @@ function useReloadOnRetarget(subjectKey: string, baseRef: string | null, reload:
 }
 
 function reloadFailure(issue: unknown): string {
-  return `Commit saved; reloading the diff failed: ${issue instanceof Error ? issue.message : String(issue)}`;
+  return `Commit saved; reloading the diff failed: ${errorMessage(issue)}`;
 }

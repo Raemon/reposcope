@@ -1,5 +1,6 @@
 import { CursorError } from './cursorApi';
 import { CURSOR_KEY_HEADER } from './cursorTypes';
+import { errorMessage } from '@/features/sources/errorMessage';
 
 export function cursorKeyOf(request: Request): string {
   const key = request.headers.get(CURSOR_KEY_HEADER);
@@ -17,7 +18,7 @@ export async function cursorRoute<T>(request: Request, work: (key: string) => Pr
 
 export function cursorFailure(error: unknown): Response {
   const status = error instanceof CursorError ? error.status : 500;
-  return Response.json({ error: error instanceof Error ? error.message : String(error) }, { status });
+  return Response.json({ error: errorMessage(error) }, { status });
 }
 
 export function requireText(body: Record<string, unknown>, name: string): string {
