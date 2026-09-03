@@ -4,6 +4,7 @@ import { localPref, usePref } from './localPref';
 import type { PullState } from './pullPaths';
 import type { PullRequestSummary } from './pullRequests';
 import type { AuthorCheck } from '@/features/github-auth/useViewerLogin';
+import { useGithubToken } from '@/features/sources/sourceStore';
 
 export type PullAuthor = 'mine' | 'anyone';
 
@@ -25,6 +26,15 @@ const filterPref = localPref<PullFilters>('reposcope.pullFilters', DEFAULT_FILTE
 
 export function usePullFilters(): PullFilters {
   return usePref(filterPref);
+}
+
+export function useShownPullAuthor(): PullAuthor {
+  const { author } = usePullFilters();
+  return useGithubToken() ? author : 'anyone';
+}
+
+export function useOfferedPullAuthors(): readonly PullAuthor[] {
+  return useGithubToken() ? PULL_AUTHORS : ['anyone'];
 }
 
 export function readPullFilters(): PullFilters {

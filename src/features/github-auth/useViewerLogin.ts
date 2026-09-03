@@ -14,15 +14,15 @@ export function useIsOwnAuthor(): AuthorCheck {
 }
 
 export function useOwnAuthorFilter(): AuthorCheck | null {
-  return ownAuthorFilter(useGithubToken(), useViewerLogin());
+  return ownAuthorFilter(useViewerLogin());
 }
 
 export function cachedOwnAuthorFilter(token: string | null): AuthorCheck | null {
-  return ownAuthorFilter(token, readCachedJson<Viewer>(VIEWER_PATH, token)?.login);
+  return ownAuthorFilter(readCachedJson<Viewer>(VIEWER_PATH, token)?.login);
 }
 
-function ownAuthorFilter(token: string | null, login: string | undefined): AuthorCheck | null {
-  return token ? matchesLogin(login) : null;
+function ownAuthorFilter(login: string | undefined): AuthorCheck | null {
+  return login ? matchesLogin(login) : null;
 }
 
 function useViewerLogin(): string | undefined {

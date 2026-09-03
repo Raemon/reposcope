@@ -13,7 +13,7 @@ import { CurrentBranchTitle, CurrentPullTitle } from '@/features/pull-requests/C
 import { MergePullButton } from '@/features/pull-requests/MergePullButton';
 import { PreviewLink } from '@/features/pull-requests/PreviewLink';
 import { PullBranchRefs } from '@/features/pull-requests/PullBranchRefs';
-import { ALL_PULLS_ROWS, PULL_AUTHORS, setPullAuthor, usePullFilters, type PullAuthor } from '@/features/pull-requests/pullFilterStore';
+import { ALL_PULLS_ROWS, setPullAuthor, useOfferedPullAuthors, useShownPullAuthor, type PullAuthor } from '@/features/pull-requests/pullFilterStore';
 import { PullRequestMenu } from '@/features/pull-requests/PullRequestMenu';
 import { ViewModeToggle } from '@/features/pull-requests/ViewModeToggle';
 import { type RepoRef } from '@/features/sources/parseRepoLink';
@@ -70,7 +70,7 @@ function CodebaseMenu({ reading }: { reading: RepoRef | null }) {
   const access = useGithubAccess();
   const results = useSourceResults(sources, token, ready, access);
   const connected = sources.some((source) => source.kind === 'viewer');
-  const { author } = usePullFilters();
+  const author = useShownPullAuthor();
 
   return (
     <HeaderMenu
@@ -122,8 +122,8 @@ function MenuNotice({ ready, reading }: { ready: boolean; reading: RepoRef | nul
 }
 
 function AllPullsRows({ active, close }: { active: boolean; close: () => void }) {
-  const { author } = usePullFilters();
-  return PULL_AUTHORS.map((choice) => (
+  const author = useShownPullAuthor();
+  return useOfferedPullAuthors().map((choice) => (
     <AllPullsRow key={choice} choice={choice} active={active && author === choice} close={close} />
   ));
 }
