@@ -6,10 +6,12 @@ import type { PullRequestSummary } from './pullRequests';
 import { useIsOwnAuthor } from '@/features/github-auth/useViewerLogin';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
+import { OpenOnGithubLink } from '@/features/surface-ui/OpenOnGithubLink';
 import { RelativeTime } from '@/features/surface-ui/RelativeTime';
 
 const TITLE_ROW = 'flex min-w-0 flex-1 items-baseline gap-2 pl-3 text-[13px] leading-5';
 const META_ROW = 'hidden shrink-0 items-baseline gap-1.5 pl-3 text-[10px] text-ink-dim/60 md:flex';
+const GITHUB_LINK = 'rounded px-1 text-[10px] leading-4 text-ink-dim/60 hover:text-ink';
 
 export function CurrentPullTitle({ repo, number }: { repo: RepoRef; number: number }) {
   const pull = useCurrentPull(repo.owner, repo.name, number);
@@ -21,7 +23,7 @@ export function CurrentPullTitle({ repo, number }: { repo: RepoRef; number: numb
           <TruncatedName text={pull.pull.title} serif className="font-serif text-[17px] leading-6 tracking-[0.005em] text-ink" />
           <StateTags pull={pull.pull} />
           <AuthorAndTime author={pull.pull.author} iso={pull.pull.updatedAt} />
-          <GithubLink href={`https://github.com/${repo.owner}/${repo.name}/pull/${number}`} label="Open pull request on GitHub" />
+          <OpenOnGithubLink href={`https://github.com/${repo.owner}/${repo.name}/pull/${number}`} label="pull request" className={GITHUB_LINK} />
         </>
       )}
     </div>
@@ -37,7 +39,7 @@ export function CurrentBranchTitle({ repo, branch }: { repo: RepoRef; branch: st
       </span>
       <TruncatedName text={branch} className="font-mono text-[13px] leading-6 text-ink" />
       {head && <AuthorAndTime author={head.author} iso={head.date} />}
-      <GithubLink href={`https://github.com/${repo.owner}/${repo.name}/tree/${encodeURI(branch)}`} label="Open branch on GitHub" />
+      <OpenOnGithubLink href={`https://github.com/${repo.owner}/${repo.name}/tree/${encodeURI(branch)}`} label="branch" className={GITHUB_LINK} />
     </div>
   );
 }
@@ -71,22 +73,6 @@ function AuthorAndTime({ author, iso }: { author: string; iso: string }) {
       )}
       <RelativeTime iso={iso} />
     </div>
-  );
-}
-
-function GithubLink({ href, label }: { href: string; label: string }) {
-  return (
-    <HoverCardTrigger label={label} className="shrink-0" focusable={false} tooltipStyle>
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={label}
-        className="rounded px-1 text-[10px] leading-4 text-ink-dim/60 hover:text-ink"
-      >
-        ↗
-      </a>
-    </HoverCardTrigger>
   );
 }
 

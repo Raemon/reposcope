@@ -15,7 +15,7 @@ import { OpenOnGithubLink } from '@/features/surface-ui/OpenOnGithubLink';
 import { rowStateClass, type RowState } from '@/features/surface-ui/rowState';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 
-const ACTION = 'rounded px-1 leading-4 text-ink-dim hover:bg-btn-hover hover:text-ink';
+const ACTION = 'rounded px-1 leading-4 hover:bg-btn-hover hover:text-ink';
 const ACTION_BAR = 'flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100';
 
 export function DiffFileSection({
@@ -95,10 +95,10 @@ function blobUrl(owner: string, repo: string, headRef: string, filename: string)
 function HeaderActions({ path, href }: { path: string; href: string }) {
   return (
     <span className={ACTION_BAR}>
-      <CopyButton value={path} what="path" ariaLabel={`Copy path ${path}`} className={ACTION}>
+      <CopyButton value={path} what="path" ariaLabel={`Copy path ${path}`} className={ACTION} idleClassName="text-ink-dim">
         ⧉
       </CopyButton>
-      <OpenOnGithubLink href={href} label={path} className={ACTION} />
+      <OpenOnGithubLink href={href} label={path} className={`${ACTION} text-ink-dim`} />
     </span>
   );
 }

@@ -7,7 +7,7 @@ import { pullBeingRead, repoBeingRead } from './repoPaths';
 import { useCurrentPull } from '@/features/pull-requests/currentPullStore';
 
 export function DocumentTitle() {
-  const pathname = usePathname() ?? '';
+  const pathname = usePathname();
   const repo = repoBeingRead(pathname);
   const loaded = useCurrentPull(repo?.owner ?? '', repo?.name ?? '', pullBeingRead(pathname) ?? 0);
   const title = titleFor(pathname, loaded?.pull.title ?? null);
