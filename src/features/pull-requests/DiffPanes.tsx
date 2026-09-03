@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useImperativeHandle, useRef, useState, type Ref } from 'react';
+import { useCallback, useEffect, useImperativeHandle, useRef, useState, type Ref, type RefObject } from 'react';
+import { NearViewportProvider } from './nearViewportStore';
 import { DefinitionPeek } from './DefinitionPeek';
 import { DefinitionPeekProvider } from './definitionPeekStore';
 import { DiffFileSection } from './DiffFileSection';
@@ -11,6 +12,9 @@ import { imageFilesOf, isImagePath } from './imageFiles';
 import type { ChangedFile, ChangedFileSet, PullRequestSummary } from './pullRequests';
 
 const SCROLL_MS = 100;
+const REALIGN_MS = 150;
+const REALIGN_TRIES = 12;
+const HAND_EVENTS = ['wheel', 'touchstart', 'pointerdown', 'keydown'] as const;
 
 export interface DiffPanesHandle {
   scrollToFile: (path: string) => void;
@@ -36,8 +40,11 @@ export function DiffPanes({
   onCommitted?: () => void | Promise<void>;
   ref?: Ref<DiffPanesHandle>;
 }) {
-  const scroller = useRef<HTMLDivElement | null>(null);
+  const [scroller, setScroller] = useState<HTMLDivElement | null>(null);
   const sections = useRef(new Map<string, HTMLElement>());
+  const holdSection = useSectionRegistry(sections);
+  const realigning = useRef<(() => void) | null>(null);
+  useEffect(() => () => realigning.current?.(), []);
   const [toggled, setToggled] = useState<Record<string, boolean>>({});
   const toggleFile = useCallback((path: string) => {
     setToggled((held) => ({ ...held, [path]: !openFile(held, path) }));
@@ -45,10 +52,11 @@ export function DiffPanes({
 
   useImperativeHandle(ref, () => ({
     scrollToFile(path: string) {
-      const container = scroller.current;
       const section = sections.current.get(path);
-      if (!container || !section) return;
-      animateScrollTop(container, scrollerOffset(container, section));
+      if (!scroller || !section) return;
+      realigning.current?.();
+      animateScrollTop(scroller, scrollerOffset(scroller, section));
+      realigning.current = realignAfterDrawing(scroller, () => sections.current.get(path) ?? null);
     },
     toggleFile,
   }));
@@ -60,7 +68,7 @@ export function DiffPanes({
       <DefinitionPeekProvider owner={owner} repo={repo} fileSet={fileSet}>
         <div className="flex min-h-0 flex-1 flex-col">
           <DiffLayoutToggle />
-          <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto bg-code">
+          <div ref={setScroller} className="min-h-0 flex-1 overflow-y-auto bg-code">
             <ImageStrip
               key={`${fileSet.baseRef}:${fileSet.headRef}`}
               owner={owner}
@@ -68,23 +76,22 @@ export function DiffPanes({
               fileSet={fileSet}
               files={imageFilesOf(files)}
             />
-            {files.map((file) => (
-              <DiffFileSection
-                key={file.filename}
-                owner={owner}
-                repo={repo}
-                file={file}
-                baseRef={fileSet.baseRef}
-                headRef={fileSet.headRef}
-                selected={file.filename === selected}
-                open={openFile(toggled, file.filename)}
-                onToggle={() => toggleFile(file.filename)}
-                sectionRef={(node) => {
-                  if (node) sections.current.set(file.filename, node);
-                  else sections.current.delete(file.filename);
-                }}
-              />
-            ))}
+            <NearViewportProvider root={scroller}>
+              {files.map((file) => (
+                <DiffFileSection
+                  key={file.filename}
+                  owner={owner}
+                  repo={repo}
+                  file={file}
+                  baseRef={fileSet.baseRef}
+                  headRef={fileSet.headRef}
+                  selected={file.filename === selected}
+                  open={openFile(toggled, file.filename)}
+                  onToggle={() => toggleFile(file.filename)}
+                  sectionRef={holdSection(file.filename)}
+                />
+              ))}
+            </NearViewportProvider>
           </div>
         </div>
         <DefinitionPeek />
@@ -114,6 +121,45 @@ function ImageStrip({
 
 function scrollerOffset(container: HTMLElement, section: HTMLElement): number {
   return container.scrollTop + section.getBoundingClientRect().top - container.getBoundingClientRect().top;
+}
+
+// A stable ref per file: a fresh one each render would re-run the section's observer.
+function useSectionRegistry(sections: RefObject<Map<string, HTMLElement>>) {
+  const held = useRef(new Map<string, (node: HTMLElement | null) => void>());
+  return useCallback(
+    (path: string) => held.current.get(path) ?? remember(held.current, path, sections.current),
+    [sections],
+  );
+}
+
+function remember(refs: Map<string, (node: HTMLElement | null) => void>, path: string, sections: Map<string, HTMLElement>) {
+  const hold = (node: HTMLElement | null) => {
+    if (node) sections.set(path, node);
+    else sections.delete(path);
+  };
+  refs.set(path, hold);
+  return hold;
+}
+
+// Files above the target draw as they near, moving it; hold it there until they settle.
+function realignAfterDrawing(container: HTMLElement, section: () => HTMLElement | null): () => void {
+  let tries = 0;
+  const stop = () => {
+    clearInterval(settle);
+    handEvents((type) => window.removeEventListener(type, stop, true));
+  };
+  const settle = setInterval(() => {
+    const target = section();
+    if (!target || (tries += 1) > REALIGN_TRIES) stop();
+    else container.scrollTop = scrollerOffset(container, target);
+  }, REALIGN_MS);
+  handEvents((type) => window.addEventListener(type, stop, true));
+  return stop;
+}
+
+// Scroll anchoring moves the scroller too, so only real input counts as taking over.
+function handEvents(each: (type: (typeof HAND_EVENTS)[number]) => void) {
+  for (const type of HAND_EVENTS) each(type);
 }
 
 function animateScrollTop(container: HTMLElement, target: number) {

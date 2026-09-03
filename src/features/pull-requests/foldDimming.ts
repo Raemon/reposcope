@@ -1,5 +1,6 @@
-import type { CodeSegment } from './codeSegments';
+import type { CodeSegment, DimmedSegment } from './codeSegments';
 import type { ThemedToken } from './diffHighlight';
+import { abbreviated } from './keywordAbbreviations';
 
 const KEYWORD_OPACITY = 0.45;
 const TAIL_OPACITY = 0.6;
@@ -10,7 +11,7 @@ interface NameSpan {
   end: number;
 }
 
-export function dimAroundName(segments: CodeSegment[], tokens: ThemedToken[] | null): CodeSegment[] {
+export function collapsedSegments(segments: CodeSegment[], tokens: ThemedToken[] | null): DimmedSegment[] {
   const name = tokens && declaredName(tokens);
   if (!name) return segments;
   let offset = 0;
@@ -39,17 +40,18 @@ function innermostScope(token: ThemedToken): string {
   return scopes[scopes.length - 1]?.scopeName ?? '';
 }
 
-function dimSegment(segment: CodeSegment, start: number, name: NameSpan): CodeSegment[] {
-  return sliceStarts(segment.content, start, name).map((from, index, starts) => ({
-    ...segment,
-    content: segment.content.slice(from, starts[index + 1]),
-    opacity: opacityAt(start + from, name),
-  }));
+function dimSegment(segment: CodeSegment, start: number, name: NameSpan): DimmedSegment[] {
+  return nameSlices(segment.content, start, name).flatMap(([from, to]) => {
+    const piece = { ...segment, content: segment.content.slice(from, to), opacity: opacityAt(start + from, name) };
+    return start + from < name.start ? abbreviated(piece) : [piece];
+  });
 }
 
-function sliceStarts(text: string, start: number, name: NameSpan): number[] {
-  const inside = [name.start, name.end].map((point) => point - start).filter((at) => at > 0 && at < text.length);
-  return [0, ...inside];
+// Slices the segment where the declared name starts and ends, so each piece dims as a whole.
+function nameSlices(text: string, start: number, name: NameSpan): [number, number][] {
+  const cuts = [name.start, name.end].map((point) => point - start).filter((at) => at > 0 && at < text.length);
+  const bounds = [0, ...cuts, text.length];
+  return bounds.slice(0, -1).map((from, index) => [from, bounds[index + 1] ?? text.length]);
 }
 
 function opacityAt(position: number, name: NameSpan): number | undefined {

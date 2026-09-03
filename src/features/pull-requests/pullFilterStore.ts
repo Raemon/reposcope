@@ -29,6 +29,14 @@ export function setOnlyMine(onlyMine: boolean): void {
   filterPref.set({ ...filterPref.read(), onlyMine });
 }
 
+export function clearPullFilters(): void {
+  filterPref.set(OPEN_ONLY);
+}
+
+export function isDefaultPullFilters(filters: PullFilters): boolean {
+  return filters.state === OPEN_ONLY.state && filters.onlyMine === OPEN_ONLY.onlyMine;
+}
+
 export function listedPulls<T extends PullRequestSummary>(
   pulls: T[],
   filters: PullFilters,

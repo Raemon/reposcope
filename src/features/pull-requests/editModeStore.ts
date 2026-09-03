@@ -1,8 +1,8 @@
 'use client';
 
-import { booleanPref, usePref } from './localPref';
+import { boolPref, usePref } from './localPref';
 
-const editModePref = booleanPref('reposcope.diffEditMode', false);
+const editModePref = boolPref('reposcope.diffEditMode', false);
 
 export function setDiffEditMode(on: boolean): void {
   editModePref.set(on);

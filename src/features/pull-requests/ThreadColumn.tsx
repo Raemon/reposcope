@@ -1,11 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { placeThreads, type AnchoredThread, type PlacedThread } from './commentAnchors';
 import { DEFAULT_COMMENT_WIDTH, setCommentColumnWidth, useCommentColumnStyle } from './commentColumnWidth';
-import { linesHeight, ROW_HEIGHT } from './diffMetrics';
+import { linesHeight, ROW_HEIGHT, type RowHeights } from './diffMetrics';
 import type { DiffLine } from './diffLines';
 import { DragHandle, useDragWidth } from './ResizableColumn';
+import { useElementWidth } from './useElementWidth';
 import { ThreadCard } from './ThreadCard';
 
 const CARD_GAP = 4;
@@ -17,21 +18,23 @@ const MIN_SLOT = CARD_HEADER + EXPAND_BAR;
 export function ThreadColumn({
   anchors,
   lines,
+  heights: rowHeights,
   onOverflow,
 }: {
   anchors: AnchoredThread[];
   lines: DiffLine[];
+  heights: RowHeights;
   onOverflow: (pixels: number) => void;
 }) {
   const column = useRef<HTMLDivElement | null>(null);
-  const startDrag = useDragWidth({ width: useMeasuredWidth(column), open: true }, setCommentColumnWidth, 'left');
+  const startDrag = useDragWidth({ width: useElementWidth(column, DEFAULT_COMMENT_WIDTH), open: true }, setCommentColumnWidth, 'left');
   const [heights, setHeights] = useState<Record<number, number>>({});
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
   const measure = useCallback((rootId: number, height: number) => {
     setHeights((held) => (held[rootId] === height ? held : { ...held, [rootId]: height }));
   }, []);
   const cards = placeThreads(anchors, heights, CARD_GAP, MIN_SLOT);
-  const overflow = overflowBelow(cards, heights, expanded, linesHeight(lines));
+  const overflow = overflowBelow(cards, heights, expanded, linesHeight(lines, rowHeights));
 
   useEffect(() => onOverflow(overflow), [overflow, onOverflow]);
 
@@ -52,19 +55,6 @@ export function ThreadColumn({
       <DragHandle onPointerDown={startDrag} edge="left" />
     </div>
   );
-}
-
-// Flex-sized until first dragged, so a drag must start from the rendered width.
-function useMeasuredWidth(node: RefObject<HTMLElement | null>): number {
-  const [width, setWidth] = useState(DEFAULT_COMMENT_WIDTH);
-  useLayoutEffect(() => {
-    const element = node.current;
-    if (!element) return;
-    const observer = new ResizeObserver(() => setWidth(element.offsetWidth));
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [node]);
-  return width;
 }
 
 function clampFor(card: PlacedThread, heights: Record<number, number>): number | null {
@@ -127,6 +117,8 @@ function PlacedCard({
         <button
           type="button"
           onClick={onToggle}
+          aria-expanded={expanded}
+          aria-label={expanded ? 'Collapse comment' : 'Expand comment'}
           style={{ height: EXPAND_BAR }}
           className="block w-full rounded-b border border-t-0 border-panel-edge bg-tip px-1.5 text-left text-[9px] italic leading-[13px] text-ink-dim hover:text-ink"
         >

@@ -5,7 +5,7 @@ import { AiChatColumn } from '@/features/ai-chat/AiChatColumn';
 import { ColumnBoundary } from '@/features/surface-ui/ColumnBoundary';
 import { AllFilesSection } from './AllFilesSection';
 import { CentralTabBar, useShowsColumn } from './centralLayout';
-import { ColumnPreview } from './ColumnPreview';
+import { ColumnPreview, type PreviewToken } from './ColumnPreview';
 import { DiffPanes, type DiffPanesHandle } from './DiffPanes';
 import { PullCommitColumn, WHOLE_CHANGE, commitItems, commitTokens } from './PullCommitColumn';
 import { PullFilesColumn, fileTokens } from './PullFilesColumn';
@@ -158,9 +158,10 @@ function Workspace({
   const showsDiscussion = useShowsColumn('discussion');
   const showsCommits = useShowsColumn('commits');
   const showsFiles = useShowsColumn('files');
+  const discussionColumn = useCollapsibleColumn(discussionSize, setDiscussionSize);
   useRegisterColumn(
     'discussion',
-    { ...useCollapsibleColumn(discussionSize, setDiscussionSize), items: [], selected: null },
+    { ...discussionColumn, items: [], selected: null, onActivate: () => discussionColumn.setOpen(true) },
     discussion !== null && showsDiscussion,
   );
   useRegisterColumn(
@@ -209,11 +210,18 @@ function Workspace({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <CentralTabBar />
+      <CentralTabBar hasDiscussion={discussion !== null} />
       <div className="flex min-h-0 flex-1 max-md:flex-col max-md:overflow-y-auto">
         {listColumn}
         {discussion !== null && (
-          <ResizableColumn navId="discussion" icon="❝" title="discussion" size={discussionSize} onSize={setDiscussionSize}>
+          <ResizableColumn
+            navId="discussion"
+            icon="❝"
+            title="discussion"
+            preview={<ColumnPreview column="discussion" tokens={DISCUSSION_TOKENS} />}
+            size={discussionSize}
+            onSize={setDiscussionSize}
+          >
             {discussion}
           </ResizableColumn>
         )}
@@ -221,16 +229,18 @@ function Workspace({
           navId="commits"
           icon="◆"
           title="commits"
+          note={countNote(change.commits.length, 'commit')}
           preview={<ColumnPreview column="commits" tokens={commitTokens(change, selection)} />}
           size={commitSize}
           onSize={setCommitSize}
         >
-          <PullCommitColumn change={change} selection={selection} onSelect={setSelection} />
+          <PullCommitColumn owner={owner} repo={repo} change={change} selection={selection} onSelect={setSelection} />
         </ResizableColumn>
         <ResizableColumn
           navId="files"
           icon="▤"
           title="files"
+          note={filesNote(loadedFiles, showingWhole)}
           tone="bg-shade"
           preview={<ColumnPreview column="files" tokens={fileTokens(files, path)} />}
           size={fileSize}
@@ -256,26 +266,30 @@ function Workspace({
             onDelete={editableFiles !== null && fileSet !== null ? deletion.ask : null}
           />
         </ResizableColumn>
-        {!showsDiff ? null : browsed !== null && repoFiles.fileSet !== null ? (
-          <div className="flex min-w-0 flex-1 flex-col max-md:h-[80vh] max-md:flex-none">
-            <RepoBrowseReader owner={owner} repo={repo} fileSet={repoFiles.fileSet} tree={browseTree} item={browsed} />
-          </div>
-        ) : fileSet === null && fileError !== null ? (
-          <p className="flex-1 px-2 py-1 text-[11px] text-error-ink">{fileError}</p>
-        ) : (
-          <div className="flex min-w-0 flex-1 flex-col max-md:h-[80vh] max-md:flex-none">
-            {notice !== null && <p className="shrink-0 px-2 py-1 text-[11px] text-error-ink">{notice}</p>}
-            <DiffPanes
-              ref={diffPanes}
-              owner={owner}
-              repo={repo}
-              fileSet={fileSet}
-              files={files}
-              selected={path}
-              editablePull={editableFiles}
-              onCommitted={reloadInPlace}
-            />
-          </div>
+        {!showsDiff ? null : (
+          <ColumnBoundary>
+            {browsed !== null && repoFiles.fileSet !== null ? (
+              <div className="flex min-w-0 flex-1 flex-col max-md:h-[80vh] max-md:flex-none">
+                <RepoBrowseReader owner={owner} repo={repo} fileSet={repoFiles.fileSet} tree={browseTree} item={browsed} />
+              </div>
+            ) : fileSet === null && fileError !== null ? (
+              <p className="flex-1 px-2 py-1 text-[11px] text-error-ink">{fileError}</p>
+            ) : (
+              <div className="flex min-w-0 flex-1 flex-col max-md:h-[80vh] max-md:flex-none">
+                {notice !== null && <p className="shrink-0 px-2 py-1 text-[11px] text-error-ink">{notice}</p>}
+                <DiffPanes
+                  ref={diffPanes}
+                  owner={owner}
+                  repo={repo}
+                  fileSet={fileSet}
+                  files={files}
+                  selected={path}
+                  editablePull={editableFiles}
+                  onCommitted={reloadInPlace}
+                />
+              </div>
+            )}
+          </ColumnBoundary>
         )}
         <ColumnBoundary>
           <AiChatColumn owner={owner} repo={repo} subject={subjectKey} headRef={headRef} />
@@ -292,6 +306,17 @@ function Workspace({
       )}
     </div>
   );
+}
+
+const DISCUSSION_TOKENS: PreviewToken[] = [{ key: 'discussion', label: '❝', title: 'discussion' }];
+
+function countNote(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? '' : 's'}`;
+}
+
+function filesNote(loaded: ChangedFile[] | null, showingWhole: boolean): string | undefined {
+  if (!showingWhole) return 'read-only · historical commit';
+  return loaded === null ? undefined : countNote(loaded.length, 'file');
 }
 
 function remaining(files: ChangedFile[], deleted: string[]): ChangedFile[] {

@@ -40,8 +40,8 @@ export function enumPref<T extends string>(key: string, values: readonly T[], fa
   return localPref<T>(key, fallback, (stored) => (values.includes(stored as T) ? (stored as T) : undefined));
 }
 
-export function booleanPref(key: string, fallback: boolean): LocalPref<boolean> {
-  return localPref(key, fallback, (stored) => (typeof stored === 'boolean' ? stored : undefined));
+export function boolPref(key: string, fallback: boolean): LocalPref<boolean> {
+  return localPref<boolean>(key, fallback, (stored) => (typeof stored === 'boolean' ? stored : undefined));
 }
 
 export function clampedPref<T>(key: string, fallback: T, clamp: (value: number) => number): LocalPref<number | T> {

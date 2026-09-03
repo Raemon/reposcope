@@ -1,8 +1,11 @@
 'use client';
 
+import { useEffect } from 'react';
 import { RepoPullsColumn } from './PullListColumn';
+import { ReviewLoadNotice } from './ReviewLoadNotice';
 import { ReviewWorkspace } from './ReviewWorkspace';
-import type { ChangeSummary } from './pullRequests';
+import { setCurrentBranch } from './currentPullStore';
+import type { ChangeSummary, CommitSummary } from './pullRequests';
 import { branchFilesPath, branchPath } from './pullPaths';
 import { useStickyColumn } from './stickyColumns';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
@@ -18,10 +21,12 @@ export function BranchView({ owner, repo, branch }: { owner: string; repo: strin
 
   usePollWhileVisible(branchState.reload, ready);
 
-  if (!change) {
-    if (branchState.error) return <p className="px-2 py-1 text-[11px] text-error-ink">{branchState.error}</p>;
-    return <p className="px-2 py-1 text-[11px] text-ink-dim">Loading {branch}…</p>;
-  }
+  useEffect(() => () => setCurrentBranch(null), []);
+  useEffect(() => {
+    setCurrentBranch(change && { owner, repo, branch, head: headCommit(change) });
+  }, [change, owner, repo, branch]);
+
+  if (!change) return <ReviewLoadNotice label={branch} error={branchState.error} reload={branchState.reload} />;
 
   return (
     <ReviewWorkspace
@@ -39,4 +44,8 @@ export function BranchView({ owner, repo, branch }: { owner: string; repo: strin
       editableWhole={null}
     />
   );
+}
+
+function headCommit(change: ChangeSummary): CommitSummary | null {
+  return change.commits[change.commits.length - 1] ?? null;
 }

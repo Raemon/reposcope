@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react';
 
-function ToolbarIcon({ children }: { children: ReactNode }) {
+function ToolbarIcon({ size = 16, children }: { size?: number; children: ReactNode }) {
   return (
     <svg
       viewBox="0 0 24 24"
-      width="16"
-      height="16"
+      width={size}
+      height={size}
       fill="none"
       stroke="currentColor"
       strokeWidth="2"
@@ -98,6 +98,27 @@ export function SortIcon() {
     <ToolbarIcon>
       <path d="M7 20V4M3.5 7.5 7 4l3.5 3.5" />
       <path d="M17 4v16M13.5 16.5 17 20l3.5-3.5" />
+    </ToolbarIcon>
+  );
+}
+
+export function WrapLinesIcon() {
+  return (
+    <ToolbarIcon>
+      <path d="M3.5 5.5h17M3.5 18.5h6" />
+      <path d="M3.5 12h13a3.5 3.5 0 0 1 0 6.5h-2.5" />
+      <path d="M16 15.5 13.5 18.5 16 21.5" />
+    </ToolbarIcon>
+  );
+}
+
+export function TrashIcon() {
+  return (
+    <ToolbarIcon size={14}>
+      <path d="M4 6.5h16" />
+      <path d="M9.5 6.5V4.5h5v2" />
+      <path d="M6.5 6.5 7.5 20.5h9l1-14" />
+      <path d="M10.5 10v7M13.5 10v7" />
     </ToolbarIcon>
   );
 }
