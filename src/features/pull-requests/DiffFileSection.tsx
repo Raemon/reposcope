@@ -1,11 +1,14 @@
 'use client';
 
+import { useCallback } from 'react';
 import { ChangeCounts } from './ChangeCounts';
 import { useColumnNav } from './columnNav';
+import { ROW_HEIGHT } from './diffMetrics';
 import { FileDiff } from './FileDiff';
 import { ImageDiff } from './ImageDiff';
 import { isImagePath } from './imageFiles';
 import { imageSides } from './imageView';
+import { useNearViewport } from './nearViewportStore';
 import type { ChangedFile } from './pullRequests';
 import { rowStateClass, type RowState } from '@/features/surface-ui/rowState';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
@@ -32,8 +35,21 @@ export function DiffFileSection({
   sectionRef: (node: HTMLElement | null) => void;
 }) {
   const row = useColumnNav('diff').row(file.filename, selected);
+  const [watchNear, near] = useNearViewport();
+  // React takes this cleanup instead of calling the ref with null: let go of both here.
+  const holdSection = useCallback(
+    (element: HTMLElement | null) => {
+      sectionRef(element);
+      const unwatch = watchNear(element);
+      return () => {
+        unwatch?.();
+        sectionRef(null);
+      };
+    },
+    [sectionRef, watchNear],
+  );
   return (
-    <section ref={sectionRef} className="border-b border-panel-edge">
+    <section ref={holdSection} className="border-b border-panel-edge">
       <SelectableRow
         {...row.props}
         onActivate={onToggle}
@@ -50,9 +66,23 @@ export function DiffFileSection({
         <span className="shrink-0 text-[9px] uppercase tracking-[0.18em] text-ink-dim">{file.status}</span>
         <ChangeCounts additions={file.additions} deletions={file.deletions} />
       </SelectableRow>
-      {open && <FileBody owner={owner} repo={repo} file={file} baseRef={baseRef} headRef={headRef} />}
+      {open &&
+        (near ? (
+          <FileBody owner={owner} repo={repo} file={file} baseRef={baseRef} headRef={headRef} />
+        ) : (
+          <div style={{ height: unreadHeight(file) }} />
+        ))}
     </section>
   );
+}
+
+// Rough stand-in for a file too far off screen to draw, so the scrollbar spans the diff.
+function unreadHeight(file: ChangedFile): number {
+  return Math.max(1, patchRowCount(file)) * ROW_HEIGHT;
+}
+
+function patchRowCount(file: ChangedFile): number {
+  return file.patch ? file.patch.split('\n').length : file.additions + file.deletions;
 }
 
 function sectionTone(state: RowState): string {
