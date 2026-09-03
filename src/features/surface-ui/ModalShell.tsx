@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode, type RefObject } from 'react';
+import { focusFirstItem } from './focusables';
 
 export function ModalShell({
   label,
@@ -14,10 +15,7 @@ export function ModalShell({
   children: ReactNode;
 }) {
   const panel = useRef<HTMLDialogElement | null>(null);
-
-  useEffect(() => {
-    panel.current?.showModal();
-  }, []);
+  useModalFocus(panel);
 
   return (
     <dialog
@@ -26,6 +24,7 @@ export function ModalShell({
       onKeyDown={(event) => {
         if (event.key !== 'Escape') return;
         event.preventDefault();
+        event.stopPropagation();
         if (dismissable) onDismiss();
       }}
       onClick={(event) => {
@@ -39,4 +38,17 @@ export function ModalShell({
       </div>
     </dialog>
   );
+}
+
+function useModalFocus(panel: RefObject<HTMLDialogElement | null>): void {
+  useEffect(() => {
+    const dialog = panel.current;
+    const returnTo = document.activeElement;
+    dialog?.showModal();
+    focusFirstItem(dialog);
+    return () => {
+      dialog?.close();
+      if (returnTo instanceof HTMLElement) returnTo.focus();
+    };
+  }, [panel]);
 }
