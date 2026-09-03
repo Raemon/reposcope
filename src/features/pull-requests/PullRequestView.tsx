@@ -6,6 +6,7 @@ import { AllPullsColumn, RepoPullsColumn } from './PullListColumn';
 import { ReviewLoadNotice } from './ReviewLoadNotice';
 import { ReviewWorkspace } from './ReviewWorkspace';
 import { setCurrentPull } from './currentPullStore';
+import { prefetchPull } from './prefetchPull';
 import { pullFilesPath, pullPath } from './pullPaths';
 import type { PullRequestCommits, PullRequestSummary } from './pullRequests';
 import { useStickyColumn } from './stickyColumns';
@@ -31,6 +32,11 @@ export function PullRequestView({
   const pull = pullState.data;
 
   usePollWhileVisible(pullState.reload, ready);
+
+  // Without this the file list waits on the pull call before the workspace even asks for it.
+  useEffect(() => {
+    if (ready) prefetchPull(owner, repo, number, token);
+  }, [ready, owner, repo, number, token]);
 
   const latestReload = useRef(pullState.reload);
   latestReload.current = pullState.reload;
