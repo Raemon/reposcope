@@ -1,6 +1,7 @@
 'use client';
 
-import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
+import { usePathname } from 'next/navigation';
+import { useEffect, useRef, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react';
 import { useColumnNav } from './columnNav';
 import { rowStateClass } from '@/features/surface-ui/rowState';
 import { SelectableLink } from '@/features/surface-ui/SelectableLink';
@@ -42,4 +43,13 @@ export function NavListRow({
       {trailing}
     </div>
   );
+}
+
+export function useCurrentRowInView(rowCount: number) {
+  const list = useRef<HTMLElement>(null);
+  const pathname = usePathname();
+  useEffect(() => {
+    list.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ block: 'nearest' });
+  }, [pathname, rowCount]);
+  return list;
 }
