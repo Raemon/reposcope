@@ -33,7 +33,7 @@ export function PullRequestView({
 
   usePollWhileVisible(pullState.reload, ready);
 
-  // Without this the file list waits on the pull call before the workspace even asks for it.
+  // Without this the file list waits on the pull call before anything asks for it.
   useEffect(() => {
     if (ready) prefetchPull(owner, repo, number, token);
   }, [ready, owner, repo, number, token]);

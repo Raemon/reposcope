@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback } from 'react';
 import { ChangeCounts } from './ChangeCounts';
 import { useColumnNav } from './columnNav';
 import { ROW_HEIGHT } from './diffMetrics';
@@ -8,7 +8,7 @@ import { FileDiff } from './FileDiff';
 import { ImageDiff } from './ImageDiff';
 import { isImagePath } from './imageFiles';
 import { imageSides } from './imageView';
-import { useNearViewport } from './nearViewport';
+import { useNearViewport } from './nearViewportStore';
 import type { ChangedFile } from './pullRequests';
 import { rowStateClass, type RowState } from '@/features/surface-ui/rowState';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
@@ -35,16 +35,16 @@ export function DiffFileSection({
   sectionRef: (node: HTMLElement | null) => void;
 }) {
   const row = useColumnNav('diff').row(file.filename, selected);
-  const [node, setNode] = useState<HTMLElement | null>(null);
-  const near = useNearViewport(node);
+  const [watchNear, near] = useNearViewport();
+  const holdSection = useCallback(
+    (element: HTMLElement | null) => {
+      sectionRef(element);
+      return watchNear(element);
+    },
+    [sectionRef, watchNear],
+  );
   return (
-    <section
-      ref={(element) => {
-        setNode(element);
-        sectionRef(element);
-      }}
-      className="border-b border-panel-edge"
-    >
+    <section ref={holdSection} className="border-b border-panel-edge">
       <SelectableRow
         {...row.props}
         onActivate={onToggle}
@@ -71,9 +71,13 @@ export function DiffFileSection({
   );
 }
 
-// Stands in for a file too far off screen to draw, so the scrollbar spans the whole diff.
+// Rough stand-in for a file too far off screen to draw, so the scrollbar spans the diff.
 function unreadHeight(file: ChangedFile): number {
-  return Math.max(1, file.additions + file.deletions) * ROW_HEIGHT;
+  return Math.max(1, patchRowCount(file)) * ROW_HEIGHT;
+}
+
+function patchRowCount(file: ChangedFile): number {
+  return file.patch ? file.patch.split('\n').length : file.additions + file.deletions;
 }
 
 function sectionTone(state: RowState): string {

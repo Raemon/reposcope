@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useImperativeHandle, useRef, useState, type Ref } from 'react';
-import { NearViewportProvider } from './nearViewport';
+import { useCallback, useImperativeHandle, useRef, useState, type Ref, type RefObject } from 'react';
+import { NearViewportProvider } from './nearViewportStore';
 import { DefinitionPeek } from './DefinitionPeek';
 import { DefinitionPeekProvider } from './definitionPeekStore';
 import { DiffFileSection } from './DiffFileSection';
@@ -12,7 +12,8 @@ import { imageFilesOf, isImagePath } from './imageFiles';
 import type { ChangedFile, ChangedFileSet, PullRequestSummary } from './pullRequests';
 
 const SCROLL_MS = 100;
-const REALIGN_TRIES = 6;
+const REALIGN_MS = 150;
+const REALIGN_TRIES = 4;
 
 export interface DiffPanesHandle {
   scrollToFile: (path: string) => void;
@@ -40,6 +41,8 @@ export function DiffPanes({
 }) {
   const [scroller, setScroller] = useState<HTMLDivElement | null>(null);
   const sections = useRef(new Map<string, HTMLElement>());
+  const holdSection = useSectionRegistry(sections);
+  const realigning = useRef<(() => void) | null>(null);
   const [toggled, setToggled] = useState<Record<string, boolean>>({});
   const toggleFile = useCallback((path: string) => {
     setToggled((held) => ({ ...held, [path]: !openFile(held, path) }));
@@ -49,8 +52,9 @@ export function DiffPanes({
     scrollToFile(path: string) {
       const section = sections.current.get(path);
       if (!scroller || !section) return;
+      realigning.current?.();
       animateScrollTop(scroller, scrollerOffset(scroller, section));
-      realignAfterDrawing(scroller, () => sections.current.get(path) ?? null);
+      realigning.current = realignAfterDrawing(scroller, () => sections.current.get(path) ?? null);
     },
     toggleFile,
   }));
@@ -82,10 +86,7 @@ export function DiffPanes({
                   selected={file.filename === selected}
                   open={openFile(toggled, file.filename)}
                   onToggle={() => toggleFile(file.filename)}
-                  sectionRef={(node) => {
-                    if (node) sections.current.set(file.filename, node);
-                    else sections.current.delete(file.filename);
-                  }}
+                  sectionRef={holdSection(file.filename)}
                 />
               ))}
             </NearViewportProvider>
@@ -120,16 +121,39 @@ function scrollerOffset(container: HTMLElement, section: HTMLElement): number {
   return container.scrollTop + section.getBoundingClientRect().top - container.getBoundingClientRect().top;
 }
 
+// A stable ref per file: a fresh one each render would re-run the section's observer.
+function useSectionRegistry(sections: RefObject<Map<string, HTMLElement>>) {
+  const held = useRef(new Map<string, (node: HTMLElement | null) => void>());
+  return useCallback(
+    (path: string) => held.current.get(path) ?? remember(held.current, path, sections.current),
+    [sections],
+  );
+}
+
+function remember(refs: Map<string, (node: HTMLElement | null) => void>, path: string, sections: Map<string, HTMLElement>) {
+  const hold = (node: HTMLElement | null) => {
+    if (node) sections.set(path, node);
+    else sections.delete(path);
+  };
+  refs.set(path, hold);
+  return hold;
+}
+
 // Files above the target draw as they near, moving it; re-align until heights settle.
-function realignAfterDrawing(container: HTMLElement, section: () => HTMLElement | null) {
+function realignAfterDrawing(container: HTMLElement, section: () => HTMLElement | null): () => void {
   let placed: number | null = null;
   let tries = 0;
   const settle = setInterval(() => {
     const target = section();
-    if (!target || movedByHand(container, placed) || (tries += 1) > REALIGN_TRIES) return clearInterval(settle);
-    container.scrollTop = scrollerOffset(container, target);
-    placed = container.scrollTop;
-  }, SCROLL_MS);
+    if (!target || movedByHand(container, placed) || (tries += 1) > REALIGN_TRIES) clearInterval(settle);
+    else placed = alignTo(container, target);
+  }, REALIGN_MS);
+  return () => clearInterval(settle);
+}
+
+function alignTo(container: HTMLElement, section: HTMLElement): number {
+  container.scrollTop = scrollerOffset(container, section);
+  return container.scrollTop;
 }
 
 function movedByHand(container: HTMLElement, placed: number | null): boolean {
