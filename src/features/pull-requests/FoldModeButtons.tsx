@@ -17,7 +17,7 @@ export function FoldModeButtons() {
   return (
     <span className="flex items-center gap-2">
       {CHOICES.map(({ mode, icon, label }) => (
-        <ChoiceButton key={mode} label={label} active={command.mode === mode} onSelect={() => applyFoldMode(mode)}>
+        <ChoiceButton key={mode} label={label} active={command.mode === mode} placement="top-start" onSelect={() => applyFoldMode(mode)}>
           {icon}
         </ChoiceButton>
       ))}

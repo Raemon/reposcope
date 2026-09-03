@@ -11,15 +11,15 @@ interface TipPosition {
   top: number;
 }
 
-type TipPlacement = 'side' | 'below';
+export type TipPlacement = 'side' | 'below' | 'top-start' | 'top-end';
 
 const CARD_WIDTHS = { default: 'max-w-[min(34rem,calc(100vw-1rem))]', wide: 'max-w-[min(56rem,calc(100vw-1rem))]' };
 type TipWidth = keyof typeof CARD_WIDTHS;
 const POPPER_BASE = 'fixed z-50 w-max overflow-hidden';
 const CARD_POPPER = 'min-w-64 rounded-md bg-tip shadow-card';
-const TOOLTIP_POPPER = 'bg-black/85 text-white pointer-events-none';
+const TOOLTIP_POPPER = 'rounded bg-tooltip-bg text-tooltip-ink pointer-events-none';
 const CARD_LABEL = 'truncate border-b border-panel-edge px-3 py-2 text-accent';
-const TOOLTIP_LABEL = 'truncate px-2 py-1 text-white';
+const TOOLTIP_LABEL = 'truncate px-2 py-1';
 
 function labelClass(tooltipStyle: boolean, serif: boolean): string {
   const shell = tooltipStyle ? TOOLTIP_LABEL : CARD_LABEL;
@@ -242,13 +242,14 @@ function HoverCardPopper({
 }
 
 function floatingTipPosition(tip: DOMRect, anchor: DOMRect, placement: TipPlacement): TipPosition {
-  if (placement === 'below') {
-    return {
-      left: Math.max(VIEWPORT_MARGIN, Math.min(anchor.left, window.innerWidth - tip.width - VIEWPORT_MARGIN)),
-      top: clampedTop(anchor.bottom + GAP, tip.height),
-    };
-  }
-  return { left: horizontalPosition(anchor, tip.width), top: clampedTop(anchor.top, tip.height) };
+  if (placement === 'side') return { left: horizontalPosition(anchor, tip.width), top: clampedTop(anchor.top, tip.height) };
+  const left = placement === 'top-end' ? anchor.right - tip.width : anchor.left;
+  const top = placement === 'below' ? anchor.bottom + GAP : anchor.top - GAP - tip.height;
+  return { left: clampedLeft(left, tip.width), top: clampedTop(top, tip.height) };
+}
+
+function clampedLeft(preferredLeft: number, tipWidth: number): number {
+  return Math.max(VIEWPORT_MARGIN, Math.min(preferredLeft, window.innerWidth - tipWidth - VIEWPORT_MARGIN));
 }
 
 function horizontalPosition(anchor: DOMRect, tipWidth: number): number {

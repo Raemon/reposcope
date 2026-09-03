@@ -52,7 +52,7 @@ export function PullRowFields({ pull, repo, repoColumnCh }: { pull: PullRowSumma
   );
 }
 
-function RowTag({ children }: { children: ReactNode }) {
+export function RowTag({ children }: { children: ReactNode }) {
   return <span className="shrink-0 rounded bg-btn px-1 font-mono text-[9px]">{children}</span>;
 }
 

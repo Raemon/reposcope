@@ -1,22 +1,25 @@
 'use client';
 
 import { useLayoutEffect, useRef } from 'react';
-import { EXPAND_MS } from './diffMetrics';
+import { EXPAND_MS, type RowHeights } from './diffMetrics';
 import type { DiffRow } from './splitDiff';
 
-export function useHeightTransition(rows: DiffRow[], hidden: Set<number>) {
+export function useHeightTransition(rows: DiffRow[], hidden: Set<number>, heights: RowHeights) {
   const node = useRef<HTMLDivElement | null>(null);
   const measured = useRef<number | null>(null);
+  const wrapped = useRef(heights);
 
+  // Rewrapping restates the baseline silently; only folding should animate.
   useLayoutEffect(() => {
     const element = node.current;
     if (!element) return;
-    const height = element.scrollHeight;
+    const rewrapped = wrapped.current !== heights;
+    wrapped.current = heights;
     const from = measured.current;
-    measured.current = height;
-    if (from === null || from === height) return;
-    return playGrow(element, from, height);
-  }, [rows, hidden]);
+    measured.current = element.scrollHeight;
+    if (rewrapped || from === null || from === measured.current) return;
+    return playGrow(element, from, measured.current);
+  }, [rows, hidden, heights]);
 
   return node;
 }

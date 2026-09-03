@@ -2,23 +2,25 @@
 
 import type { ReactNode } from 'react';
 import { iconButtonClass, type IconButtonTone } from './buttonStyles';
-import { HoverCardTrigger } from './HoverCard';
+import { HoverCardTrigger, type TipPlacement } from './HoverCard';
 
 export function ChoiceButton({
   label,
   active,
   onSelect,
   tone,
+  placement,
   children,
 }: {
   label: string;
   active: boolean;
   onSelect: () => void;
   tone?: IconButtonTone;
+  placement?: TipPlacement;
   children: ReactNode;
 }) {
   return (
-    <HoverCardTrigger label={label} focusable={false} tooltipStyle>
+    <HoverCardTrigger label={label} focusable={false} tooltipStyle placement={placement}>
       <button
         type="button"
         onClick={onSelect}

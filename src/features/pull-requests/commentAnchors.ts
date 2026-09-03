@@ -1,4 +1,4 @@
-import { linesHeight, ROW_HEIGHT } from './diffMetrics';
+import { linesHeight, ROW_HEIGHT, type RowHeights } from './diffMetrics';
 import type { DiffLine } from './diffLines';
 import type { ReviewThread } from './reviewThreads';
 import type { DiffRow } from './splitDiff';
@@ -14,9 +14,9 @@ export interface PlacedThread {
   slot: number;
 }
 
-export function anchorThreads(threads: ReviewThread[], rows: DiffRow[], lines: DiffLine[]): AnchoredThread[] {
+export function anchorThreads(threads: ReviewThread[], rows: DiffRow[], lines: DiffLine[], heights: RowHeights): AnchoredThread[] {
   return threads
-    .map((thread) => ({ thread, anchorTop: anchorTopOf(thread, rows, lines) }))
+    .map((thread) => ({ thread, anchorTop: anchorTopOf(thread, rows, lines, heights) }))
     .filter((anchored): anchored is AnchoredThread => anchored.anchorTop !== null)
     .sort((a, b) => a.anchorTop - b.anchorTop);
 }
@@ -39,11 +39,11 @@ function stackedTops(anchors: AnchoredThread[], heights: Record<number, number>,
   });
 }
 
-function anchorTopOf(thread: ReviewThread, rows: DiffRow[], lines: DiffLine[]): number | null {
+function anchorTopOf(thread: ReviewThread, rows: DiffRow[], lines: DiffLine[], heights: RowHeights): number | null {
   const row = rowOf(thread, rows);
   if (row < 0) return null;
   const index = displayIndexOf(row, thread.side, lines);
-  return index < 0 ? null : linesHeight(lines.slice(0, index));
+  return index < 0 ? null : linesHeight(lines.slice(0, index), heights);
 }
 
 export function rowOf(thread: ReviewThread, rows: DiffRow[]): number {

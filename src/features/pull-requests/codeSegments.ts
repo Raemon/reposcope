@@ -6,7 +6,11 @@ export interface CodeSegment {
   content: string;
   style?: CSSProperties;
   emphasized: boolean;
+}
+
+export interface DimmedSegment extends CodeSegment {
   opacity?: number;
+  elided?: boolean;
 }
 
 export function codeSegments(
