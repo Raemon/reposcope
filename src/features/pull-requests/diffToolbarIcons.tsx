@@ -1,22 +1,4 @@
-import type { ReactNode } from 'react';
-
-function ToolbarIcon({ size = 16, children }: { size?: number; children: ReactNode }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width={size}
-      height={size}
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      {children}
-    </svg>
-  );
-}
+import { StrokeIcon as ToolbarIcon } from '@/features/surface-ui/StrokeIcon';
 
 export function SplitViewIcon() {
   return (
