@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import type { ReactNode } from 'react';
+import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 import { CodebaseList } from './CodebaseList';
 import { HeaderMenu } from './HeaderMenu';
 import { branchBeingRead, pullBeingRead, repoBeingRead, repoRoute } from './repoPaths';
@@ -13,9 +13,11 @@ import { CurrentBranchTitle, CurrentPullTitle } from '@/features/pull-requests/C
 import { MergePullButton } from '@/features/pull-requests/MergePullButton';
 import { PreviewLink } from '@/features/pull-requests/PreviewLink';
 import { PullBranchRefs } from '@/features/pull-requests/PullBranchRefs';
+import { ALL_PULLS_ROWS, setPullAuthor, useOfferedPullAuthors, useShownPullAuthor, type PullAuthor } from '@/features/pull-requests/pullFilterStore';
 import { PullRequestMenu } from '@/features/pull-requests/PullRequestMenu';
 import { ViewModeToggle } from '@/features/pull-requests/ViewModeToggle';
 import { type RepoRef } from '@/features/sources/parseRepoLink';
+import { opensAnotherTab } from '@/features/surface-ui/selectableClick';
 import { SelectableLink } from '@/features/surface-ui/SelectableLink';
 import { ThemeToggle } from '@/features/theme/ThemeToggle';
 import { disconnectGithub, useGithubAccess, useGithubToken, useSources, useStoreReady } from '@/features/sources/sourceStore';
@@ -68,21 +70,22 @@ function CodebaseMenu({ reading }: { reading: RepoRef | null }) {
   const access = useGithubAccess();
   const results = useSourceResults(sources, token, ready, access);
   const connected = sources.some((source) => source.kind === 'viewer');
+  const author = useShownPullAuthor();
 
   return (
     <HeaderMenu
-      label={readingAllPulls ? 'All pull requests' : reading ? <RepoLabel reading={reading} /> : 'Codebases'}
+      label={readingAllPulls ? ALL_PULLS_ROWS[author].label : reading ? <RepoLabel reading={reading} /> : 'Codebases'}
       width="w-80"
     >
-      {() => (
+      {(close) => (
         <>
           {ready && sources.length > 0 ? (
             <CodebaseList groups={sidebarGroups(sources, results)} autoFocusFilter>
-              <AllPullsRow active={readingAllPulls} />
+              <AllPullsRows active={readingAllPulls} close={close} />
             </CodebaseList>
           ) : (
             <>
-              <AllPullsRow active={readingAllPulls} />
+              <AllPullsRows active={readingAllPulls} close={close} />
               <MenuNotice ready={ready} reading={reading} />
             </>
           )}
@@ -118,10 +121,21 @@ function MenuNotice({ ready, reading }: { ready: boolean; reading: RepoRef | nul
   );
 }
 
-function AllPullsRow({ active }: { active: boolean }) {
+function AllPullsRows({ active, close }: { active: boolean; close: () => void }) {
+  const author = useShownPullAuthor();
+  return useOfferedPullAuthors().map((choice) => (
+    <AllPullsRow key={choice} choice={choice} active={active && author === choice} close={close} />
+  ));
+}
+
+function AllPullsRow({ choice, active, close }: { choice: PullAuthor; active: boolean; close: () => void }) {
+  const select = (event: ReactMouseEvent<HTMLAnchorElement>) => {
+    setPullAuthor(choice);
+    if (!opensAnotherTab(event)) close();
+  };
   return (
-    <MenuRow href={ALL_PULLS} active={active} label="All">
-      open pull requests from every codebase, newest first
+    <MenuRow href={ALL_PULLS} active={active} label={ALL_PULLS_ROWS[choice].label} onSelect={select}>
+      {ALL_PULLS_ROWS[choice].note}
     </MenuRow>
   );
 }
@@ -139,17 +153,20 @@ function MenuRow({
   href,
   active,
   label,
+  onSelect,
   children,
 }: {
   href: string;
   active: boolean;
   label: string;
+  onSelect: (event: ReactMouseEvent<HTMLAnchorElement>) => void;
   children: ReactNode;
 }) {
   return (
     <SelectableLink
       href={href}
       current={active}
+      onSelect={onSelect}
       className={`flex items-baseline gap-1.5 border-b border-panel-edge px-2 py-1 text-[11px] leading-4 ${
         active ? 'bg-btn-active text-accent' : 'text-ink hover:bg-btn-hover'
       }`}

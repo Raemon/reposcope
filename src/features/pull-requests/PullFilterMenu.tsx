@@ -1,6 +1,6 @@
 'use client';
 
-import { setOnlyMine, setPullState, usePullFilters } from './pullFilterStore';
+import { setPullAuthor, setPullState, useOfferedPullAuthors, usePullFilters } from './pullFilterStore';
 import { iconButtonClass } from '@/features/surface-ui/buttonStyles';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { PopoverMenu, type PopoverTrigger } from '@/features/surface-ui/PopoverMenu';
@@ -9,13 +9,20 @@ const FILTER_LABEL = 'Filter pull requests';
 
 export function PullFilterMenu() {
   const filters = usePullFilters();
+  const offersMine = useOfferedPullAuthors().includes('mine');
   return (
     <PopoverMenu align="right-0" panelClass="w-44 py-1" trigger={FilterButton}>
       {() => (
         <>
           <FilterCheckbox label="only open PRs" on={filters.state === 'open'} onChange={(on) => setPullState('open', on)} />
           <FilterCheckbox label="only closed PRs" on={filters.state === 'closed'} onChange={(on) => setPullState('closed', on)} />
-          <FilterCheckbox label="only my PRs" on={filters.onlyMine} onChange={setOnlyMine} />
+          {offersMine && (
+            <FilterCheckbox
+              label="only my PRs"
+              on={filters.author === 'mine'}
+              onChange={(on) => setPullAuthor(on ? 'mine' : 'anyone')}
+            />
+          )}
         </>
       )}
     </PopoverMenu>
