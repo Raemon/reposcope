@@ -4,9 +4,16 @@ import { useCallback, type CSSProperties, type PointerEvent as ReactPointerEvent
 import { PANE_WIDTH, useForcedOpen, usePaneMode } from './centralLayout';
 import { useColumnNav, type ColumnRow } from './columnNav';
 import { COLUMN_HEADER, type ColumnId } from './navColumn';
+import { ColumnBoundary } from '@/features/surface-ui/ColumnBoundary';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 
 const HEADER_ROW = 'flex w-full shrink-0 items-center gap-1.5 border-panel-edge px-1.5 py-[1px] text-left';
+
+const STRIP =
+  'flex w-full shrink-0 cursor-pointer items-center gap-1.5 border-b px-1.5 py-1 text-[10px] uppercase tracking-[0.18em] text-ink-dim hover:text-ink md:w-7 md:min-h-0 md:flex-col md:gap-2.5 md:border-b-0 md:px-0';
+// Buttons don't inherit text-transform, so the strip's uppercase repeats here.
+const STRIP_EXPAND =
+  'flex shrink-0 items-center gap-1.5 overflow-hidden rounded-[3px] uppercase outline-none focus-visible:ring-1 focus-visible:ring-accent md:max-h-[40%] md:flex-col md:gap-2.5';
 
 const MIN_WIDTH = 140;
 const MAX_WIDTH = 900;
@@ -76,41 +83,6 @@ export function DragHandle({
   );
 }
 
-export function CollapsedColumn({
-  title,
-  icon,
-  preview,
-  focused,
-  side,
-  onExpand,
-  onPointerDown,
-  onPointerLeave,
-}: {
-  title: string;
-  icon: string;
-  preview?: ReactNode;
-  focused: boolean;
-  side: ColumnSide;
-  onExpand: () => void;
-  onPointerDown: () => void;
-  onPointerLeave: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onExpand}
-      onPointerDown={onPointerDown}
-      onPointerLeave={onPointerLeave}
-      aria-label={`Expand ${title}`}
-      className={`flex w-full shrink-0 items-center gap-1.5 border-b px-1.5 py-1 text-[10px] uppercase tracking-[0.18em] text-ink-dim hover:text-ink md:w-7 md:min-h-0 md:flex-col md:gap-2.5 md:border-b-0 ${OUTER_EDGE[side]} md:px-0 ${columnEdge(focused)}`}
-    >
-      <span aria-hidden className="shrink-0 text-[11px] leading-none">{icon}</span>
-      <span className="shrink-0 overflow-hidden md:max-h-[40%] md:[writing-mode:vertical-rl]">{title}</span>
-      {preview}
-    </button>
-  );
-}
-
 export function SectionHeader({
   icon,
   title,
@@ -153,30 +125,30 @@ export function SectionHeader({
   );
 }
 
-export function ColumnHeader({
+function ColumnHeader({
+  navId,
   title,
   icon,
   note,
-  focused,
-  row,
   action,
   onCollapse,
 }: {
+  navId: ColumnId;
   title: string;
   icon: string;
   note?: string;
-  focused: boolean;
-  row: ColumnRow;
   action?: ReactNode;
   onCollapse: (() => void) | null;
 }) {
+  const nav = useColumnNav(navId);
+  const row = nav.row(COLUMN_HEADER);
   return (
-    <div className={`flex shrink-0 items-center ${headerTone(row, focused)}`}>
+    <div className={`flex shrink-0 items-center ${headerTone(row, nav.focused)}`}>
       <SectionHeader
         {...row.props}
         icon={icon}
         title={title}
-        titleTone={focused ? 'text-accent' : 'text-ink-dim'}
+        titleTone={nav.focused ? 'text-accent' : 'text-ink-dim'}
         note={note}
         chevron={onCollapse === null ? null : <span className="inline-block max-md:-rotate-90">‹</span>}
         className="min-w-0 flex-1"
@@ -204,34 +176,66 @@ interface ColumnProps {
 }
 
 export function ResizableColumn(props: ColumnProps) {
-  const { navId, title, icon, note, preview, size, onSize, action, footer, tone = 'bg-panel', side = 'left', children } = props;
-  const nav = useColumnNav(navId);
-  const startDrag = useDragWidth(size, onSize);
-  const pane = usePaneMode(navId);
+  const pane = usePaneMode(props.navId);
   const forcedOpen = useForcedOpen();
   if (pane === 'hidden') return null;
-  if (pane === 'pane')
-    return (
-      <section onPointerDown={nav.focus} onPointerLeave={nav.clearHover} className="flex min-h-0 min-w-0 flex-1 flex-col bg-panel">
-        <div ref={nav.bodyRef} className="min-h-0 flex-1 overflow-auto">
-          <div className={PANE_WIDTH}>{children}</div>
+  if (pane === 'pane') return <PaneColumn {...props} />;
+  if (!props.size.open && !forcedOpen) return <StripColumn {...props} />;
+  return <OpenColumn {...props} collapsible={!forcedOpen} />;
+}
+
+function PaneColumn({ navId, title, icon, note, action, footer, children }: ColumnProps) {
+  const nav = useColumnNav(navId);
+  return (
+    <section onPointerDown={nav.focus} onPointerLeave={nav.clearHover} className="flex min-h-0 min-w-0 flex-1 flex-col bg-panel">
+      <div className={`${PANE_WIDTH} shrink-0`}>
+        <ColumnHeader navId={navId} title={title} icon={icon} note={note} action={action} onCollapse={null} />
+      </div>
+      <div ref={nav.bodyRef} className="min-h-0 flex-1 overflow-auto">
+        <div className={PANE_WIDTH}>
+          <ColumnBoundary>{children}</ColumnBoundary>
         </div>
-        {footer}
-      </section>
-    );
-  if (!size.open && !forcedOpen)
-    return (
-      <CollapsedColumn
-        title={title}
-        icon={icon}
-        preview={preview}
-        focused={nav.focused}
-        side={side}
-        onExpand={() => onSize({ ...size, open: true })}
-        onPointerDown={nav.focus}
-        onPointerLeave={nav.clearHover}
-      />
-    );
+      </div>
+      {footer}
+    </section>
+  );
+}
+
+function StripColumn({ navId, title, icon, preview, size, onSize, side = 'left' }: ColumnProps) {
+  const nav = useColumnNav(navId);
+  return (
+    // The whole strip expands on click; the button adds the label and keyboard access.
+    <div
+      onClick={() => onSize({ ...size, open: true })}
+      onPointerDown={nav.focus}
+      onPointerLeave={nav.clearHover}
+      className={`${STRIP} ${OUTER_EDGE[side]} ${columnEdge(nav.focused)}`}
+    >
+      <button type="button" aria-label={`Expand ${title}`} className={STRIP_EXPAND}>
+        <span aria-hidden className="shrink-0 text-[11px] leading-none">{icon}</span>
+        <span className="shrink-0 md:[writing-mode:vertical-rl]">{title}</span>
+      </button>
+      {preview}
+    </div>
+  );
+}
+
+function OpenColumn({
+  navId,
+  title,
+  icon,
+  note,
+  size,
+  onSize,
+  action,
+  footer,
+  tone = 'bg-panel',
+  side = 'left',
+  collapsible,
+  children,
+}: ColumnProps & { collapsible: boolean }) {
+  const nav = useColumnNav(navId);
+  const startDrag = useDragWidth(size, onSize);
   return (
     <section
       onPointerDown={nav.focus}
@@ -240,15 +244,16 @@ export function ResizableColumn(props: ColumnProps) {
       style={{ '--col-w': `${size.width}px` } as CSSProperties}
     >
       <ColumnHeader
+        navId={navId}
         title={title}
         icon={icon}
         note={note}
-        focused={nav.focused}
-        row={nav.row(COLUMN_HEADER)}
         action={action}
-        onCollapse={forcedOpen ? null : () => onSize({ ...size, open: false })}
+        onCollapse={collapsible ? () => onSize({ ...size, open: false }) : null}
       />
-      <div ref={nav.bodyRef} className="max-h-[50vh] overflow-auto md:max-h-none md:min-h-0 md:flex-1">{children}</div>
+      <div ref={nav.bodyRef} className="max-h-[50vh] overflow-auto md:max-h-none md:min-h-0 md:flex-1">
+        <ColumnBoundary>{children}</ColumnBoundary>
+      </div>
       {footer}
       <DragHandle onPointerDown={startDrag} />
     </section>
