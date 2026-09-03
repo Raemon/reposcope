@@ -117,6 +117,8 @@ function PlacedCard({
         <button
           type="button"
           onClick={onToggle}
+          aria-expanded={expanded}
+          aria-label={expanded ? 'Collapse comment' : 'Expand comment'}
           style={{ height: EXPAND_BAR }}
           className="block w-full rounded-b border border-t-0 border-panel-edge bg-tip px-1.5 text-left text-[9px] italic leading-[13px] text-ink-dim hover:text-ink"
         >

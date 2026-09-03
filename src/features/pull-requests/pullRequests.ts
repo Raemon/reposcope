@@ -116,8 +116,10 @@ export interface CloseResult {
 export interface PullComment {
   id: number;
   author: string;
+  avatarUrl: string;
   createdAt: string;
   body: string;
+  url: string;
   path: string | null;
 }
 
@@ -142,9 +144,10 @@ interface GithubPull {
 
 interface GithubComment {
   id: number;
-  user: { login: string } | null;
+  user: { login: string; avatar_url?: string } | null;
   created_at: string;
   body?: string;
+  html_url: string;
   path?: string;
 }
 
@@ -478,8 +481,10 @@ function pullComment(comment: GithubComment): PullComment {
   return {
     id: comment.id,
     author: comment.user?.login ?? '',
+    avatarUrl: comment.user?.avatar_url ?? '',
     createdAt: comment.created_at,
     body: comment.body ?? '',
+    url: comment.html_url,
     path: comment.path ?? null,
   };
 }
