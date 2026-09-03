@@ -41,9 +41,9 @@ export function CodebaseHeader() {
         <GithubSignedOutNotice />
         {reading && pullNumber !== null && (
           <>
-            <PullBranchRefs repo={reading} number={pullNumber} />
-            <PreviewLink repo={reading} number={pullNumber} />
+            <PreviewLink key={`${reading.owner}/${reading.name}#${pullNumber}`} repo={reading} number={pullNumber} />
             <MergePullButton repo={reading} number={pullNumber} />
+            <PullBranchRefs repo={reading} number={pullNumber} />
           </>
         )}
         {readingChange && <ViewModeToggle />}
