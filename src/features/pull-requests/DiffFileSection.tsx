@@ -12,6 +12,7 @@ import { useNearViewport } from './nearViewportStore';
 import type { ChangedFile } from './pullRequests';
 import { CopyButton } from '@/features/surface-ui/CopyButton';
 import { OpenOnGithubLink } from '@/features/surface-ui/OpenOnGithubLink';
+import { PaneStatusLine } from '@/features/surface-ui/PaneStatusLine';
 import { rowStateClass, type RowState } from '@/features/surface-ui/rowState';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
 
@@ -140,9 +141,9 @@ function FileBody({
     );
   }
   if (diff) return diff;
-  return <Note text={`${file.status} — no textual diff`} />;
-}
-
-function Note({ text }: { text: string }) {
-  return <p className="flex-1 px-2 py-1 text-[11px] text-ink-dim">{text}</p>;
+  return (
+    <PaneStatusLine tone="dim" className="flex-1">
+      {file.status} — no textual diff
+    </PaneStatusLine>
+  );
 }

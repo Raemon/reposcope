@@ -2,8 +2,9 @@
 
 import { Component, type ReactNode } from 'react';
 import { errorMessage } from '@/features/sources/errorMessage';
+import { PaneStatusLine } from './PaneStatusLine';
 
-// Without this, one render error anywhere in a column replaces the whole page with Next.js's error screen.
+// Without this, one render error in a column replaces the page with Next's error screen.
 export class ColumnBoundary extends Component<{ children: ReactNode }, { failure: string | null }> {
   state = { failure: null as string | null };
 
@@ -12,18 +13,12 @@ export class ColumnBoundary extends Component<{ children: ReactNode }, { failure
   }
 
   render() {
-    if (this.state.failure === null) return this.props.children;
-    return <Failed message={this.state.failure} onRetry={() => this.setState({ failure: null })} />;
+    const { failure } = this.state;
+    if (failure === null) return this.props.children;
+    return (
+      <PaneStatusLine tone="error" onRetry={() => this.setState({ failure: null })}>
+        This column hit an error: {failure}
+      </PaneStatusLine>
+    );
   }
-}
-
-function Failed({ message, onRetry }: { message: string; onRetry: () => void }) {
-  return (
-    <div className="px-1.5 py-1 text-[10px] leading-4 text-error-ink">
-      <p>This column hit an error: {message}</p>
-      <button type="button" onClick={onRetry} className="mt-1 underline">
-        try again
-      </button>
-    </div>
-  );
 }

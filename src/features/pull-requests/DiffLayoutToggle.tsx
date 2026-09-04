@@ -17,7 +17,7 @@ const CHOICES: { layout: DiffLayout; icon: ReactNode; label: string; tone?: Icon
   { layout: 'result', icon: <ResultViewIcon />, label: 'Show the file as it will be, with removed lines hidden', tone: 'add' },
 ];
 
-export function DiffLayoutToggle() {
+export function DiffLayoutToggle({ sortable }: { sortable: boolean }) {
   const current = useDiffLayout();
   return (
     <div className="relative z-30 flex shrink-0 items-center gap-2 border-b border-panel-edge bg-panel px-2 py-[2px]">
@@ -37,7 +37,7 @@ export function DiffLayoutToggle() {
         ))}
         <WrapToggle />
         <EditModeToggle />
-        <DiffSortMenu />
+        {sortable && <DiffSortMenu />}
       </span>
     </div>
   );
