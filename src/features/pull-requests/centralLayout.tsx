@@ -59,6 +59,10 @@ function entryOf(tab: CentralTab): TabEntry {
   return ENTRY_OF_TAB.get(tab) ?? PULLS_TAB;
 }
 
+export function tabShowing(id: ColumnId): CentralTab | null {
+  return [PULLS_TAB, ...SUBJECT_TABS].find((entry) => id in entry.columns)?.tab ?? null;
+}
+
 export function usePaneMode(id: ColumnId): PaneMode {
   const { central, tab } = useCentralLayout();
   return central ? entryOf(tab).columns[id] ?? 'hidden' : 'column';

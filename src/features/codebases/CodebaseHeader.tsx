@@ -25,6 +25,8 @@ import { GithubSignedOutNotice } from '@/features/sources/GithubSignedOutNotice'
 
 const ALL_PULLS = '/pulls';
 
+const REPO_MENU_COMMAND = { id: 'repo-menu', label: 'repositories menu', keys: ['0', 'r'] };
+
 export function CodebaseHeader() {
   const pathname = usePathname();
   const reading = repoBeingRead(pathname);
@@ -76,6 +78,7 @@ function CodebaseMenu({ reading }: { reading: RepoRef | null }) {
     <HeaderMenu
       label={readingAllPulls ? ALL_PULLS_ROWS[author].label : reading ? <RepoLabel reading={reading} /> : 'Codebases'}
       width="w-80"
+      command={REPO_MENU_COMMAND}
     >
       {(close) => (
         <>

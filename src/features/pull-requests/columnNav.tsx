@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { navActionFor, type NavAction } from './columnKeys';
 import { COLUMN_HEADER, nextCursor, stepColumn, type ColumnId, type NavColumn } from './navColumn';
 import { rowState, type RowState } from '@/features/surface-ui/rowState';
@@ -20,6 +20,7 @@ interface NavValue {
   hover: Hover | null;
   setHover: (hover: Hover | null) => void;
   focus: (column: ColumnId) => void;
+  toggle: (column: ColumnId) => void;
   activate: (column: ColumnId, item: string) => void;
   register: (id: ColumnId, column: NavColumn | null) => void;
   registerBody: (id: ColumnId, node: HTMLElement | null) => void;
@@ -31,6 +32,7 @@ const INERT: NavValue = {
   hover: null,
   setHover: () => {},
   focus: () => {},
+  toggle: () => {},
   activate: () => {},
   register: () => {},
   registerBody: () => {},
@@ -43,6 +45,8 @@ export function ColumnNavProvider({ children }: { children: ReactNode }) {
   const [focused, setFocused] = useState<ColumnId>('files');
   const [cursors, setCursors] = useState<Cursors>({});
   const [hover, setHover] = useState<Hover | null>(null);
+  const [toggling, setToggling] = useState<ColumnId | null>(null);
+  const [revealing, setRevealing] = useState<ColumnId | null>(null);
 
   const setCursor = useCallback((id: ColumnId, item: string | null) => {
     setCursors((held) => ({ ...held, [id]: item ?? undefined }));
@@ -79,8 +83,22 @@ export function ColumnNavProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.querySelector('[data-nav-cursor]')?.scrollIntoView({ block: 'nearest' });
   }, [focused, cursors]);
+  useEffect(() => {
+    if (toggling === null) return;
+    setToggling(null);
+    const column = columns.current.get(toggling);
+    if (!column) return;
+    toggleColumn(column, focused === toggling);
+    setFocused(toggling);
+    setRevealing(toggling);
+  }, [toggling, focused]);
+  useEffect(() => {
+    if (revealing === null) return;
+    setRevealing(null);
+    document.querySelector(`[data-nav-column="${revealing}"]`)?.scrollIntoView({ block: 'start', inline: 'nearest' });
+  }, [revealing]);
 
-  const value = { focused, cursors, hover, setHover, focus: setFocused, activate, register, registerBody };
+  const value = { focused, cursors, hover, setHover, focus: setFocused, toggle: setToggling, activate, register, registerBody };
   return <ColumnNavContext.Provider value={value}>{children}</ColumnNavContext.Provider>;
 }
 
@@ -114,6 +132,7 @@ export function useColumnNav(id: ColumnId) {
     focused,
     cursor,
     focus: () => nav.focus(id),
+    toggle: () => nav.toggle(id),
     activate: (item: string) => nav.activate(id, item),
     clearHover: () => nav.setHover(null),
     bodyRef,
@@ -124,13 +143,8 @@ export function useColumnNav(id: ColumnId) {
   };
 }
 
-export function useRegisterColumn(id: ColumnId, column: NavColumn, active = true) {
-  const nav = useContext(ColumnNavContext);
-  useLayoutEffect(() => {
-    if (!active) return;
-    nav.register(id, column);
-    return () => nav.register(id, null);
-  });
+export function useNavRegister() {
+  return useContext(ColumnNavContext).register;
 }
 
 function stepToLiveColumn(columns: Map<ColumnId, NavColumn>, from: ColumnId, delta: number): ColumnId {
@@ -139,6 +153,11 @@ function stepToLiveColumn(columns: Map<ColumnId, NavColumn>, from: ColumnId, del
     if (stepColumn(at, delta) === at) break;
   }
   return from;
+}
+
+function toggleColumn(column: NavColumn, focused: boolean) {
+  if (!column.open) column.setOpen?.(true);
+  else if (focused && column.collapsible) column.setOpen?.(false);
 }
 
 function activateColumn(column: NavColumn, cursor: string | null) {

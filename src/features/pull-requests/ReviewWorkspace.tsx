@@ -13,7 +13,7 @@ import { isTreeItem } from './fileTreeNodes';
 import { RepoBrowseReader } from './RepoBrowseReader';
 import { useRepoFiles } from './repoFileStore';
 import { ResizableColumn, useCollapsibleColumn, type ColumnSize } from './ResizableColumn';
-import { useRegisterColumn } from './columnNav';
+import { useRegisterColumn } from './registerColumn';
 import { commentCountsOf, sortChangedFiles } from './diffSort';
 import { useDiffSort } from './diffSortStore';
 import { DeleteFileModal } from './DeleteFileModal';
@@ -159,14 +159,11 @@ function Workspace({
   const stacked = useCentralLayout().central;
   const showsDiff = useShowsColumn('diff');
   const reviewRow = usePageScrollFirst(stacked && showsDiff);
-  const showsDiscussion = useShowsColumn('discussion');
-  const showsCommits = useShowsColumn('commits');
-  const showsFiles = useShowsColumn('files');
   const discussionColumn = useCollapsibleColumn('discussion', discussionSize, setDiscussionSize);
   useRegisterColumn(
     'discussion',
     { ...discussionColumn, items: [], selected: null, onActivate: () => discussionColumn.setOpen(true) },
-    discussion !== null && showsDiscussion,
+    discussion !== null,
   );
   useRegisterColumn(
     'commits',
@@ -176,7 +173,6 @@ function Workspace({
       selected: selection,
       onSelect: setSelection,
     },
-    showsCommits,
   );
   useRegisterColumn(
     'files',
@@ -187,7 +183,6 @@ function Workspace({
       onSelect: selectFileItem,
       onActivate: activateFileItem,
     },
-    showsFiles,
   );
   useRegisterColumn(
     'diff',
@@ -199,7 +194,6 @@ function Workspace({
       onSelect: revealFile,
       onActivate: (filename) => diffPanes.current?.toggleFile(filename),
     },
-    showsDiff,
   );
 
   async function reloadInPlace() {

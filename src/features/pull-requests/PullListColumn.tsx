@@ -4,9 +4,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { AllPullRequestList } from './AllPullRequestList';
 import { BranchesSection, useBranches } from './BranchesSection';
-import { useShowsColumn } from './centralLayout';
 import { ColumnPreview, type PreviewToken } from './ColumnPreview';
-import { useRegisterColumn } from './columnNav';
+import { useRegisterColumn } from './registerColumn';
 import { PullFilterMenu } from './PullFilterMenu';
 import { PullRequestList } from './PullRequestList';
 import { collapsePullList, type PullListColumnName } from './collapsePullList';
@@ -90,16 +89,12 @@ function PullsColumn({
     router.push(target.href);
     if (target.pull) collapsePullList(column);
   };
-  useRegisterColumn(
-    'pulls',
-    {
-      ...useCollapsibleColumn('pulls', size, onSize),
-      items: targets.map((target) => target.route),
-      selected,
-      onActivate: openTarget,
-    },
-    useShowsColumn('pulls'),
-  );
+  useRegisterColumn('pulls', {
+    ...useCollapsibleColumn('pulls', size, onSize),
+    items: targets.map((target) => target.route),
+    selected,
+    onActivate: openTarget,
+  });
   return (
     <ResizableColumn
       navId="pulls"
