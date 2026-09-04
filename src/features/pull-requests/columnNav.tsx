@@ -45,8 +45,8 @@ export function ColumnNavProvider({ children }: { children: ReactNode }) {
   const [focused, setFocused] = useState<ColumnId>('files');
   const [cursors, setCursors] = useState<Cursors>({});
   const [hover, setHover] = useState<Hover | null>(null);
-  const [toggling, setToggling] = useState<ColumnId | null>(null);
-  const [revealing, setRevealing] = useState<ColumnId | null>(null);
+  const [pendingToggle, setPendingToggle] = useState<ColumnId | null>(null);
+  const [pendingReveal, setPendingReveal] = useState<ColumnId | null>(null);
 
   const setCursor = useCallback((id: ColumnId, item: string | null) => {
     setCursors((held) => ({ ...held, [id]: item ?? undefined }));
@@ -83,22 +83,23 @@ export function ColumnNavProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.querySelector('[data-nav-cursor]')?.scrollIntoView({ block: 'nearest' });
   }, [focused, cursors]);
+  // Deferred to an effect: a central tab switch must render and register the column first.
   useEffect(() => {
-    if (toggling === null) return;
-    setToggling(null);
-    const column = columns.current.get(toggling);
+    if (pendingToggle === null) return;
+    setPendingToggle(null);
+    const column = columns.current.get(pendingToggle);
     if (!column) return;
-    toggleColumn(column, focused === toggling);
-    setFocused(toggling);
-    setRevealing(toggling);
-  }, [toggling, focused]);
+    toggleColumn(column, focused === pendingToggle);
+    setFocused(pendingToggle);
+    setPendingReveal(pendingToggle);
+  }, [pendingToggle, focused]);
   useEffect(() => {
-    if (revealing === null) return;
-    setRevealing(null);
-    document.querySelector(`[data-nav-column="${revealing}"]`)?.scrollIntoView({ block: 'start', inline: 'nearest' });
-  }, [revealing]);
+    if (pendingReveal === null) return;
+    setPendingReveal(null);
+    scrollColumnIntoView(pendingReveal);
+  }, [pendingReveal]);
 
-  const value = { focused, cursors, hover, setHover, focus: setFocused, toggle: setToggling, activate, register, registerBody };
+  const value = { focused, cursors, hover, setHover, focus: setFocused, toggle: setPendingToggle, activate, register, registerBody };
   return <ColumnNavContext.Provider value={value}>{children}</ColumnNavContext.Provider>;
 }
 
@@ -132,7 +133,6 @@ export function useColumnNav(id: ColumnId) {
     focused,
     cursor,
     focus: () => nav.focus(id),
-    toggle: () => nav.toggle(id),
     activate: (item: string) => nav.activate(id, item),
     clearHover: () => nav.setHover(null),
     bodyRef,
@@ -143,8 +143,9 @@ export function useColumnNav(id: ColumnId) {
   };
 }
 
-export function useNavRegister() {
-  return useContext(ColumnNavContext).register;
+export function useNavRegistry(): Pick<NavValue, 'register' | 'toggle'> {
+  const { register, toggle } = useContext(ColumnNavContext);
+  return { register, toggle };
 }
 
 function stepToLiveColumn(columns: Map<ColumnId, NavColumn>, from: ColumnId, delta: number): ColumnId {
@@ -164,6 +165,10 @@ function activateColumn(column: NavColumn, cursor: string | null) {
   if (!column.open) return column.setOpen?.(true);
   if (cursor === COLUMN_HEADER) return column.setOpen?.(false);
   if (cursor !== null) column.onActivate?.(cursor);
+}
+
+function scrollColumnIntoView(id: ColumnId) {
+  document.querySelector(`[data-nav-column="${id}"]`)?.scrollIntoView({ block: 'start', inline: 'nearest' });
 }
 
 function scrollBody(node: HTMLElement | undefined, delta: number) {

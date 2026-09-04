@@ -8,12 +8,12 @@ import { SELECTABLE_TEXT, useSelectableClick } from '@/features/surface-ui/selec
 export function HeaderMenu({
   label,
   width,
-  command = null,
+  command,
   children,
 }: {
   label: ReactNode;
   width: string;
-  command?: CommandSpec | null;
+  command?: CommandSpec;
   children: (close: () => void) => ReactNode;
 }) {
   return (
@@ -27,8 +27,8 @@ export function HeaderMenu({
   );
 }
 
-function LabelButton({ label, command, open, toggle }: PopoverTrigger & { label: ReactNode; command: CommandSpec | null }) {
-  useCommand(command, toggle);
+function LabelButton({ label, command, open, toggle }: PopoverTrigger & { label: ReactNode; command?: CommandSpec }) {
+  useCommand(command ?? null, toggle);
   const labelClick = useSelectableClick<HTMLButtonElement>(toggle);
   return (
     <button

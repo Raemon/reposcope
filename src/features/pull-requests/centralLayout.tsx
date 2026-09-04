@@ -30,7 +30,9 @@ const SUBJECT_TABS: TabEntry[] = [
   { tab: 'ai-chat', label: 'ai chat', columns: { 'ai-chat': 'pane' }, focus: 'ai-chat' },
 ];
 
-const ENTRY_OF_TAB = new Map<CentralTab, TabEntry>([PULLS_TAB, ...SUBJECT_TABS].map((entry) => [entry.tab, entry]));
+const TABS = [PULLS_TAB, ...SUBJECT_TABS];
+
+const ENTRY_OF_TAB = new Map<CentralTab, TabEntry>(TABS.map((entry) => [entry.tab, entry]));
 
 export const PANE_WIDTH = 'mx-auto w-full max-w-[980px]';
 
@@ -59,8 +61,8 @@ function entryOf(tab: CentralTab): TabEntry {
   return ENTRY_OF_TAB.get(tab) ?? PULLS_TAB;
 }
 
-export function tabShowing(id: ColumnId): CentralTab | null {
-  return [PULLS_TAB, ...SUBJECT_TABS].find((entry) => id in entry.columns)?.tab ?? null;
+export function tabContaining(id: ColumnId): CentralTab | null {
+  return TABS.find((entry) => id in entry.columns)?.tab ?? null;
 }
 
 export function usePaneMode(id: ColumnId): PaneMode {

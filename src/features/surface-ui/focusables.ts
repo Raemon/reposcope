@@ -1,3 +1,5 @@
+export const ARROW_STEPS: Record<string, number> = { ArrowDown: 1, ArrowUp: -1 };
+
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled])';
 
 export function focusableItems(root: HTMLElement | null): HTMLElement[] {

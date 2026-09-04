@@ -14,11 +14,13 @@ export interface Command extends CommandSpec {
 
 const commands = new Map<string, Command>();
 const listeners = new Set<() => void>();
-let listed: Command[] = [];
-const NONE: Command[] = [];
+let sorted: Command[] = [];
+const EMPTY: Command[] = [];
+
+const byFirstKey = (a: Command, b: Command) => (a.keys[0] ?? '').localeCompare(b.keys[0] ?? '');
 
 function publish(): void {
-  listed = [...commands.values()].sort((a, b) => (a.keys[0] ?? '').localeCompare(b.keys[0] ?? ''));
+  sorted = [...commands.values()].sort(byFirstKey);
   listeners.forEach((notify) => notify());
 }
 
@@ -33,27 +35,25 @@ export function registerCommand(command: Command): () => void {
   commands.set(command.id, command);
   publish();
   return () => {
-    if (commands.get(command.id) === command) commands.delete(command.id);
+    if (commands.get(command.id) !== command) return;
+    commands.delete(command.id);
     publish();
   };
 }
 
 export function commandForKey(key: string): Command | null {
-  return listed.find((command) => command.keys.includes(key)) ?? null;
+  return sorted.find((command) => command.keys.includes(key)) ?? null;
 }
 
 export function useCommands(): Command[] {
-  return useSyncExternalStore(subscribe, () => listed, () => NONE);
+  return useSyncExternalStore(subscribe, () => sorted, () => EMPTY);
 }
 
 export function useCommand(spec: CommandSpec | null, run: () => void): void {
-  const latest = useRef(run);
-  latest.current = run;
-  const id = spec?.id ?? null;
-  const label = spec?.label ?? '';
-  const keys = spec?.keys.join(' ') ?? '';
+  const latestRun = useRef(run);
+  latestRun.current = run;
   useEffect(() => {
-    if (id === null) return;
-    return registerCommand({ id, label, keys: keys.split(' '), run: () => latest.current() });
-  }, [id, label, keys]);
+    if (spec === null) return;
+    return registerCommand({ ...spec, run: () => latestRun.current() });
+  }, [spec]);
 }

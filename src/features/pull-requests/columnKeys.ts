@@ -1,4 +1,4 @@
-import { isTyping } from '@/features/hotkeys/isTyping';
+import { keyboardBusy } from '@/features/hotkeys/keyboardBusy';
 
 export type NavAction =
   | { kind: 'column'; delta: number }
@@ -17,6 +17,6 @@ const KEY_ACTIONS: Record<string, NavAction> = {
 
 export function navActionFor(event: KeyboardEvent): NavAction | null {
   if (event.metaKey || event.ctrlKey || event.altKey) return null;
-  if (isTyping(event.target)) return null;
+  if (keyboardBusy(event)) return null;
   return KEY_ACTIONS[event.key] ?? null;
 }

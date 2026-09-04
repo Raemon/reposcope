@@ -2,14 +2,12 @@
 
 import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type RefObject } from 'react';
-import { focusFirstItem, focusableItems, holdsFocus, holdsKeyboardFocus } from './focusables';
+import { ARROW_STEPS, focusFirstItem, focusableItems, holdsFocus, holdsKeyboardFocus } from './focusables';
 
 export interface PopoverTrigger {
   open: boolean;
   toggle: () => void;
 }
-
-const ARROW_STEPS: Record<string, number> = { ArrowDown: 1, ArrowUp: -1 };
 
 export function PopoverMenu({
   align,

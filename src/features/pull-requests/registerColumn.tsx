@@ -1,8 +1,8 @@
 'use client';
 
 import { useLayoutEffect } from 'react';
-import { tabShowing, useCentralLayout, usePaneMode } from './centralLayout';
-import { useColumnNav, useNavRegister } from './columnNav';
+import { tabContaining, useCentralLayout, usePaneMode } from './centralLayout';
+import { useNavRegistry } from './columnNav';
 import type { ColumnId, NavColumn } from './navColumn';
 import { useCommand, type CommandSpec } from '@/features/hotkeys/commandStore';
 
@@ -14,23 +14,22 @@ const COLUMN_COMMANDS: Partial<Record<ColumnId, CommandSpec>> = {
   'ai-chat': { id: 'column:ai-chat', label: 'ai chat column', keys: ['5', 'a'] },
 };
 
-export function useRegisterColumn(id: ColumnId, column: NavColumn, present = true) {
-  const register = useNavRegister();
-  const shown = present && usePaneMode(id) !== 'hidden';
+export function useRegisterColumn(id: ColumnId, column: NavColumn, available = true) {
+  const { register, toggle } = useNavRegistry();
+  const visible = available && usePaneMode(id) !== 'hidden';
   useLayoutEffect(() => {
-    if (!shown) return;
+    if (!visible) return;
     register(id, column);
     return () => register(id, null);
   });
-  useColumnCommand(id, present);
+  useColumnCommand(id, available, toggle);
 }
 
-function useColumnCommand(id: ColumnId, present: boolean) {
+function useColumnCommand(id: ColumnId, available: boolean, toggle: (id: ColumnId) => void) {
   const { central, setTab } = useCentralLayout();
-  const nav = useColumnNav(id);
-  useCommand(present ? COLUMN_COMMANDS[id] ?? null : null, () => {
-    const tab = tabShowing(id);
+  useCommand(available ? COLUMN_COMMANDS[id] ?? null : null, () => {
+    const tab = tabContaining(id);
     if (central && tab !== null) setTab(tab);
-    nav.toggle();
+    toggle(id);
   });
 }

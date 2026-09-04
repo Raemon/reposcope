@@ -1,12 +1,15 @@
 import { commandForKey, type Command } from './commandStore';
-import { isTyping } from './isTyping';
+import { keyboardBusy } from './keyboardBusy';
 
-export function togglesPalette(event: KeyboardEvent): boolean {
-  return (event.metaKey || event.ctrlKey) && !event.altKey && event.key.toLowerCase() === 'k';
+export function isPaletteShortcut(event: KeyboardEvent): boolean {
+  return (event.metaKey || event.ctrlKey) && !event.altKey && !event.repeat && event.key.toLowerCase() === 'k';
 }
 
-export function hotkeyCommand(event: KeyboardEvent): Command | null {
-  if (event.metaKey || event.ctrlKey || event.altKey || event.repeat) return null;
-  if (isTyping(event.target) || document.querySelector('dialog[open]') !== null) return null;
+export function commandForHotkey(event: KeyboardEvent): Command | null {
+  if (hasModifier(event) || event.repeat || keyboardBusy(event)) return null;
   return commandForKey(event.key.toLowerCase());
+}
+
+function hasModifier(event: KeyboardEvent): boolean {
+  return event.metaKey || event.ctrlKey || event.altKey || event.shiftKey;
 }
