@@ -162,11 +162,15 @@
 }
 
 @utility row-shade {
+  background-image: linear-gradient(rgb(0 0 0 / 0.05), rgb(0 0 0 / 0.05));
+}
+
+@utility row-lit {
   background-image: linear-gradient(rgb(0 0 0 / 0.2), rgb(0 0 0 / 0.2));
 }
 
 .diff-line-lit {
-  @apply row-shade;
+  @apply row-lit;
 }
 
 @media (prefers-color-scheme: dark) {

@@ -167,7 +167,7 @@ function PeekLine({
   const cell = line.cell;
   if (line.kind === 'hunk' || !cell) return null;
   return (
-    <div className={`flex h-[15px] items-center gap-1 leading-[15px] ${lineTone(line.side, line.kind === 'change', false)}`}>
+    <div className={`flex h-[15px] items-center gap-1 leading-[15px] ${lineTone(line.side, line.kind === 'change')}`}>
       <span className="w-[38px] shrink-0 select-none text-right text-[9px] text-ink-dim">{cell.line}</span>
       <span className="diff-code whitespace-pre pr-2 text-[11px]" onClick={onPress}>
         {codeSegments(cell.text, tokens, null).map((segment, at) => (

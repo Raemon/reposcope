@@ -26,6 +26,7 @@ const WRAPPED_ROW = 'flex min-h-[15px] items-start gap-1 leading-[15px]';
 // Literal px; Tailwind can't compile computed classes. Sync with BLANK_ROW_HEIGHT.
 const BLANK_ROW = 'flex h-[4px] items-center gap-1 leading-[4px]';
 const GUTTER = 'flex w-[46px] shrink-0 select-none items-center text-[9px] text-ink-dim';
+const TONED_GUTTER = 'self-stretch group-hover:row-shade group-[.diff-line-lit]:row-lit';
 const TOUCHED_MARK = 'bg-add-bg/60 shadow-[inset_2px_0_0_var(--add-emph)]';
 const STICKY_CHIP = 'sticky right-0 shrink-0 rounded bg-procgen px-1 hover:bg-btn-hover hover:text-ink';
 const EDIT_BTN = `${STICKY_CHIP} uppercase tracking-[0.14em]`;
@@ -275,7 +276,7 @@ function DiffLineView({
   const folded = layout !== null && foldsTail(line, collapsed, layout);
   const segments = collapsedSegments(raw, layout, folded ? longestPrefix : Infinity);
   const fold = folded ? prefixStyle(longestPrefix) : null;
-  const tones = rowTones(line, collapsed);
+  const tones = rowTones(line);
   return (
     <div
       {...{ [ROW_ATTR]: line.row }}
@@ -305,13 +306,10 @@ function prefixStyle(longest: number): CSSProperties {
   return { fontSize: PREFIX_FONT, minWidth: `${longest}ch` };
 }
 
-// A collapsed row fades its change colour so the text reads; the gutter keeps it at full strength.
-function rowTones(line: DiffLine, collapsed: boolean): { row: string; gutter: string } {
-  if (line.blank) return { row: '', gutter: '' };
-  const changed = line.kind === 'change';
-  const ink = lineInk(line.side, changed);
-  if (!collapsed || !changed) return { row: `${lineBackground(line.side, changed, line.touched)} ${ink}`, gutter: '' };
-  return { row: `${faintBackground(line.side)} ${ink}`, gutter: lineBackground(line.side, changed, false) };
+// Full-strength gutter tint keeps the change legible over the faded code.
+function rowTones(line: DiffLine): { row: string; gutter: string } {
+  if (line.kind !== 'change') return { row: line.touched ? TOUCHED_MARK : '', gutter: '' };
+  return { row: `${faintBackground(line.side)} ${changeInk(line.side)}`, gutter: changeBackground(line.side) };
 }
 
 function faintBackground(side: 'left' | 'right'): string {
@@ -401,7 +399,7 @@ function plural(count: number, word: string): string {
 
 function GutterCell({ line, anchor, tone }: { line: number | null; anchor: CollapseAnchor | null; tone: string }) {
   return (
-    <span className={`${GUTTER} ${tone ? `self-stretch ${tone}` : ''}`}>
+    <span className={`${GUTTER} ${tone ? `${TONED_GUTTER} ${tone}` : ''}`}>
       <span className="min-w-0 flex-1 text-right">{line}</span>
       {/* flex, not inline: an inline-block button leaves a baseline gap that unsettles a wrapped row. */}
       <span className="flex w-3 shrink-0 justify-center">{anchor && <CollapseChevron anchor={anchor} />}</span>
@@ -424,17 +422,15 @@ function CollapseChevron({ anchor }: { anchor: CollapseAnchor }) {
   );
 }
 
-export function lineTone(side: 'left' | 'right', changed: boolean, touched: boolean): string {
-  return `${lineBackground(side, changed, touched)} ${lineInk(side, changed)}`;
+export function lineTone(side: 'left' | 'right', changed: boolean): string {
+  return changed ? `${changeBackground(side)} ${changeInk(side)}` : '';
 }
 
-function lineBackground(side: 'left' | 'right', changed: boolean, touched: boolean): string {
-  if (changed) return side === 'left' ? 'bg-del-bg' : 'bg-add-bg';
-  return touched ? TOUCHED_MARK : '';
+function changeBackground(side: 'left' | 'right'): string {
+  return side === 'left' ? 'bg-del-bg' : 'bg-add-bg';
 }
 
-function lineInk(side: 'left' | 'right', changed: boolean): string {
-  if (!changed) return '';
+function changeInk(side: 'left' | 'right'): string {
   return side === 'left' ? 'text-del-ink' : 'text-add-ink';
 }
 
