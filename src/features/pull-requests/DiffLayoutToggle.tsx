@@ -1,7 +1,7 @@
 'use client';
 
 import { useContext, type ReactNode } from 'react';
-import { setDiffLayout, useDiffLayout, type DiffLayout } from './diffLayoutStore';
+import { DIFF_LAYOUT_LABEL, setDiffLayout, useDiffLayout, type DiffLayout } from './diffLayoutStore';
 import { EditTarget } from './editTarget';
 import { setDiffEditMode, useDiffEditMode } from './editModeStore';
 import { DiffSortMenu } from './DiffSortMenu';
@@ -11,10 +11,10 @@ import type { IconButtonTone } from '@/features/surface-ui/buttonStyles';
 import { EditIcon, ResultViewIcon, SplitViewIcon, UnifiedViewIcon, WrapLinesIcon } from './diffToolbarIcons';
 import { setDiffWrap, useDiffWrap } from './diffWrapStore';
 
-const CHOICES: { layout: DiffLayout; icon: ReactNode; label: string; tone?: IconButtonTone }[] = [
-  { layout: 'split', icon: <SplitViewIcon />, label: 'Show diffs in a two-column view' },
-  { layout: 'unified', icon: <UnifiedViewIcon />, label: 'Show diffs in a one-column view' },
-  { layout: 'result', icon: <ResultViewIcon />, label: 'Show the file as it will be, with removed lines hidden', tone: 'add' },
+const CHOICES: { layout: DiffLayout; icon: ReactNode; tone?: IconButtonTone }[] = [
+  { layout: 'split', icon: <SplitViewIcon /> },
+  { layout: 'unified', icon: <UnifiedViewIcon /> },
+  { layout: 'result', icon: <ResultViewIcon />, tone: 'add' },
 ];
 
 export function DiffLayoutToggle({ sortable }: { sortable: boolean }) {
@@ -23,10 +23,10 @@ export function DiffLayoutToggle({ sortable }: { sortable: boolean }) {
     <div className="relative z-30 flex shrink-0 items-center gap-2 border-b border-panel-edge bg-panel px-2 py-[2px]">
       <FoldModeButtons />
       <span className="ml-auto flex items-center gap-2">
-        {CHOICES.map(({ layout, icon, label, tone }) => (
+        {CHOICES.map(({ layout, icon, tone }) => (
           <ChoiceButton
             key={layout}
-            label={label}
+            label={DIFF_LAYOUT_LABEL[layout]}
             active={current === layout}
             tone={tone}
             placement="top-end"

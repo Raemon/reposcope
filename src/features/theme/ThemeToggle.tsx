@@ -1,13 +1,12 @@
 'use client';
 
-import { setTheme, useTheme } from './themeStore';
+import { nextTheme, setTheme, themeSwitchLabel, useTheme } from './themeStore';
 import { IconToggleButton } from '@/features/surface-ui/IconToggleButton';
 
 export function ThemeToggle() {
   const theme = useTheme();
-  const next = theme === 'dark' ? 'light' : 'dark';
   return (
-    <IconToggleButton label={`Switch to ${next} mode`} onClick={() => setTheme(next)}>
+    <IconToggleButton label={themeSwitchLabel(theme)} onClick={() => setTheme(nextTheme(theme))}>
       {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
     </IconToggleButton>
   );

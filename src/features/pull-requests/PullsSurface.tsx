@@ -21,10 +21,10 @@ export function AllPullsSurface() {
   );
 }
 
-export function RepoPullsSurface({ owner, repo }: { owner: string; repo: string }) {
+export function RepoPullsSurface({ owner, repo, wantedFile }: { owner: string; repo: string; wantedFile: string | null }) {
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <RepoFilesBrowser owner={owner} repo={repo} />
+      <RepoFilesBrowser owner={owner} repo={repo} wantedFile={wantedFile} />
     </div>
   );
 }

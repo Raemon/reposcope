@@ -9,7 +9,7 @@ import { ColumnPreview, type PreviewToken } from './ColumnPreview';
 import { DiffPanes, type DiffPanesHandle } from './DiffPanes';
 import { PullCommitColumn, WHOLE_CHANGE, commitItems, commitTokens } from './PullCommitColumn';
 import { PullFilesColumn, fileTokens } from './PullFilesColumn';
-import { isTreeItem } from './fileTreeNodes';
+import { browseKey, isTreeItem } from './fileTreeNodes';
 import { RepoBrowseReader } from './RepoBrowseReader';
 import { useRepoFiles } from './repoFileStore';
 import { ResizableColumn, useCollapsibleColumn, type ColumnSize } from './ResizableColumn';
@@ -24,6 +24,9 @@ import { useStickyColumn, useStickyOpen } from './stickyColumns';
 import { useFileDeletion } from './useFileDeletion';
 import { useRepoFileTree } from './useRepoFileTree';
 import { usePageScrollFirst } from './usePageScrollFirst';
+import { useCommands } from '@/features/commands/commandRegistry';
+import { commitReveal, fileReveal, useReveal, useRevealFromParam } from '@/features/commands/revealStore';
+import { workspaceCommands } from '@/features/commands/workspaceCommands';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 import { useCachedJson } from '@/features/sources/useCachedJson';
 import { usePollWhileVisible } from '@/features/sources/usePollWhileVisible';
@@ -42,6 +45,8 @@ interface ReviewWorkspaceProps {
   listColumn: ReactNode;
   discussion: ReactNode | null;
   editableWhole: PullRequestSummary | null;
+  wantedFile: string | null;
+  wantedCommit: string | null;
 }
 
 export function ReviewWorkspace(props: ReviewWorkspaceProps) {
@@ -65,6 +70,8 @@ function Workspace({
   listColumn,
   discussion,
   editableWhole,
+  wantedFile,
+  wantedCommit,
 }: ReviewWorkspaceProps) {
   const ready = useStoreReady();
   const token = useGithubToken();
@@ -117,6 +124,18 @@ function Workspace({
     setPath(filename);
     setScrollWanted(filename);
   }, []);
+  const revealOrBrowse = useCallback(
+    (filename: string) => {
+      if (fileSet?.files.some((file) => file.filename === filename)) return revealFile(filename);
+      setAllFilesOpen(true);
+      setBrowsed(browseKey(filename));
+    },
+    [fileSet, revealFile, setAllFilesOpen],
+  );
+  useRevealFromParam(fileReveal, wantedFile);
+  useRevealFromParam(commitReveal, wantedCommit);
+  useReveal(fileReveal, () => fileSet !== null, revealOrBrowse);
+  useReveal(commitReveal, (sha) => commitItems(change).includes(sha), setSelection);
   const browseTree = useRepoFileTree({
     repoFiles,
     query: fileQuery,
@@ -161,6 +180,7 @@ function Workspace({
   const showsDiscussion = useShowsColumn('discussion');
   const showsCommits = useShowsColumn('commits');
   const showsFiles = useShowsColumn('files');
+  useCommands(workspaceCommands({ showsDiff, files: fileItems, path, revealFile, editable: editableFiles !== null }));
   const discussionColumn = useCollapsibleColumn('discussion', discussionSize, setDiscussionSize);
   useRegisterColumn(
     'discussion',

@@ -111,6 +111,10 @@ export function allPullsRoute(owner: string, repo: string, number: number): stri
   return `${pullRoute(owner, repo, number)}?from=all`;
 }
 
+export function pullRouteFor(acrossRepos: boolean): (owner: string, repo: string, number: number) => string {
+  return acrossRepos ? allPullsRoute : pullRoute;
+}
+
 function repoParams(owner: string, repo: string): string {
   return `owner=${encodeURIComponent(owner)}&name=${encodeURIComponent(repo)}`;
 }

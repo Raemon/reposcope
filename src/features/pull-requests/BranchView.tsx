@@ -12,7 +12,19 @@ import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 import { useCachedJson } from '@/features/sources/useCachedJson';
 import { usePollWhileVisible } from '@/features/sources/usePollWhileVisible';
 
-export function BranchView({ owner, repo, branch }: { owner: string; repo: string; branch: string }) {
+export function BranchView({
+  owner,
+  repo,
+  branch,
+  wantedFile = null,
+  wantedCommit = null,
+}: {
+  owner: string;
+  repo: string;
+  branch: string;
+  wantedFile?: string | null;
+  wantedCommit?: string | null;
+}) {
   const ready = useStoreReady();
   const token = useGithubToken();
   const [listSize, setListSize] = useStickyColumn('pulls');
@@ -42,6 +54,8 @@ export function BranchView({ owner, repo, branch }: { owner: string; repo: strin
       listColumn={<RepoPullsColumn owner={owner} repo={repo} size={listSize} onSize={setListSize} />}
       discussion={null}
       editableWhole={null}
+      wantedFile={wantedFile}
+      wantedCommit={wantedCommit}
     />
   );
 }

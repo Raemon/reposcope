@@ -1,14 +1,13 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { setViewMode, useViewMode } from './viewModeStore';
+import { nextViewMode, setViewMode, useViewMode, viewModeSwitchLabel } from './viewModeStore';
 import { IconToggleButton } from '@/features/surface-ui/IconToggleButton';
 
 export function ViewModeToggle() {
   const mode = useViewMode();
-  const next = mode === 'central' ? 'columns' : 'central';
   return (
-    <IconToggleButton label={`Switch to ${next} layout`} onClick={() => setViewMode(next)}>
+    <IconToggleButton label={viewModeSwitchLabel(mode)} onClick={() => setViewMode(nextViewMode(mode))}>
       {mode === 'central' ? <ColumnsIcon /> : <CentralIcon />}
     </IconToggleButton>
   );

@@ -1,9 +1,10 @@
 'use client';
 
 import { createContext, useContext, useState, type ReactNode } from 'react';
-import { useColumnNav } from './columnNav';
+import { showColumnCommand, useColumnNav, useFocusColumn } from './columnNav';
 import type { ColumnId } from './navColumn';
 import { useViewMode } from './viewModeStore';
+import { useCommands, type Command } from '@/features/commands/commandRegistry';
 
 export type CentralTab = 'pulls' | 'review' | 'ai-chat';
 
@@ -30,7 +31,9 @@ const SUBJECT_TABS: TabEntry[] = [
   { tab: 'ai-chat', label: 'ai chat', columns: { 'ai-chat': 'pane' }, focus: 'ai-chat' },
 ];
 
-const ENTRY_OF_TAB = new Map<CentralTab, TabEntry>([PULLS_TAB, ...SUBJECT_TABS].map((entry) => [entry.tab, entry]));
+const ALL_TABS = [PULLS_TAB, ...SUBJECT_TABS];
+
+const ENTRY_OF_TAB = new Map<CentralTab, TabEntry>(ALL_TABS.map((entry) => [entry.tab, entry]));
 
 export const PANE_WIDTH = 'mx-auto w-full max-w-[980px]';
 
@@ -45,9 +48,20 @@ interface CentralValue {
 
 const CentralContext = createContext<CentralValue>({ central: false, tab: 'review', setTab: () => {} });
 
+const NO_COMMANDS: Command[] = [];
+
 export function CentralLayoutProvider({ children }: { children: ReactNode }) {
   const [tab, setTab] = useState<CentralTab>('review');
   const central = useViewMode() === 'central';
+  const focus = useFocusColumn();
+  useCommands(
+    central
+      ? tabColumnCommands((id) => {
+          setTab(tabShowing(id));
+          focus(id);
+        })
+      : NO_COMMANDS,
+  );
   return <CentralContext.Provider value={{ central, tab, setTab }}>{children}</CentralContext.Provider>;
 }
 
@@ -57,6 +71,15 @@ export function useCentralLayout(): CentralValue {
 
 function entryOf(tab: CentralTab): TabEntry {
   return ENTRY_OF_TAB.get(tab) ?? PULLS_TAB;
+}
+
+function tabShowing(id: ColumnId): CentralTab {
+  return ALL_TABS.find((entry) => id in entry.columns)?.tab ?? PULLS_TAB.tab;
+}
+
+// Hidden central columns never register with ColumnNav, so their commands live here.
+function tabColumnCommands(show: (id: ColumnId) => void): Command[] {
+  return ALL_TABS.flatMap((entry) => (Object.keys(entry.columns) as ColumnId[]).map((id) => showColumnCommand(id, show)));
 }
 
 export function usePaneMode(id: ColumnId): PaneMode {

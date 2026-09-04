@@ -2,7 +2,7 @@
 
 import { standingPulls, type PullTarget } from './pullActionStore';
 import { listedPulls, readPullFilters, type PullFilters } from './pullFilterStore';
-import { allPullsRoute, pullRoute, repoPullsPath } from './pullPaths';
+import { pullRoute, pullRouteFor, repoPullsPath } from './pullPaths';
 import type { CrossRepoPulls, PullRequestSummary } from './pullRequests';
 import { allPullsCacheKey } from './useAllPullRequests';
 import { repoRoute } from '@/features/codebases/repoPaths';
@@ -17,17 +17,26 @@ export function viewingPull(target: PullTarget): boolean {
   return window.location.pathname === pullRoute(target.owner, target.repo, target.number);
 }
 
-export function nextPullAfter(
-  target: PullTarget,
-  token: string | null,
-  acrossRepos: boolean,
-): (PullTarget & { href: string }) | null {
+export type LinkedPull = PullTarget & { href: string };
+
+export function nextPullAfter(target: PullTarget, token: string | null, acrossRepos: boolean): LinkedPull | null {
+  return neighborPull(target, token, acrossRepos, 1) ?? neighborPull(target, token, acrossRepos, -1);
+}
+
+export function neighborPull(target: PullTarget, token: string | null, acrossRepos: boolean, delta: number): LinkedPull | null {
+  const { listed, index } = listedAround(target, token, acrossRepos);
+  const next = index < 0 ? null : listed[index + delta] ?? null;
+  return next && linked(next, acrossRepos);
+}
+
+function listedAround(target: PullTarget, token: string | null, acrossRepos: boolean): { listed: PullTarget[]; index: number } {
   const filters = readPullFilters();
   const listed = standingPulls(acrossRepos ? cachedAllPulls(token, filters) : cachedRepoPulls(target, token, filters));
-  const index = listed.findIndex((pull) => samePull(pull, target));
-  const next = index < 0 ? null : listed[index + 1] ?? listed[index - 1] ?? null;
-  if (!next) return null;
-  return { ...next, href: acrossRepos ? allPullsRoute(next.owner, next.repo, next.number) : pullRoute(next.owner, next.repo, next.number) };
+  return { listed, index: listed.findIndex((pull) => samePull(pull, target)) };
+}
+
+function linked(next: PullTarget, acrossRepos: boolean): LinkedPull {
+  return { ...next, href: pullRouteFor(acrossRepos)(next.owner, next.repo, next.number) };
 }
 
 export function pullListRoute(target: PullTarget, acrossRepos: boolean): string {

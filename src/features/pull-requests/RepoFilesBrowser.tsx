@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useShowsColumn } from './centralLayout';
 import { ColumnPreview, type PreviewToken } from './ColumnPreview';
 import { useRegisterColumn } from './columnNav';
-import { rowKey } from './fileTreeNodes';
+import { browseKey, rowKey } from './fileTreeNodes';
 import { RepoBrowseReader } from './RepoBrowseReader';
 import { RepoFileList } from './RepoFileList';
 import { RepoPullsColumn } from './PullListColumn';
@@ -12,11 +12,16 @@ import { useRepoFiles } from './repoFileStore';
 import { ResizableColumn, useCollapsibleColumn } from './ResizableColumn';
 import { useStickyColumn } from './stickyColumns';
 import { useRepoFileTree, type RepoFileTree } from './useRepoFileTree';
+import { fileReveal, useReveal, useRevealFromParam } from '@/features/commands/revealStore';
 
-export function RepoFilesBrowser({ owner, repo }: { owner: string; repo: string }) {
+const ALWAYS = () => true;
+
+export function RepoFilesBrowser({ owner, repo, wantedFile }: { owner: string; repo: string; wantedFile: string | null }) {
   const [pullSize, setPullSize] = useStickyColumn('repo-pulls');
   const [fileSize, setFileSize] = useStickyColumn('repo-files');
   const [browsed, setBrowsed] = useState<string | null>(null);
+  useRevealFromParam(fileReveal, wantedFile);
+  useReveal(fileReveal, ALWAYS, useCallback((path: string) => setBrowsed(browseKey(path)), []));
   const [query, setQuery] = useState('');
   const repoFiles = useRepoFiles(owner, repo, true);
   const tree = useRepoFileTree({ repoFiles, query, selected: browsed, onSelect: setBrowsed });

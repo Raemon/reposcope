@@ -5,9 +5,13 @@ import { nextPullAfter, pullListRoute, viewingAcrossRepos } from './nextPull';
 import { prefetchPull } from './prefetchPull';
 import { trackPullAction, type PullTarget } from './pullActionStore';
 import { mergePullPath } from './pullPaths';
-import type { MergeResult } from './pullRequests';
+import type { MergeResult, PullRequestCommits } from './pullRequests';
 import { setStickyColumn } from './stickyColumns';
 import { apiPost } from '@/features/sources/apiClient';
+
+export function canMerge(pull: PullRequestCommits | null): boolean {
+  return pull !== null && pull.pull.state === 'open' && !pull.pull.merged && !pull.conflicted;
+}
 
 export function mergePull(target: PullTarget, token: string | null, navigate: (href: string) => void): void {
   const acrossRepos = viewingAcrossRepos();
