@@ -9,6 +9,7 @@ import type { PullTarget } from './pullActionStore';
 import { clearPullFilters, isDefaultPullFilters, usePullFilters } from './pullFilterStore';
 import { prefetchPull } from './prefetchPull';
 import { pullRoute } from './pullPaths';
+import { pullStateTags } from './pullStateTags';
 import { useIsOwnAuthor } from '@/features/github-auth/useViewerLogin';
 import { useGithubToken } from '@/features/sources/sourceStore';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
@@ -45,8 +46,9 @@ export function PullRowFields({ pull, repo, repoColumnCh }: { pull: PullRowSumma
         <span className={ROW_META}>#{pull.number}</span>
         {!isOwnAuthor(pull.author) && <span className={ROW_META}>{pull.author}</span>}
         <span className="flex-1" />
-        {pull.draft && <RowTag>draft</RowTag>}
-        {pull.state !== 'open' && <RowTag>{pull.merged ? 'merged' : 'closed'}</RowTag>}
+        {pullStateTags(pull).map((tag) => (
+          <RowTag key={tag}>{tag}</RowTag>
+        ))}
         <RelativeTime iso={pull.updatedAt} className={ROW_META} />
       </div>
     </>

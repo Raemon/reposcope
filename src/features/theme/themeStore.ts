@@ -13,6 +13,14 @@ export function readTheme(): Theme {
   return systemTheme();
 }
 
+export function nextTheme(theme: Theme): Theme {
+  return theme === 'dark' ? 'light' : 'dark';
+}
+
+export function themeSwitchLabel(theme: Theme): string {
+  return `Switch to ${nextTheme(theme)} mode`;
+}
+
 export function setTheme(theme: Theme): void {
   writeItem(THEME_KEY, theme);
   applyTheme(theme);

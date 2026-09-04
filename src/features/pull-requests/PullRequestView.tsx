@@ -19,11 +19,15 @@ export function PullRequestView({
   repo,
   number,
   acrossRepos = false,
+  wantedFile = null,
+  wantedCommit = null,
 }: {
   owner: string;
   repo: string;
   number: number;
   acrossRepos?: boolean;
+  wantedFile?: string | null;
+  wantedCommit?: string | null;
 }) {
   const ready = useStoreReady();
   const token = useGithubToken();
@@ -68,6 +72,8 @@ export function PullRequestView({
       }
       discussion={<PullDiscussion owner={owner} repo={repo} number={number} author={pull.pull.author} body={pull.body} />}
       editableWhole={editablePull(pull.pull)}
+      wantedFile={wantedFile}
+      wantedCommit={wantedCommit}
     />
   );
 }

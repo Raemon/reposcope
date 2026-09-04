@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { CodebaseHeader } from '@/features/codebases/CodebaseHeader';
+import { CommandCenter } from '@/features/commands/CommandCenter';
 import { DocumentTitle } from '@/features/codebases/DocumentTitle';
 import { DEFAULT_TITLE } from '@/features/codebases/documentTitles';
 import { ThemeScript } from '@/features/theme/ThemeScript';
@@ -19,6 +20,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
       </head>
       <body className="h-full bg-bg font-mono text-ink">
         <DocumentTitle />
+        <CommandCenter />
         <div className="flex h-full flex-col">
           <CodebaseHeader />
           <main className="min-h-0 flex-1 overflow-auto">{children}</main>

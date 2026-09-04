@@ -1,8 +1,10 @@
 'use client';
 
 import { RowTag } from './PullListRow';
+import { githubBranchUrl, githubPullUrl } from '@/features/codebases/repoPaths';
 import { useCurrentBranchHead, useCurrentPull } from './currentPullStore';
 import type { PullRequestSummary } from './pullRequests';
+import { pullStateTags } from './pullStateTags';
 import { useIsOwnAuthor } from '@/features/github-auth/useViewerLogin';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
@@ -23,7 +25,7 @@ export function CurrentPullTitle({ repo, number }: { repo: RepoRef; number: numb
           <TruncatedName text={pull.pull.title} serif className="font-serif text-[17px] leading-6 tracking-[0.005em] text-ink" />
           <StateTags pull={pull.pull} />
           <AuthorAndTime author={pull.pull.author} iso={pull.pull.updatedAt} />
-          <OpenOnGithubLink href={`https://github.com/${repo.owner}/${repo.name}/pull/${number}`} label="pull request" className={GITHUB_LINK} />
+          <OpenOnGithubLink href={githubPullUrl(repo.owner, repo.name, number)} label="pull request" className={GITHUB_LINK} />
         </>
       )}
     </div>
@@ -39,7 +41,7 @@ export function CurrentBranchTitle({ repo, branch }: { repo: RepoRef; branch: st
       </span>
       <TruncatedName text={branch} className="font-mono text-[13px] leading-6 text-ink" />
       {head && <AuthorAndTime author={head.author} iso={head.date} />}
-      <OpenOnGithubLink href={`https://github.com/${repo.owner}/${repo.name}/tree/${encodeURI(branch)}`} label="branch" className={GITHUB_LINK} />
+      <OpenOnGithubLink href={githubBranchUrl(repo.owner, repo.name, branch)} label="branch" className={GITHUB_LINK} />
     </div>
   );
 }
@@ -53,12 +55,7 @@ function TruncatedName({ text, className, serif = false }: { text: string; class
 }
 
 function StateTags({ pull }: { pull: PullRequestSummary }) {
-  return (
-    <>
-      {pull.draft && <RowTag>draft</RowTag>}
-      {pull.state !== 'open' && <RowTag>{pull.merged ? 'merged' : 'closed'}</RowTag>}
-    </>
-  );
+  return pullStateTags(pull).map((tag) => <RowTag key={tag}>{tag}</RowTag>);
 }
 
 function AuthorAndTime({ author, iso }: { author: string; iso: string }) {

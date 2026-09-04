@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 import { CodebaseList } from './CodebaseList';
 import { HeaderMenu } from './HeaderMenu';
-import { branchBeingRead, pullBeingRead, repoBeingRead, repoRoute } from './repoPaths';
+import { branchBeingRead, changeBeingRead, pullBeingRead, repoBeingRead, repoRoute } from './repoPaths';
 import { sidebarGroups } from './sidebarGroups';
 import { useSourceResults } from './useSourceResults';
 import { ScopeMark } from '@/features/brand/ScopeMark';
@@ -31,7 +31,7 @@ export function CodebaseHeader() {
   const pullNumber = pullBeingRead(pathname);
   const branch = branchBeingRead(pathname);
   const readingPullList = reading !== null && pathname === repoRoute(reading.owner, reading.name);
-  const readingChange = reading !== null && (pullNumber !== null || branch !== null);
+  const readingChange = changeBeingRead(pathname);
   return (
     <header className="relative z-40 flex items-center gap-2 border-b border-panel-edge bg-panel px-2 py-5">
       <Link href="/" aria-label="reposcope home" className="shrink-0">

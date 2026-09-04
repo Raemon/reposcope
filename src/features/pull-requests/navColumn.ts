@@ -28,7 +28,7 @@ export function stepColumn(from: ColumnId, delta: number): ColumnId {
   return COLUMN_ORDER[clamp(COLUMN_ORDER.indexOf(from) + delta, COLUMN_ORDER.length)] ?? from;
 }
 
-function stepRing(ring: string[], from: string | null, delta: number): string | null {
+export function stepRing(ring: string[], from: string | null, delta: number): string | null {
   const at = from === null ? -1 : ring.indexOf(from);
   const next = at < 0 ? firstOf(ring, delta) : at + delta;
   return ring[clamp(next, ring.length)] ?? null;

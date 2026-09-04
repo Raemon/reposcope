@@ -12,6 +12,15 @@ export interface FoldCommand {
 
 const foldCommand = memoryPref<FoldCommand>({ mode: 'default', epoch: 0, wholeFile: true });
 
+export const FOLD_MODE_LABEL: Record<FoldMode, string> = {
+  default: 'Default folding — whole file, with unchanged blocks and fully deleted files collapsed',
+  expandAll: 'Expand all code sections',
+  collapseExceptTypes: 'Collapse everything except types and interfaces',
+  collapseHidingComments: 'Collapse everything, and hide the comments directly above each collapsed section',
+  collapseExceptComments: 'Collapse everything except comments',
+  gitDefault: 'GitHub default — the diff hunks exactly as GitHub shows them, with nothing folded',
+};
+
 export function applyFoldMode(mode: FoldMode): void {
   const held = foldCommand.read();
   foldCommand.set({ mode, epoch: held.epoch + 1, wholeFile: wholeFileFor(mode) ?? held.wholeFile });

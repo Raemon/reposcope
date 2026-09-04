@@ -1,7 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { applyFoldMode, useFoldCommand, type FoldMode } from './foldModeStore';
+import { FOLD_MODE_LABEL, applyFoldMode, useFoldCommand, type FoldMode } from './foldModeStore';
 import { ChoiceButton } from '@/features/surface-ui/ChoiceButton';
 import {
   CollapseExceptCommentsIcon,
@@ -12,21 +12,21 @@ import {
   SmartFoldIcon,
 } from './diffToolbarIcons';
 
-const CHOICES: { mode: FoldMode; icon: ReactNode; label: string }[] = [
-  { mode: 'default', icon: <SmartFoldIcon />, label: 'Default folding — whole file, with unchanged blocks and fully deleted files collapsed' },
-  { mode: 'expandAll', icon: <ExpandAllIcon />, label: 'Expand all code sections' },
-  { mode: 'collapseExceptTypes', icon: <CollapseExceptTypesIcon />, label: 'Collapse everything except types and interfaces' },
-  { mode: 'collapseHidingComments', icon: <CollapseHidingCommentsIcon />, label: 'Collapse everything, and hide the comments directly above each collapsed section' },
-  { mode: 'collapseExceptComments', icon: <CollapseExceptCommentsIcon />, label: 'Collapse everything except comments' },
-  { mode: 'gitDefault', icon: <GitHubIcon />, label: 'GitHub default — the diff hunks exactly as GitHub shows them, with nothing folded' },
+const CHOICES: { mode: FoldMode; icon: ReactNode }[] = [
+  { mode: 'default', icon: <SmartFoldIcon /> },
+  { mode: 'expandAll', icon: <ExpandAllIcon /> },
+  { mode: 'collapseExceptTypes', icon: <CollapseExceptTypesIcon /> },
+  { mode: 'collapseHidingComments', icon: <CollapseHidingCommentsIcon /> },
+  { mode: 'collapseExceptComments', icon: <CollapseExceptCommentsIcon /> },
+  { mode: 'gitDefault', icon: <GitHubIcon /> },
 ];
 
 export function FoldModeButtons() {
   const command = useFoldCommand();
   return (
     <span className="flex items-center gap-2">
-      {CHOICES.map(({ mode, icon, label }) => (
-        <ChoiceButton key={mode} label={label} active={command.mode === mode} placement="top-start" onSelect={() => applyFoldMode(mode)}>
+      {CHOICES.map(({ mode, icon }) => (
+        <ChoiceButton key={mode} label={FOLD_MODE_LABEL[mode]} active={command.mode === mode} placement="top-start" onSelect={() => applyFoldMode(mode)}>
           {icon}
         </ChoiceButton>
       ))}

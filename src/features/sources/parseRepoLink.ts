@@ -5,6 +5,10 @@ export type Parsed<T> = { ok: true; value: T } | { ok: false; error: string };
 
 const REPO_PATH = /^([A-Za-z0-9](?:[A-Za-z0-9-]{0,38}))\/([A-Za-z0-9_.-]{1,100}?)(?:\.git)?(?:[/#?].*)?$/;
 
+export function sameRepo(a: RepoRef, b: RepoRef): boolean {
+  return a.owner.toLowerCase() === b.owner.toLowerCase() && a.name.toLowerCase() === b.name.toLowerCase();
+}
+
 export function parseRepoLink(input: string): Parsed<RepoRef> {
   const text = input.trim();
   if (text === '') return { ok: false, error: 'Enter a repository link like https://github.com/owner/repo' };
