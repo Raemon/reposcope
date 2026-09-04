@@ -1,13 +1,16 @@
 'use client';
 
 import { headCommit } from './headCommit';
+import { pullSubject } from './pullPaths';
 import type { PullRequestCommits } from './pullRequests';
 import { openStickyColumn } from './stickyColumns';
 import { fixConflicts } from '@/features/ai-chat/fixConflicts';
+import { SparkleIcon } from '@/features/ai-chat/SparkleIcon';
 import { useCursorKey } from '@/features/ai-chat/cursorKeyStore';
 import type { CursorModel } from '@/features/ai-chat/cursorTypes';
 import { latestModel, MODEL_FAMILIES, type ModelFamily } from '@/features/ai-chat/modelFamilies';
 import { useCursorAccount, type CursorAccount } from '@/features/ai-chat/useCursorModels';
+import { useWorkingPurpose } from '@/features/ai-chat/workingSubjects';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
 import { CHOICE } from '@/features/surface-ui/buttonStyles';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
@@ -25,6 +28,8 @@ interface MenuProps {
 export function FixConflictsMenu(props: MenuProps) {
   const key = useCursorKey();
   const account = useCursorAccount(key);
+  const working = useWorkingPurpose(pullSubject(props.repo.owner, props.repo.name, props.number), 'merge-conflicts');
+  if (working) return <WorkingButton number={props.number} />;
   return (
     <PopoverMenu align="right-0" panelClass="w-64 py-0.5" trigger={(state) => <MenuButton {...state} number={props.number} />}>
       {(close) => (key === null ? <KeyNote close={close} /> : <FamilyRows account={account} onPick={pickHandler(props, key, close)} />)}
@@ -53,6 +58,17 @@ function MenuButton({ open, toggle, number }: PopoverTrigger & { number: number 
     <HoverCardTrigger label={`#${number} has conflicts with its base branch; ask a Cursor agent to resolve them`} focusable={false} tooltipStyle>
       <button type="button" aria-haspopup="menu" aria-expanded={open} onClick={toggle} className={`${CHOICE} shrink-0 ${open ? 'bg-btn-active text-accent' : ''}`}>
         Fix Merge Conflicts ▾
+      </button>
+    </HoverCardTrigger>
+  );
+}
+
+function WorkingButton({ number }: { number: number }) {
+  return (
+    <HoverCardTrigger label={`A Cursor agent is resolving #${number}'s conflicts`} focusable={false} tooltipStyle>
+      <button type="button" disabled className={`${CHOICE} flex shrink-0 items-center gap-1.5 disabled:opacity-100`}>
+        <SparkleIcon size={12} label="AI agent working" className="text-accent" />
+        <span className="opacity-40">Fix Merge Conflicts</span>
       </button>
     </HoverCardTrigger>
   );
