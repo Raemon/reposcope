@@ -17,7 +17,8 @@ const STALE_ON_STATUS = [403, 408, 429, 500, 502, 503, 504];
 
 const inFlight = new Map<string, Promise<CachedResponse>>();
 
-type Derive<T> = (body: Buffer) => T;
+type BodyStream = ReadableStream<Uint8Array> | null;
+type Derive<T> = (body: BodyStream) => Promise<T>;
 type Derivation = { what: string; derive: Derive<string> };
 
 export async function githubJson<T>(url: string, fresh = false): Promise<T> {
@@ -28,9 +29,9 @@ export async function githubBytes(url: string, accept: string): Promise<Uint8Arr
   return new Uint8Array(decodeBody(await cachedResponse(url, accept)));
 }
 
-// Caches only what `derive` makes of the body, so a tarball never sits in the cache.
+// Caches only what `derive` makes of the body stream, so a tarball never sits in memory or the cache.
 export async function githubDerived<T>(url: string, what: string, derive: Derive<T>): Promise<T> {
-  const stored = { what, derive: (body: Buffer) => JSON.stringify(derive(body)) };
+  const stored = { what, derive: async (body: BodyStream) => JSON.stringify(await derive(body)) };
   return JSON.parse(decodeBody(await cachedResponse(url, ACCEPT, false, stored)).toString('utf8')) as T;
 }
 
@@ -159,7 +160,6 @@ function remapUnauthorizedFallback(error: unknown, unauthorized: Response, url: 
 }
 
 async function capture(response: Response, derivation: Derivation | null): Promise<CachedResponse> {
-  const body = Buffer.from(await response.arrayBuffer());
   const storedAsText = derivation !== null || /json|text|javascript/.test(response.headers.get('content-type') ?? '');
   return {
     status: response.status,
@@ -167,13 +167,13 @@ async function capture(response: Response, derivation: Derivation | null): Promi
     lastModified: response.headers.get('last-modified'),
     storedAt: Date.now(),
     encoding: storedAsText ? 'utf8' : 'base64',
-    body: storedBody(body, derivation, storedAsText),
+    body: await storedBody(response, derivation, storedAsText),
   };
 }
 
-function storedBody(body: Buffer, derivation: Derivation | null, storedAsText: boolean): string {
-  if (derivation) return derivation.derive(body);
-  return body.toString(storedAsText ? 'utf8' : 'base64');
+async function storedBody(response: Response, derivation: Derivation | null, storedAsText: boolean): Promise<string> {
+  if (derivation) return derivation.derive(response.body);
+  return Buffer.from(await response.arrayBuffer()).toString(storedAsText ? 'utf8' : 'base64');
 }
 
 async function store(scope: string, key: string, entry: CachedResponse): Promise<CachedResponse> {
