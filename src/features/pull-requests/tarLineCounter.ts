@@ -39,7 +39,7 @@ export async function countTarballLines(body: ReadableStream<Uint8Array> | null)
   return counter.result();
 }
 
-// pipeline() forwards a failed download to the gunzip side; pipe() would leave the loop pending forever.
+// pipeline() forwards download errors to gunzip; pipe() would hang the loop forever.
 function gunzipped(body: ReadableStream<Uint8Array>): Readable {
   return pipeline(Readable.fromWeb(body as NodeReadableStream<Uint8Array>), createGunzip(), () => {});
 }

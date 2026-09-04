@@ -16,7 +16,7 @@ export function useRepoFiles(owner: string, repo: string, wanted: boolean): Repo
   const ready = useStoreReady();
   const token = useGithubToken();
   const { data, fresh, error } = useCachedJson<RepoFileSet>(wanted ? repoFilesPath(owner, repo) : null, token, ready);
-  const countedSha = fresh && data ? data.sha : null;
-  const counted = useCachedJson<RepoLineCounts>(countedSha && repoLinesPath(owner, repo, countedSha), token, ready);
+  const countsPath = fresh && data ? repoLinesPath(owner, repo, data.sha) : null;
+  const counted = useCachedJson<RepoLineCounts>(countsPath, token, ready);
   return { fileSet: data, lineCounts: counted.data?.lines ?? null, error };
 }

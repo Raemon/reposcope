@@ -5,7 +5,7 @@ import { githubDerived } from '@/features/codebases/githubRequest';
 export type RepoLineCounts = TarballLines;
 
 const API = 'https://api.github.com';
-// Bump when countTarballLines changes: derived results are cached forever under this name.
+// Bump when countTarballLines changes: results under this name are cached forever.
 const DERIVATION = 'line-counts@2';
 
 export async function countRepoLines(owner: string, name: string, ref: string): Promise<RepoLineCounts> {
