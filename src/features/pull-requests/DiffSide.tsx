@@ -272,8 +272,9 @@ function DiffLineView({
   const openable = Boolean(editable && side === 'right');
   const raw = codeSegments(cell.text, lineTokens, changed ? ranges : null);
   const layout = dim ? foldLayout(lineTokens) : null;
-  const segments = collapsedSegments(raw, layout);
-  const fold = layout && foldsTail(line, collapsed, layout) ? prefixStyle(longestPrefix) : null;
+  const folded = layout !== null && foldsTail(line, collapsed, layout);
+  const segments = collapsedSegments(raw, layout, folded ? longestPrefix : Infinity);
+  const fold = folded ? prefixStyle(longestPrefix) : null;
   const tones = rowTones(line, collapsed);
   return (
     <div
