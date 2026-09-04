@@ -1,6 +1,9 @@
 import type { DiffRow } from './splitDiff';
 
-export const CONTEXT_ROWS = 35;
+export const CONTEXT_BLOCKS = 35;
+
+// A ceiling for the block budget, so a file with few folds to count still truncates.
+const MAX_CONTEXT_ROWS = 150;
 
 // A shorter run would trade about as many drawn rows as it saves for its own strip.
 const MIN_RUN_ROWS = 3;
@@ -22,6 +25,8 @@ export interface TruncationInput {
 interface Shown {
   starts: number[];
   ends: number[];
+  blocksBefore: number[];
+  blockAt: number[];
 }
 
 interface Run {
@@ -45,7 +50,19 @@ function shownRows(rows: DiffRow[], folded: Set<number>): Shown {
   rows.forEach((_row, index) => {
     if (!folded.has(index)) starts.push(index);
   });
-  return { starts, ends: starts.map((_start, at) => (starts[at + 1] ?? rows.length) - 1) };
+  const ends = starts.map((_start, at) => (starts[at + 1] ?? rows.length) - 1);
+  return { starts, ends, ...blockIndex(starts, ends) };
+}
+
+// A drawn row is a collapsed block when rows are folded under it; blank and loose rows are neither.
+function blockIndex(starts: number[], ends: number[]): { blocksBefore: number[]; blockAt: number[] } {
+  const blocksBefore = [0];
+  const blockAt: number[] = [];
+  starts.forEach((start, at) => {
+    if ((ends[at] ?? start) > start) blockAt.push(at);
+    blocksBefore.push(blockAt.length);
+  });
+  return { blocksBefore, blockAt };
 }
 
 function nearInterest(rows: DiffRow[], shown: Shown, anchored: Set<number>): boolean[] {
@@ -56,7 +73,7 @@ function nearInterest(rows: DiffRow[], shown: Shown, anchored: Set<number>): boo
 function interestEdges(rows: DiffRow[], shown: Shown, anchored: Set<number>): number[] {
   const edges = new Array<number>(shown.starts.length + 1).fill(0);
   shown.starts.forEach((start, at) => {
-    if (coversInterest(rows, start, shown.ends[at] ?? start, anchored)) widen(edges, at);
+    if (coversInterest(rows, start, shown.ends[at] ?? start, anchored)) widen(edges, shown, at);
   });
   return edges;
 }
@@ -66,11 +83,27 @@ function withinEdges(edges: number[]): boolean[] {
   return edges.map((edge) => (depth += edge) > 0);
 }
 
-function widen(edges: number[], at: number) {
-  const from = Math.max(0, at - CONTEXT_ROWS);
-  const to = Math.min(edges.length - 1, at + CONTEXT_ROWS + 1);
+function widen(edges: number[], shown: Shown, at: number) {
+  const from = backOff(shown, at);
+  const to = Math.min(edges.length - 1, aheadOf(shown, at) + 1);
   edges[from] = (edges[from] ?? 0) + 1;
   edges[to] = (edges[to] ?? 0) - 1;
+}
+
+// The window reaches the 35th collapsed block either side, or the row ceiling, whichever is nearer.
+function aheadOf(shown: Shown, at: number): number {
+  const past = shown.blockAt[blocksBefore(shown, at + 1) + CONTEXT_BLOCKS];
+  const stop = Math.min(past ?? shown.starts.length, at + MAX_CONTEXT_ROWS + 1);
+  return stop - 1;
+}
+
+function backOff(shown: Shown, at: number): number {
+  const first = shown.blockAt[blocksBefore(shown, at) - CONTEXT_BLOCKS];
+  return Math.max(first ?? 0, at - MAX_CONTEXT_ROWS, 0);
+}
+
+function blocksBefore(shown: Shown, at: number): number {
+  return shown.blocksBefore[at] ?? 0;
 }
 
 function coversInterest(rows: DiffRow[], start: number, end: number, anchored: Set<number>): boolean {
