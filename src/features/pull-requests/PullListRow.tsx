@@ -6,6 +6,7 @@ import { closePull } from './closePull';
 import { NavListRow } from './NavListRow';
 import { collapsePullList, type PullListColumnName } from './collapsePullList';
 import type { PullTarget } from './pullActionStore';
+import { clearPullFilters, isDefaultPullFilters, usePullFilters } from './pullFilterStore';
 import { prefetchPull } from './prefetchPull';
 import { pullRoute } from './pullPaths';
 import { useIsOwnAuthor } from '@/features/github-auth/useViewerLogin';
@@ -26,7 +27,7 @@ interface PullRowSummary {
 
 export const ROW_META = 'shrink-0 font-mono text-[9px] text-ink-dim';
 export const LIST_NOTE = 'px-2 py-1 text-[11px] leading-4';
-export const NO_PULLS = 'No matching pull requests.';
+const NO_PULLS = 'No matching pull requests.';
 export const TITLE_LINE = 'break-words px-2 pb-0.5 pt-1 font-serif text-[14px] leading-[1.2]';
 export const META_LINE = 'flex items-center gap-1.5 px-2 py-0.5';
 
@@ -52,7 +53,7 @@ export function PullRowFields({ pull, repo, repoColumnCh }: { pull: PullRowSumma
   );
 }
 
-function RowTag({ children }: { children: ReactNode }) {
+export function RowTag({ children }: { children: ReactNode }) {
   return <span className="shrink-0 rounded bg-btn px-1 font-mono text-[9px]">{children}</span>;
 }
 
@@ -102,5 +103,19 @@ function ClosePullIcon({ target, token, shown }: { target: PullTarget; token: st
         ×
       </button>
     </HoverCardTrigger>
+  );
+}
+
+export function NoMatchingPulls() {
+  const filters = usePullFilters();
+  return (
+    <p className={`${LIST_NOTE} text-ink-dim`}>
+      {NO_PULLS}
+      {!isDefaultPullFilters(filters) && (
+        <button type="button" onClick={clearPullFilters} className="ml-1 underline decoration-dotted hover:text-ink">
+          clear filters
+        </button>
+      )}
+    </p>
   );
 }

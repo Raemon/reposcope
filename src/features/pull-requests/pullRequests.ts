@@ -9,9 +9,9 @@ import {
 import { requireGithubUser } from '@/features/github-auth/requireGithubUser';
 import { imageTypeOf } from './imageFiles';
 import type { PullState } from './pullPaths';
-import { previewDeploymentUrl } from './previewDeployment';
 import { mapWithWorkers } from './workerPool';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
+import { errorMessage } from '@/features/sources/errorMessage';
 
 export interface PullRequestSummary {
   number: number;
@@ -80,7 +80,6 @@ export interface PullRequestCommits extends ChangeSummary {
   baseRef: string;
   headRef: string;
   conflicted: boolean;
-  previewUrl: string | null;
 }
 
 export interface FileEdit {
@@ -116,8 +115,10 @@ export interface CloseResult {
 export interface PullComment {
   id: number;
   author: string;
+  avatarUrl: string;
   createdAt: string;
   body: string;
+  url: string;
   path: string | null;
 }
 
@@ -137,13 +138,15 @@ interface GithubPull {
   deletions?: number;
   mergeable?: boolean | null;
   mergeable_state?: string;
+  changed_files?: number;
 }
 
 interface GithubComment {
   id: number;
-  user: { login: string } | null;
+  user: { login: string; avatar_url?: string } | null;
   created_at: string;
   body?: string;
+  html_url: string;
   path?: string;
 }
 
@@ -178,7 +181,7 @@ const MAX_BLOB_BYTES = 6 * 1024 * 1024;
 const MAX_TEXT_BYTES = 2 * 1024 * 1024;
 export const MAX_SCANNED_REPOS = 60;
 const SCAN_WORKERS = 6;
-const COMMIT_STAT_WORKERS = 6;
+const COMMIT_STAT_WORKERS = 12;
 
 export async function listPullRequests(
   owner: string,
@@ -203,7 +206,7 @@ export async function listPullRequestsAcross(repos: RepoRef[], state: PullState 
       } catch (error) {
         failures.push({
           repo: `${repo.owner}/${repo.name}`,
-          message: error instanceof Error ? error.message : String(error),
+          message: errorMessage(error),
         });
       }
     }
@@ -223,10 +226,7 @@ export async function describePullRequest(
     githubJson<GithubPull>(`${API}/repos/${owner}/${name}/pulls/${number}`, fresh),
     githubJson<GithubCommit[]>(`${API}/repos/${owner}/${name}/pulls/${number}/commits?per_page=100`),
   ]);
-  const [preview, summaries] = await Promise.all([
-    previewDeploymentUrl(owner, name, pull.head.sha),
-    summarizeCommits(owner, name, commits),
-  ]);
+  const summaries = await summarizeCommits(owner, name, commits);
   return {
     pull: summarizePull(pull),
     body: pull.body ?? null,
@@ -235,7 +235,6 @@ export async function describePullRequest(
     additions: pull.additions ?? 0,
     deletions: pull.deletions ?? 0,
     conflicted: hasConflicts(pull),
-    previewUrl: preview,
     commits: summaries,
   };
 }
@@ -287,25 +286,45 @@ export async function listPullRequestFiles(
   fresh = false,
 ): Promise<ChangedFileSet> {
   const pull = await githubJson<GithubPull>(`${API}/repos/${owner}/${name}/pulls/${number}`, fresh);
-  return { baseRef: pull.base.sha, headRef: pull.head.sha, files: await changedFilePages(owner, name, number, fresh) };
+  const files = await changedFilePages(owner, name, number, pageCount(pull.changed_files), fresh);
+  return { baseRef: pull.base.sha, headRef: pull.head.sha, files };
+}
+
+// The pull request already counted its files, so every page can be asked for at once.
+function pageCount(changedFiles: number | undefined): number | null {
+  if (changedFiles === undefined) return null;
+  return Math.min(MAX_FILE_PAGES, Math.max(1, Math.ceil(changedFiles / FILE_PAGE)));
 }
 
 async function changedFilePages(
   owner: string,
   name: string,
   number: number,
+  pages: number | null,
   fresh = false,
 ): Promise<ChangedFile[]> {
+  if (pages === null) return countedFilePages(owner, name, number, fresh);
+  const batches = await Promise.all(
+    Array.from({ length: pages }, (_, at) => filePage(owner, name, number, at + 1, fresh)),
+  );
+  return batches.flat().map(changedFile);
+}
+
+async function countedFilePages(owner: string, name: string, number: number, fresh: boolean): Promise<ChangedFile[]> {
   const files: ChangedFile[] = [];
   for (let page = 1; page <= MAX_FILE_PAGES; page += 1) {
-    const batch = await githubJson<GithubChangedFile[]>(
-      `${API}/repos/${owner}/${name}/pulls/${number}/files?per_page=${FILE_PAGE}&page=${page}`,
-      fresh,
-    );
+    const batch = await filePage(owner, name, number, page, fresh);
     files.push(...batch.map(changedFile));
     if (batch.length < FILE_PAGE) break;
   }
   return files;
+}
+
+function filePage(owner: string, name: string, number: number, page: number, fresh: boolean): Promise<GithubChangedFile[]> {
+  return githubJson<GithubChangedFile[]>(
+    `${API}/repos/${owner}/${name}/pulls/${number}/files?per_page=${FILE_PAGE}&page=${page}`,
+    fresh,
+  );
 }
 
 export async function commitFileEdit(
@@ -352,7 +371,7 @@ async function editableFile(
   if (pull.head.sha !== headRef) throw new GithubRequestError(409, staleMessage(path));
   const target = pull.head.repo?.full_name;
   if (!target) throw new GithubRequestError(422, `The head repository for #${number} is gone`);
-  const changed = await changedFilePages(owner, name, number);
+  const changed = await changedFilePages(owner, name, number, null);
   if (!changed.some((file) => file.filename === path)) {
     throw new GithubRequestError(422, `${path} is not among the files this pull request changes`);
   }
@@ -457,8 +476,10 @@ function pullComment(comment: GithubComment): PullComment {
   return {
     id: comment.id,
     author: comment.user?.login ?? '',
+    avatarUrl: comment.user?.avatar_url ?? '',
     createdAt: comment.created_at,
     body: comment.body ?? '',
+    url: comment.html_url,
     path: comment.path ?? null,
   };
 }
@@ -479,12 +500,20 @@ function summarizePull(pull: GithubPull): PullRequestSummary {
   };
 }
 
+export function commitTitle(commit: GithubCommit): string {
+  return commit.commit.message.split('\n')[0] ?? '';
+}
+
+export function commitDate(commit: GithubCommit): string {
+  return commit.commit.author?.date ?? '';
+}
+
 function summarizeCommit(commit: GithubCommit): CommitSummary {
   return {
     sha: commit.sha,
-    message: commit.commit.message.split('\n')[0] ?? '',
+    message: commitTitle(commit),
     author: commit.author?.login ?? commit.commit.author?.name ?? '',
-    date: commit.commit.author?.date ?? '',
+    date: commitDate(commit),
     additions: commit.stats?.additions ?? 0,
     deletions: commit.stats?.deletions ?? 0,
     fileCount: commit.files?.length ?? 0,

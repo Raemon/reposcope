@@ -20,7 +20,8 @@ const CHIP_TONE: Record<RowState, string> = {
   both: 'bg-btn-both text-accent outline outline-1 outline-ink',
 };
 
-const CHIP = 'shrink-0 rounded-[3px] px-[3px] py-[2px] font-mono text-[9px] leading-none tracking-tight normal-case';
+const CHIP =
+  'shrink-0 rounded-[3px] px-[3px] py-[2px] font-mono text-[9px] leading-none tracking-tight normal-case outline-none focus-visible:ring-1 focus-visible:ring-accent';
 
 export function ColumnPreview({ tokens, column }: { tokens: PreviewToken[]; column: ColumnId }) {
   const nav = useColumnNav(column);
@@ -37,7 +38,8 @@ export function ColumnPreview({ tokens, column }: { tokens: PreviewToken[]; colu
 function PreviewChip({ token, row, activate }: { token: PreviewToken; row: ColumnRow; activate: (item: string) => void }) {
   return (
     <HoverCardTrigger label={token.title} focusable={false} tooltipStyle serifLabel={token.serif ?? false}>
-      <span
+      <button
+        type="button"
         data-nav-cursor={row.props.cursor || undefined}
         onPointerEnter={row.props.onPointerEnter}
         onClick={(event) => {
@@ -47,7 +49,7 @@ function PreviewChip({ token, row, activate }: { token: PreviewToken; row: Colum
         className={`${CHIP} ${CHIP_TONE[row.state]}`}
       >
         {token.label}
-      </span>
+      </button>
     </HoverCardTrigger>
   );
 }

@@ -23,7 +23,7 @@ export function AiChatColumn({ owner, repo, subject, headRef }: { owner: string;
   const key = useCursorKey();
   const chat = useAiChat({ subject, owner, repo, headRef, active: pane === 'pane' || size.open });
   const { session, account } = chat;
-  useRegisterColumn('ai-chat', { ...useCollapsibleColumn(size, setSize), items: [], selected: null }, pane !== 'hidden');
+  useRegisterColumn('ai-chat', { ...useCollapsibleColumn('ai-chat', size, setSize), items: [], selected: null }, pane !== 'hidden');
   return (
     <ResizableColumn
       navId="ai-chat"

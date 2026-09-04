@@ -1,25 +1,29 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { useShowsColumn } from './centralLayout';
+import { ColumnPreview, type PreviewToken } from './ColumnPreview';
 import { useRegisterColumn } from './columnNav';
+import { rowKey } from './fileTreeNodes';
 import { RepoBrowseReader } from './RepoBrowseReader';
 import { RepoFileList } from './RepoFileList';
+import { RepoPullsColumn } from './PullListColumn';
 import { useRepoFiles } from './repoFileStore';
 import { ResizableColumn, useCollapsibleColumn } from './ResizableColumn';
 import { useStickyColumn } from './stickyColumns';
-import { useRepoFileTree } from './useRepoFileTree';
+import { useRepoFileTree, type RepoFileTree } from './useRepoFileTree';
 
-export function RepoFilesBrowser({ owner, repo, children }: { owner: string; repo: string; children: ReactNode }) {
+export function RepoFilesBrowser({ owner, repo }: { owner: string; repo: string }) {
+  const [pullSize, setPullSize] = useStickyColumn('repo-pulls');
   const [fileSize, setFileSize] = useStickyColumn('repo-files');
   const [browsed, setBrowsed] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-  const repoFiles = useRepoFiles(owner, repo, fileSize.open || browsed !== null);
+  const repoFiles = useRepoFiles(owner, repo, true);
   const tree = useRepoFileTree({ repoFiles, query, selected: browsed, onSelect: setBrowsed });
   useRegisterColumn(
     'files',
     {
-      ...useCollapsibleColumn(fileSize, setFileSize),
+      ...useCollapsibleColumn('files', fileSize, setFileSize),
       items: tree.navItems,
       selected: browsed,
       onSelect: tree.selectItem,
@@ -30,8 +34,22 @@ export function RepoFilesBrowser({ owner, repo, children }: { owner: string; rep
   const fileSet = repoFiles.fileSet;
   return (
     <div className="flex min-h-0 flex-1 max-md:flex-col max-md:overflow-y-auto">
-      <div className="flex min-h-0 w-full flex-col border-panel-edge md:w-[360px] md:shrink-0 md:border-r">{children}</div>
-      <ResizableColumn navId="files" icon="▤" title="all files" size={fileSize} onSize={setFileSize}>
+      <RepoPullsColumn
+        owner={owner}
+        repo={repo}
+        note="most recently updated first"
+        size={pullSize}
+        onSize={setPullSize}
+      />
+      <ResizableColumn
+        navId="files"
+        icon="▤"
+        title="all files"
+        tone="bg-shade"
+        preview={<ColumnPreview column="files" tokens={treeTokens(tree, browsed)} />}
+        size={fileSize}
+        onSize={setFileSize}
+      >
         <RepoFileList
           repoFiles={repoFiles}
           tree={tree}
@@ -50,4 +68,14 @@ export function RepoFilesBrowser({ owner, repo, children }: { owner: string; rep
       </div>
     </div>
   );
+}
+
+function treeTokens(tree: RepoFileTree, selected: string | null): PreviewToken[] {
+  return tree.rows.map((row) => ({
+    key: rowKey(row),
+    label: row.node.name.slice(0, 2),
+    title: row.node.path,
+    accent: rowKey(row) === selected,
+    serif: true,
+  }));
 }

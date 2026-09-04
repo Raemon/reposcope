@@ -8,6 +8,7 @@ import { type ImageSource } from './imageView';
 import { openImageTab } from './openImageTab';
 import { useFileBlob } from './useFileBlob';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
+import { PaneStatusLine } from '@/features/surface-ui/PaneStatusLine';
 
 export function ImageDiff({
   owner,
@@ -60,13 +61,13 @@ function ImagePane({
       </div>
       <div className="flex min-h-[80px] flex-1 items-center justify-center p-3">
         {!source ? (
-          <PaneNote text={label === 'before' ? 'added in this change' : 'deleted in this change'} />
+          <PaneStatusLine tone="dim">{label === 'before' ? 'Added in this change.' : 'Deleted in this change.'}</PaneStatusLine>
         ) : blob.error ? (
-          <PaneNote text={blob.error} />
+          <PaneStatusLine tone="error">{blob.error}</PaneStatusLine>
         ) : !blob.value ? (
-          <PaneNote text="Loading…" />
+          <PaneStatusLine tone="dim">Loading…</PaneStatusLine>
         ) : !blob.value.dataUrl ? (
-          <PaneNote text={`too large to preview (${byteLabel(blob.value.byteSize)})`} />
+          <PaneStatusLine tone="dim">Too large to preview ({byteLabel(blob.value.byteSize)}).</PaneStatusLine>
         ) : (
           <HoverCardTrigger label="Open image in a new tab" focusable={false} tooltipStyle>
             <button
@@ -87,10 +88,6 @@ function ImagePane({
       </div>
     </div>
   );
-}
-
-function PaneNote({ text }: { text: string }) {
-  return <p className="text-[10px] text-ink-dim">{text}</p>;
 }
 
 function byteLabel(bytes: number): string {

@@ -60,7 +60,3 @@ const TERMINAL = ['FINISHED', 'ERROR', 'FAILED', 'CANCELLED', 'CANCELED', 'EXPIR
 export function runFinished(status: string | null | undefined): boolean {
   return typeof status !== 'string' || TERMINAL.includes(status.toUpperCase());
 }
-
-export function describeFailure(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}

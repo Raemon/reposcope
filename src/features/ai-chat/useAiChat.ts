@@ -6,9 +6,10 @@ import { CURSOR_AGENT_PATH, CURSOR_RUN_PATH } from './aiChatPaths';
 import { appendEntry, entryId } from './chatEntries';
 import { followOnce } from './followRun';
 import { cursorHeaders, useCursorKey } from './cursorKeyStore';
-import { describeFailure, runFinished, WARMUP_PROMPT, type CursorLaunch, type CursorRun } from './cursorTypes';
+import { runFinished, WARMUP_PROMPT, type CursorLaunch, type CursorRun } from './cursorTypes';
 import { useCursorAccount, type CursorAccount } from './useCursorModels';
 import { apiKeyedPost } from '@/features/sources/apiClient';
+import { errorMessage } from '@/features/sources/errorMessage';
 
 export interface AiChatTarget {
   subject: string;
@@ -104,7 +105,7 @@ async function warmUp(launch: Launch): Promise<void> {
   try {
     updateSession(subject, launched(await requestAgent(launch, key)));
   } catch (error) {
-    updateSession(subject, { launching: false, error: describeFailure(error) });
+    updateSession(subject, { launching: false, error: errorMessage(error) });
   }
 }
 
@@ -130,6 +131,6 @@ async function sendQueued(subject: string, key: string, agentId: string, prompt:
     const run = await apiKeyedPost<CursorRun>(CURSOR_RUN_PATH, cursorHeaders(key), { agent: agentId, prompt });
     updateSession(subject, { runId: run.id, status: run.status });
   } catch (error) {
-    updateSession(subject, { status: 'ERROR', error: describeFailure(error) });
+    updateSession(subject, { status: 'ERROR', error: errorMessage(error) });
   }
 }

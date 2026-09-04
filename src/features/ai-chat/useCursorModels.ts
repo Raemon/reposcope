@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 import { CURSOR_SESSION_PATH } from './aiChatPaths';
 import { cursorHeaders } from './cursorKeyStore';
-import { describeFailure, type CursorSessionInfo } from './cursorTypes';
+import type { CursorSessionInfo } from './cursorTypes';
 import { apiKeyedJson } from '@/features/sources/apiClient';
+import { errorMessage } from '@/features/sources/errorMessage';
 
 const PREFERRED = /composer-2\.5|composer/i;
 
@@ -22,7 +23,7 @@ export function useCursorAccount(key: string | null): CursorAccount {
     let live = true;
     apiKeyedJson<CursorSessionInfo>(CURSOR_SESSION_PATH, cursorHeaders(key))
       .then((info) => live && setState({ info, error: null }))
-      .catch((issue: unknown) => live && setState({ info: null, error: describeFailure(issue) }));
+      .catch((issue: unknown) => live && setState({ info: null, error: errorMessage(issue) }));
     return () => {
       live = false;
     };

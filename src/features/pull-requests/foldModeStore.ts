@@ -2,7 +2,7 @@
 
 import { memoryPref, usePref } from './localPref';
 
-export type FoldMode = 'default' | 'expandAll' | 'collapseAll' | 'gitDefault';
+export type FoldMode = 'default' | 'expandAll' | 'collapseExceptTypes' | 'collapseHidingComments' | 'collapseExceptComments' | 'gitDefault';
 
 export interface FoldCommand {
   mode: FoldMode;

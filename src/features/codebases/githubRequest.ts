@@ -38,7 +38,8 @@ export async function githubSend<T>(url: string, method: string, body: unknown):
     rejectIfUnauthorized(response.status, tokenUsed);
     throw new GithubRequestError(response.status, await describeSendFailure(response, url));
   }
-  return (await response.json()) as T;
+  // GitHub answers some successful writes (a merge with nothing to do) with 204 and no body.
+  return response.status === 204 ? (undefined as T) : ((await response.json()) as T);
 }
 
 export async function dropGithubCache(owner: string, name: string): Promise<void> {

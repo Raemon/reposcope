@@ -1,58 +1,118 @@
-import type { CodeSegment } from './codeSegments';
+import { DIM_INK_STYLE, type CodeSegment, type DimmedSegment, type SegmentRole } from './codeSegments';
 import type { ThemedToken } from './diffHighlight';
+import { abbreviated, wordsToClip } from './keywordAbbreviations';
 
-const KEYWORD_OPACITY = 0.45;
-const TAIL_OPACITY = 0.6;
+const DIM_OPACITY = 0.45;
 const LEADING_SCOPES = /^(keyword|storage|punctuation|comment|meta\.brace)/;
+const KEYWORD_SCOPES = /^(keyword|storage)/;
 
 interface NameSpan {
   start: number;
   end: number;
 }
 
-export function dimAroundName(segments: CodeSegment[], tokens: ThemedToken[] | null): CodeSegment[] {
-  const name = tokens && declaredName(tokens);
-  if (!name) return segments;
+type Explanation = NonNullable<ThemedToken['explanation']>[number];
+
+interface GrammarPiece {
+  content: string;
+  scope: string;
+}
+
+export interface FoldLayout {
+  indent: number;
+  name: NameSpan;
+  prefix: string;
+}
+
+export function foldLayout(tokens: ThemedToken[] | null): FoldLayout | null {
+  const pieces = tokens && grammarPieces(tokens);
+  const name = pieces && declaredName(pieces);
+  if (!name) return null;
+  const text = pieces.map((piece) => piece.content).join('');
+  const indent = text.length - text.trimStart().length;
+  return { indent, name, prefix: text.slice(indent, name.start) };
+}
+
+// Same-coloured grammar pieces merge into one token; theme-split halves share one explanation.
+function grammarPieces(tokens: ThemedToken[]): GrammarPiece[] {
+  const pieces: GrammarPiece[] = [];
+  let shared: Explanation[] | undefined;
+  let consumed = 0;
+  for (const token of tokens) {
+    if (token.explanation !== shared) [shared, consumed] = [token.explanation, 0];
+    const own = shared ? sliceOf(shared, consumed, token.content.length) : [{ content: token.content, scope: '' }];
+    pieces.push(...own);
+    consumed += token.content.length;
+  }
+  return pieces;
+}
+
+function sliceOf(explanation: Explanation[], from: number, length: number): GrammarPiece[] {
+  const pieces: GrammarPiece[] = [];
+  let at = 0;
+  for (const piece of explanation) {
+    const content = piece.content.slice(Math.max(from - at, 0), Math.max(from + length - at, 0));
+    if (content) pieces.push({ content, scope: piece.scopes[piece.scopes.length - 1]?.scopeName ?? '' });
+    at += piece.content.length;
+  }
+  return pieces;
+}
+
+// The prefix is clipped only when its full words overflow the pane's prefix column.
+export function collapsedSegments(segments: CodeSegment[], layout: FoldLayout | null, column: number): DimmedSegment[] {
+  if (!layout) return segments;
+  const clip = wordsToClip(layout.prefix, column);
   let offset = 0;
   return segments.flatMap((segment) => {
-    const pieces = dimSegment(segment, offset, name);
+    const pieces = roleSlices(segment, offset, layout, clip);
     offset += segment.content.length;
     return pieces;
   });
 }
 
-function declaredName(tokens: ThemedToken[]): NameSpan | null {
+// No keyword before the first word means no prefix (CSS selectors, YAML keys).
+function declaredName(pieces: GrammarPiece[]): NameSpan | null {
   let at = 0;
-  for (const token of tokens) {
-    if (namesTheBlock(token)) return { start: at, end: at + token.content.length };
-    at += token.content.length;
+  let keyworded = false;
+  for (const piece of pieces) {
+    if (namesTheBlock(piece)) return keyworded ? { start: at, end: at + piece.content.length } : null;
+    keyworded ||= isKeyword(piece);
+    at += piece.content.length;
   }
   return null;
 }
 
-function namesTheBlock(token: ThemedToken): boolean {
-  return /\w/.test(token.content) && !LEADING_SCOPES.test(innermostScope(token));
+function namesTheBlock({ content, scope }: GrammarPiece): boolean {
+  return /\w/.test(content) && !LEADING_SCOPES.test(scope);
 }
 
-function innermostScope(token: ThemedToken): string {
-  const scopes = token.explanation?.[0]?.scopes ?? [];
-  return scopes[scopes.length - 1]?.scopeName ?? '';
+function isKeyword({ content, scope }: GrammarPiece): boolean {
+  return /\w/.test(content) && KEYWORD_SCOPES.test(scope);
 }
 
-function dimSegment(segment: CodeSegment, start: number, name: NameSpan): CodeSegment[] {
-  return sliceStarts(segment.content, start, name).map((from, index, starts) => ({
-    ...segment,
-    content: segment.content.slice(from, starts[index + 1]),
-    opacity: opacityAt(start + from, name),
-  }));
+function roleSlices(segment: CodeSegment, start: number, layout: FoldLayout, clip: ReadonlySet<string>): DimmedSegment[] {
+  const boundaries = [layout.indent, layout.name.start, layout.name.end];
+  return slicesAt(segment.content, start, boundaries).flatMap(([from, to]) => {
+    const piece = withRole(segment, segment.content.slice(from, to), roleAt(start + from, layout));
+    return piece.role === 'prefix' ? abbreviated(piece, clip) : [piece];
+  });
 }
 
-function sliceStarts(text: string, start: number, name: NameSpan): number[] {
-  const inside = [name.start, name.end].map((point) => point - start).filter((at) => at > 0 && at < text.length);
-  return [0, ...inside];
+function roleAt(position: number, { indent, name }: FoldLayout): SegmentRole | null {
+  if (position < indent) return null;
+  if (position < name.start) return 'prefix';
+  return position < name.end ? 'name' : 'tail';
 }
 
-function opacityAt(position: number, name: NameSpan): number | undefined {
-  if (position < name.start) return KEYWORD_OPACITY;
-  return position < name.end ? undefined : TAIL_OPACITY;
+function withRole(segment: CodeSegment, content: string, role: SegmentRole | null): DimmedSegment {
+  if (role === null) return { ...segment, content };
+  if (role === 'name') return { ...segment, content, role };
+  return { ...segment, content, role, style: DIM_INK_STYLE, opacity: DIM_OPACITY };
+}
+
+function slicesAt(text: string, start: number, points: number[]): [number, number][] {
+  const inside = points.map((point) => point - start).filter((at) => at > 0 && at < text.length);
+  const cuts = [...new Set(inside)].sort((a, b) => a - b);
+  const bounds = [0, ...cuts, text.length];
+  return cuts.concat(text.length).map((to, index) => [bounds[index] ?? 0, to]);
 }

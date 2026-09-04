@@ -7,6 +7,7 @@ import { latestPullFailure, pullActionFor, usePullActions } from './pullActionSt
 import type { RepoRef } from '@/features/sources/parseRepoLink';
 import { useGithubToken } from '@/features/sources/sourceStore';
 import { CHOICE } from '@/features/surface-ui/buttonStyles';
+import { FailureNote } from '@/features/surface-ui/FailureNote';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 
 export function MergePullButton({ repo, number }: { repo: RepoRef; number: number }) {
@@ -37,9 +38,9 @@ export function MergePullButton({ repo, number }: { repo: RepoRef; number: numbe
   return (
     <div className="flex shrink-0 items-center gap-2">
       {failure !== null && (
-        <HoverCardTrigger label={`${failure.owner}/${failure.repo}#${failure.number}: ${failure.message}`} className="max-w-56" focusable={false} tooltipStyle>
-          <span className="truncate text-[10px] text-error-ink">#{failure.number} {failure.message}</span>
-        </HoverCardTrigger>
+        <FailureNote label={`${failure.owner}/${failure.repo}#${failure.number}: ${failure.message}`}>
+          #{failure.number} {failure.message}
+        </FailureNote>
       )}
       {elsewhere !== null && (
         <span className="shrink-0 text-[10px] text-ink-dim">

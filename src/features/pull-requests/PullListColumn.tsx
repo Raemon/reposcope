@@ -22,6 +22,7 @@ const ICON = '⇅';
 export interface PullColumn {
   owner: string;
   repo: string;
+  note?: string;
   size: ColumnSize;
   onSize: (next: ColumnSize) => void;
 }
@@ -34,19 +35,19 @@ interface PullNavTarget {
   pull: boolean;
 }
 
-export function RepoPullsColumn({ owner, repo, size, onSize }: PullColumn) {
+export function RepoPullsColumn({ owner, repo, note, size, onSize }: PullColumn) {
   const { listed } = useRepoPullList(owner, repo);
   const [branchesOpen, setBranchesOpen] = useStickyOpen('branches');
-  const listingBranches = size.open && branchesOpen;
-  const branches = useBranches(owner, repo, listingBranches);
+  const listing = useBranches(owner, repo, size.open && branchesOpen);
   return (
     <PullsColumn
       column="pulls"
-      targets={repoTargets(owner, repo, listed, listingBranches ? branches : [])}
+      note={note}
+      targets={repoTargets(owner, repo, listed, listing.branches)}
       size={size}
       onSize={onSize}
       footer={
-        <BranchesSection owner={owner} repo={repo} branches={branches} expanded={branchesOpen} onExpanded={setBranchesOpen} />
+        <BranchesSection owner={owner} repo={repo} listing={listing} expanded={branchesOpen} onExpanded={setBranchesOpen} />
       }
     >
       <PullRequestList repo={{ owner, name: repo }} />
@@ -65,6 +66,7 @@ export function AllPullsColumn({ size, onSize }: Pick<PullColumn, 'size' | 'onSi
 
 function PullsColumn({
   column,
+  note,
   targets,
   size,
   onSize,
@@ -72,6 +74,7 @@ function PullsColumn({
   children,
 }: {
   column: PullListColumnName;
+  note?: string;
   targets: PullNavTarget[];
   size: ColumnSize;
   onSize: (next: ColumnSize) => void;
@@ -90,7 +93,7 @@ function PullsColumn({
   useRegisterColumn(
     'pulls',
     {
-      ...useCollapsibleColumn(size, onSize),
+      ...useCollapsibleColumn('pulls', size, onSize),
       items: targets.map((target) => target.route),
       selected,
       onActivate: openTarget,
@@ -102,6 +105,7 @@ function PullsColumn({
       navId="pulls"
       icon={ICON}
       title="pull requests"
+      note={note}
       preview={<ColumnPreview column="pulls" tokens={targets.map((target) => pullToken(target, target.route === selected))} />}
       size={size}
       onSize={onSize}

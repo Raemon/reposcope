@@ -1,5 +1,5 @@
-import type { Node } from '@vscode/tree-sitter-wasm';
-import { lastLineOf, parseSource } from './treeSitterFolds';
+import type { Node, Tree } from '@vscode/tree-sitter-wasm';
+import { lastLineOf } from './treeSitterFolds';
 
 export interface DefinitionQuery {
   path: string;
@@ -26,6 +26,37 @@ export interface Resolution {
 export interface ResolverFiles {
   readFile(ref: string, path: string): Promise<string | null>;
   hasFile(ref: string, path: string): Promise<boolean>;
+  parsed(ref: string, path: string): Promise<ParsedFile | null>;
+}
+
+export interface Located {
+  key: string;
+  literal: boolean;
+}
+
+export class ParsedFile {
+  private index: Map<string, Binding[]> | null = null;
+  private exports: ExportSpecifier[] | null = null;
+
+  constructor(private readonly tree: Tree) {}
+
+  get root(): Node {
+    return this.tree.rootNode;
+  }
+
+  bindings(word: string): Binding[] {
+    this.index ??= bindingIndex(this.root);
+    return this.index.get(word) ?? [];
+  }
+
+  exportSpecifiers(): ExportSpecifier[] {
+    this.exports ??= exportSpecifiers(this.root);
+    return this.exports;
+  }
+
+  delete() {
+    this.tree.delete();
+  }
 }
 
 const MAX_EXPORT_HOPS = 4;
@@ -39,39 +70,50 @@ export function roughSite(path: string, ref: string, line: number): DefinitionSi
 export async function resolveDefinition(query: DefinitionQuery, files: ResolverFiles): Promise<Resolution> {
   const text = await files.readFile(query.ref, query.path);
   if (text === null) return { sites: [], note: 'file unavailable' };
-  const resolved = await withTree(text, query.path, (root) => resolveInTree(root, query, files));
+  const parsed = await files.parsed(query.ref, query.path);
+  const resolved = parsed ? await resolveInTree(parsed, query, files) : null;
   if (resolved && (resolved.sites.length > 0 || resolved.note !== null)) return resolved;
   return { sites: scanText(text, query.path, query.ref, query.word), note: null };
 }
 
+export async function locateDefinition(query: DefinitionQuery, files: ResolverFiles): Promise<Located> {
+  const parsed = await files.parsed(query.ref, query.path);
+  const pointed = parsed ? nodeAt(parsed, query) : null;
+  const chosen = parsed ? chooseBinding(parsed, query, pointed) : null;
+  const at = chosen ? chosen.name.startIndex : 'scan';
+  const key = `${query.ref}\0${query.path}\0${query.word}\0${at}`;
+  const literal = pointed !== null && insideLiteral(pointed);
+  return { key, literal };
+}
+
 export async function refineSite(site: DefinitionSite, word: string, files: ResolverFiles): Promise<DefinitionSite> {
-  const text = await files.readFile(site.ref, site.path);
-  if (text === null) return site;
-  const refined = await withTree(text, site.path, (root) => nearestBinding(root, word, site));
-  return refined ?? site;
+  const parsed = await files.parsed(site.ref, site.path);
+  return (parsed && nearestBinding(parsed, word, site)) ?? site;
 }
 
-async function withTree<T>(text: string, path: string, work: (root: Node) => T | Promise<T>): Promise<T | null> {
-  const tree = await parseSource(text, path);
-  if (!tree) return null;
-  try {
-    return await work(tree.rootNode);
-  } finally {
-    tree.delete();
-  }
+async function resolveInTree(parsed: ParsedFile, query: DefinitionQuery, files: ResolverFiles): Promise<Resolution> {
+  const chosen = chooseBinding(parsed, query, nodeAt(parsed, query));
+  if (!chosen) return { sites: [], note: null };
+  if (chosen.source) return followImport(chosen, query, files);
+  return { sites: [siteOf(chosen.name, query.path, query.ref)], note: null };
 }
 
-async function resolveInTree(root: Node, query: DefinitionQuery, files: ResolverFiles): Promise<Resolution> {
-  const bindings = collectBindings(root, query.word);
-  const clicked = root.descendantForPosition({ row: query.line - 1, column: query.column });
+function nodeAt(parsed: ParsedFile, query: DefinitionQuery): Node | null {
+  return parsed.root.descendantForPosition({ row: query.line - 1, column: query.column });
+}
+
+function chooseBinding(parsed: ParsedFile, query: DefinitionQuery, pointed: Node | null): Binding | null {
+  const bindings = parsed.bindings(query.word);
   const imported = bindings.find((held) => held.source !== null);
-  const local = bestLocal(bindings, clicked);
-  if (local && shadowsImport(local, imported, clicked)) {
-    return { sites: [siteOf(local.name, query.path, query.ref)], note: null };
-  }
-  if (imported?.source) return followImport(imported, query, files);
-  if (local) return { sites: [siteOf(local.name, query.path, query.ref)], note: null };
-  return { sites: [], note: null };
+  const local = bestLocal(bindings, pointed);
+  if (local && shadowsImport(local, imported, pointed)) return local;
+  return imported ?? local;
+}
+
+const LITERAL_NODE = /comment|string|heredoc|jsx_text/;
+
+function insideLiteral(node: Node): boolean {
+  return LITERAL_NODE.test(node.type) || LITERAL_NODE.test(node.parent?.type ?? '');
 }
 
 function shadowsImport(local: Binding, imported: Binding | undefined, clicked: Node | null): boolean {
@@ -79,27 +121,30 @@ function shadowsImport(local: Binding, imported: Binding | undefined, clicked: N
   return commonDepth(local.name, clicked) > commonDepth(imported.name, clicked);
 }
 
-interface Binding {
+export interface Binding {
   name: Node;
   source: string | null;
   kind: 'named' | 'default' | 'namespace';
   original: string;
 }
 
-function collectBindings(root: Node, word: string): Binding[] {
-  const found: Binding[] = [];
+function bindingIndex(root: Node): Map<string, Binding[]> {
+  const index = new Map<string, Binding[]>();
   visit(root, (node) => {
     if (node.type === 'export_specifier') return;
-    const name = bindingName(node, word);
+    const name = bindingName(node);
     if (!name) return;
-    found.push({
+    const binding = {
       name,
       source: importSourceOf(name),
       kind: importKindOf(node),
-      original: node.childForFieldName('name')?.text ?? word,
-    });
+      original: node.childForFieldName('name')?.text ?? name.text,
+    };
+    const held = index.get(name.text) ?? [];
+    held.push(binding);
+    index.set(name.text, held);
   });
-  return found;
+  return index;
 }
 
 function visit(root: Node, see: (node: Node) => void) {
@@ -114,11 +159,11 @@ function visit(root: Node, see: (node: Node) => void) {
 
 const NAME_TYPE = /identifier$|_name$/;
 
-function bindingName(node: Node, word: string): Node | null {
+function bindingName(node: Node): Node | null {
   const name = node.childForFieldName('alias') ?? node.childForFieldName('name') ?? node.childForFieldName('pattern');
-  if (name && NAME_TYPE.test(name.type) && name.text === word) return name;
-  if (node.type === 'namespace_import' || node.type === 'import_clause') return directIdentifier(node, word);
-  if (destructuredLeaf(node) && node.text === word) return node;
+  if (name && NAME_TYPE.test(name.type)) return name;
+  if (node.type === 'namespace_import' || node.type === 'import_clause') return directIdentifier(node);
+  if (destructuredLeaf(node)) return node;
   return null;
 }
 
@@ -126,9 +171,9 @@ function destructuredLeaf(node: Node): boolean {
   return /identifier/.test(node.type) && /pattern$/.test(node.parent?.type ?? '');
 }
 
-function directIdentifier(node: Node, word: string): Node | null {
+function directIdentifier(node: Node): Node | null {
   for (const child of node.namedChildren) {
-    if (child && child.type === 'identifier' && child.text === word) return child;
+    if (child && child.type === 'identifier') return child;
   }
   return null;
 }
@@ -204,15 +249,15 @@ async function findExported(
   hops: number,
 ): Promise<DefinitionSite | null> {
   if (hops <= 0) return null;
-  const text = await files.readFile(ref, path);
-  if (text === null) return null;
-  const found = await withTree(text, path, (root) => exportedSite(root, word, path, ref, files, hops));
+  const parsed = await files.parsed(ref, path);
+  const found = parsed ? await exportedSite(parsed, word, path, ref, files, hops) : null;
   if (found !== null) return found;
-  return scanText(text, path, ref, word)[0] ?? null;
+  const text = await files.readFile(ref, path);
+  return text === null ? null : scanText(text, path, ref, word)[0] ?? null;
 }
 
 async function exportedSite(
-  root: Node,
+  parsed: ParsedFile,
   word: string,
   path: string,
   ref: string,
@@ -220,16 +265,16 @@ async function exportedSite(
   hops: number,
 ): Promise<DefinitionSite | null> {
   if (hops <= 0) return null;
-  const local = moduleBinding(root, word);
+  const local = moduleBinding(parsed, word);
   if (local && local.source === null) return siteOf(local.name, path, ref);
   if (local?.source) return followBinding(local, path, ref, files, hops);
-  const viaClause = await reExportedName(root, word, path, ref, files, hops);
+  const viaClause = await reExportedName(parsed, word, path, ref, files, hops);
   if (viaClause) return viaClause;
-  return starExportedName(root, word, path, ref, files, hops);
+  return starExportedName(parsed.root, word, path, ref, files, hops);
 }
 
-function moduleBinding(root: Node, word: string): Binding | null {
-  const bindings = collectBindings(root, word);
+function moduleBinding(parsed: ParsedFile, word: string): Binding | null {
+  const bindings = [...parsed.bindings(word)];
   bindings.sort((a, b) => exportedRank(b.name) - exportedRank(a.name) || a.name.startPosition.row - b.name.startPosition.row);
   return bindings[0] ?? null;
 }
@@ -251,18 +296,18 @@ async function followBinding(
 }
 
 async function reExportedName(
-  root: Node,
+  parsed: ParsedFile,
   word: string,
   path: string,
   ref: string,
   files: ResolverFiles,
   hops: number,
 ): Promise<DefinitionSite | null> {
-  for (const held of exportSpecifiers(root)) {
+  for (const held of parsed.exportSpecifiers()) {
     if ((held.alias ?? held.original) !== word) continue;
     if (held.source === null) {
       if (held.original === word) continue;
-      return exportedSite(root, held.original, path, ref, files, hops - 1);
+      return exportedSite(parsed, held.original, path, ref, files, hops - 1);
     }
     const target = await resolveModulePath(held.source, path, ref, files);
     if (target) return findExported(held.original, target, ref, files, hops - 1);
@@ -329,9 +374,8 @@ async function findDefaultExport(
   hops: number,
 ): Promise<DefinitionSite | null> {
   if (hops <= 0) return null;
-  const text = await files.readFile(ref, path);
-  if (text === null) return null;
-  return withTree(text, path, (root) => defaultExportSite(root, path, ref));
+  const parsed = await files.parsed(ref, path);
+  return parsed ? defaultExportSite(parsed.root, path, ref) : null;
 }
 
 function defaultExportSite(root: Node, path: string, ref: string): DefinitionSite | null {
@@ -375,8 +419,8 @@ function startWithComments(decl: Node): number {
   return start.startPosition.row + 1;
 }
 
-function nearestBinding(root: Node, word: string, site: DefinitionSite): DefinitionSite | null {
-  const bindings = collectBindings(root, word).filter((held) => held.source === null);
+function nearestBinding(parsed: ParsedFile, word: string, site: DefinitionSite): DefinitionSite | null {
+  const bindings = parsed.bindings(word).filter((held) => held.source === null);
   bindings.sort((a, b) => lineDistance(a, site) - lineDistance(b, site));
   const best = bindings[0];
   return best ? siteOf(best.name, site.path, site.ref) : null;
