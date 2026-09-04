@@ -96,9 +96,9 @@ function PaneLines(props: SideProps) {
 function longestFoldedPrefix(lines: DiffLine[], tokens: SideTokens | null, anchors: Map<number, CollapseAnchor>): number {
   let longest = 0;
   for (const line of lines) {
+    if (!anchors.get(line.row)?.collapsed) continue;
     const layout = foldLayout(line.cell ? (tokens?.[line.side][line.row] ?? null) : null);
-    const collapsed = anchors.get(line.row)?.collapsed ?? false;
-    if (layout && foldsTail(line, collapsed, layout)) longest = Math.max(longest, abbreviatedLength(layout.prefix));
+    if (layout) longest = Math.max(longest, abbreviatedLength(layout.prefix));
   }
   return longest;
 }
@@ -274,7 +274,7 @@ function DiffLineView({
   const raw = codeSegments(cell.text, lineTokens, changed ? ranges : null);
   const layout = dim ? foldLayout(lineTokens) : null;
   const folded = layout !== null && foldsTail(line, collapsed, layout);
-  const segments = collapsedSegments(raw, layout, folded ? longestPrefix : Infinity);
+  const segments = collapsedSegments(raw, layout, collapsed ? longestPrefix : Infinity);
   const fold = folded ? prefixStyle(longestPrefix) : null;
   const tones = rowTones(line);
   return (
@@ -303,7 +303,7 @@ function DiffLineView({
   );
 }
 
-// One column for every abbreviated prefix in the pane, as wide as the longest.
+// One column for the pane's prefixes, as wide as the longest collapsed row's.
 function prefixStyle(longest: number): CSSProperties {
   return { fontSize: PREFIX_FONT, minWidth: `${longest}ch` };
 }
