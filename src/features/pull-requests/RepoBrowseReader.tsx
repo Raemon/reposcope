@@ -27,9 +27,9 @@ export function RepoBrowseReader({
   const items = useMemo(() => (folder === null ? [] : folderReadingOrder(tree.nodes, folder)), [tree.nodes, folder]);
   if (settled === null) return null;
   if (folder !== null)
-    return <RepoFolderReader key={`${fileSet.ref}:${folder}`} owner={owner} repo={repo} refName={fileSet.ref} items={items} />;
+    return <RepoFolderReader key={`${fileSet.sha}:${folder}`} owner={owner} repo={repo} refName={fileSet.sha} items={items} />;
   const path = treePath(settled);
-  return path === null ? null : <RepoFileReader owner={owner} repo={repo} refName={fileSet.ref} path={path} />;
+  return path === null ? null : <RepoFileReader owner={owner} repo={repo} refName={fileSet.sha} path={path} />;
 }
 
 function useSettled<T>(value: T, delayMs: number): T | null {

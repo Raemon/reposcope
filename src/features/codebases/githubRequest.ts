@@ -12,7 +12,8 @@ export class GithubRequestError extends Error {
 
 const ACCEPT = 'application/vnd.github+json';
 const DEFAULT_FRESHNESS_MS = 30_000;
-const IMMUTABLE_PATTERNS = [/\/commits\/[0-9a-f]{7,40}$/, /\/tarball\/[0-9a-f]{40}$/];
+const IMMUTABLE_PATTERNS = [/\/commits\/[0-9a-f]{7,40}$/, /\/(?:git\/trees|tarball)\/[0-9a-f]{40}$/];
+const COMMIT_SHA = /^[0-9a-f]{40}$/;
 const STALE_ON_STATUS = [403, 408, 429, 500, 502, 503, 504];
 
 const inFlight = new Map<string, Promise<CachedResponse>>();
@@ -186,9 +187,21 @@ function decodeBody(entry: CachedResponse): Buffer {
 }
 
 function freshnessOf(url: string): number {
-  return IMMUTABLE_PATTERNS.some((pattern) => pattern.test(pathOf(url)))
-    ? Number.POSITIVE_INFINITY
-    : DEFAULT_FRESHNESS_MS;
+  return pinnedToCommit(url) ? Number.POSITIVE_INFINITY : DEFAULT_FRESHNESS_MS;
+}
+
+// Anything addressed by a full commit sha can never change, so it is kept until evicted.
+function pinnedToCommit(url: string): boolean {
+  if (IMMUTABLE_PATTERNS.some((pattern) => pattern.test(pathOf(url)))) return true;
+  return COMMIT_SHA.test(refParamOf(url) ?? '');
+}
+
+function refParamOf(url: string): string | null {
+  try {
+    return new URL(url).searchParams.get('ref');
+  } catch {
+    return null;
+  }
 }
 
 function scopeOf(url: string): string {
