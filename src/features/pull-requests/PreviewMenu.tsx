@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import type { PreviewEntry } from './pullPreviews';
 import { buildProgress, isCommitEntry, previewNeedsRebuild, type PreviewControls } from './usePullPreviews';
 import { PopoverMenu, type PopoverTrigger } from '@/features/surface-ui/PopoverMenu';
+import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { RelativeTime } from '@/features/surface-ui/RelativeTime';
 import { StrokeIcon } from '@/features/surface-ui/StrokeIcon';
 
@@ -26,7 +27,7 @@ export function PreviewMenu({ previews, number, baseRef }: { previews: PreviewCo
     <PopoverMenu
       align="right-0"
       panelClass="flex max-h-[70vh] w-[28rem] flex-col overflow-hidden"
-      trigger={(state) => <ChevronButton {...state} number={number} />}
+      trigger={(state) => <MenuButton {...state} previews={previews} number={number} />}
     >
       {(close) => (
         <>
@@ -45,18 +46,42 @@ export function previewName(entry: PreviewEntry): string {
   return entry.branch ?? entry.sha.slice(0, 7);
 }
 
-function ChevronButton({ open, toggle, number }: PopoverTrigger & { number: number }) {
+function MenuButton({ open, toggle, previews, number }: PopoverTrigger & { previews: PreviewControls; number: number }) {
+  const urging = previewNeedsRebuild(previews);
   return (
-    <button
-      type="button"
-      aria-haspopup="menu"
-      aria-expanded={open}
-      aria-label={`Show every preview deployment for #${number}`}
-      onClick={toggle}
-      className={`flex h-full items-center pl-0.5 pr-1.5 text-[9px] ${open ? 'bg-btn-active text-accent' : 'text-ink-dim/60 hover:text-ink'}`}
-    >
-      ▾
-    </button>
+    <HoverCardTrigger label={menuLabel(previews, number)} focusable={false} tooltipStyle>
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`Show every preview deployment for #${number}`}
+        onClick={toggle}
+        className={`flex h-full items-center rounded-r px-1.5 ${menuTone(open, urging)}`}
+      >
+        {previews.working ? <RefreshIcon spinning /> : <ChevronIcon />}
+      </button>
+    </HoverCardTrigger>
+  );
+}
+
+function menuTone(open: boolean, urging: boolean): string {
+  if (open) return 'bg-btn-active text-accent';
+  if (urging) return 'text-accent hover:bg-accent/20';
+  return 'hover:bg-btn-hover hover:text-ink';
+}
+
+function menuLabel(previews: PreviewControls, number: number): string {
+  const progress = buildProgress(previews);
+  if (progress !== null) return progress;
+  if (previewNeedsRebuild(previews)) return `The latest commit of #${number} has no preview; open to build a fresh one`;
+  return `Every preview deployment for #${number}`;
+}
+
+function ChevronIcon() {
+  return (
+    <StrokeIcon size={12}>
+      <path d="M6 9l6 6 6-6" />
+    </StrokeIcon>
   );
 }
 
@@ -157,7 +182,7 @@ export function StateDot({ state }: { state: keyof typeof DOT_TONE }) {
   return <span aria-hidden className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${DOT_TONE[state]}`} />;
 }
 
-export function RefreshIcon({ spinning, className = '' }: { spinning: boolean; className?: string }) {
+function RefreshIcon({ spinning, className = '' }: { spinning: boolean; className?: string }) {
   return (
     <StrokeIcon size={12} className={`shrink-0 ${spinning ? 'animate-spin' : ''} ${className}`}>
       <path d="M20 12a8 8 0 1 1-2.34-5.66" />
