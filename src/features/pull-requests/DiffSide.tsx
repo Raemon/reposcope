@@ -25,8 +25,10 @@ const ROW = 'flex h-[15px] items-center gap-1 leading-[15px]';
 const WRAPPED_ROW = 'flex min-h-[15px] items-start gap-1 leading-[15px]';
 // Literal px; Tailwind can't compile computed classes. Sync with BLANK_ROW_HEIGHT.
 const BLANK_ROW = 'flex h-[4px] items-center gap-1 leading-[4px]';
-const GUTTER = 'flex w-[46px] shrink-0 select-none items-center text-[9px] text-ink-dim';
+const GUTTER = 'relative flex w-[46px] shrink-0 select-none items-center text-[9px] text-ink-dim';
 const TONED_GUTTER = 'self-stretch group-hover:row-shade group-[.diff-line-lit]:row-lit';
+const DRAFT_BTN =
+  'absolute left-0 flex h-[15px] w-[11px] items-center justify-center rounded-sm bg-btn text-[10px] leading-none text-ink-dim opacity-0 hover:bg-btn-hover hover:text-ink focus-visible:opacity-100 group-hover:opacity-100';
 const TOUCHED_MARK = 'bg-add-bg/60 shadow-[inset_2px_0_0_var(--add-emph)]';
 const STICKY_CHIP = 'sticky right-0 shrink-0 rounded bg-procgen px-1 hover:bg-btn-hover hover:text-ink';
 const EDIT_BTN = `${STICKY_CHIP} uppercase tracking-[0.14em]`;
@@ -65,6 +67,7 @@ export interface SideProps {
   heights: RowHeights;
   onMeasured: (heights: RowHeights) => void;
   onUntruncate?: (run: number) => void;
+  draftThreadAt?: (line: number, side: 'left' | 'right') => (() => void) | null;
 }
 
 export function DiffSide(props: SideProps) {
@@ -152,6 +155,7 @@ function DiffLines({
   wrap,
   heights,
   onUntruncate,
+  draftThreadAt,
   dim,
   longestPrefix,
 }: SideProps & { from: number; to: number; dim: boolean; longestPrefix: number }) {
@@ -183,6 +187,7 @@ function DiffLines({
                 onEdit={editStarter(rows, line.row, onEditBlock)}
                 pointer={pointer}
                 onUntruncate={onUntruncate}
+                onDraft={draftStarter(rows, line, draftThreadAt)}
               />
               {spacerLine === index && <div style={{ height: spacer?.height }} />}
             </Fragment>
@@ -223,6 +228,20 @@ function editStarter(rows: DiffRow[], index: number, onEditBlock?: (rowIndex: nu
   return () => onEditBlock(index + (hunk ? 1 : 0));
 }
 
+function draftStarter(rows: DiffRow[], line: DiffLine, draftThreadAt?: SideProps['draftThreadAt']) {
+  const target = draftTarget(rows[line.row], line);
+  if (!draftThreadAt || !target) return undefined;
+  return draftThreadAt(target.line, target.side) ?? undefined;
+}
+
+// GitHub wants RIGHT for unchanged lines; LEFT is only for deletions.
+function draftTarget(row: DiffRow | undefined, line: DiffLine): { line: number; side: 'left' | 'right' } | null {
+  if (!row || line.blank) return null;
+  const side = line.side === 'left' && row.kind === 'context' ? 'right' : line.side;
+  const cell = row[side];
+  return cell ? { line: cell.line, side } : null;
+}
+
 function DiffLineView({
   line,
   labels,
@@ -240,6 +259,7 @@ function DiffLineView({
   onEdit,
   pointer,
   onUntruncate,
+  onDraft,
 }: {
   line: DiffLine;
   labels: boolean;
@@ -257,6 +277,7 @@ function DiffLineView({
   onEdit?: () => void;
   pointer?: CodePointer;
   onUntruncate?: (run: number) => void;
+  onDraft?: () => void;
 }) {
   const { cell, side } = line;
   if (line.kind === 'truncated') {
@@ -284,7 +305,7 @@ function DiffLineView({
       style={sized}
       onClick={openable && onEdit ? (event) => opensEditor(event.detail) && onEdit() : undefined}
     >
-      <GutterCell line={line.blank ? null : cell.line} anchor={anchor} tone={tones.gutter} />
+      <GutterCell line={line.blank ? null : cell.line} anchor={anchor} tone={tones.gutter} onDraft={onDraft} />
       <span className={collapsed ? FOLDED_TEXT : 'contents'}>
         <span
           {...{ [WRAPPED_CELL]: `${side}:${line.row}` }}
@@ -399,13 +420,40 @@ function plural(count: number, word: string): string {
   return `${count} ${word}${count === 1 ? '' : 's'}`;
 }
 
-function GutterCell({ line, anchor, tone }: { line: number | null; anchor: CollapseAnchor | null; tone: string }) {
+function GutterCell({
+  line,
+  anchor,
+  tone,
+  onDraft,
+}: {
+  line: number | null;
+  anchor: CollapseAnchor | null;
+  tone: string;
+  onDraft?: () => void;
+}) {
   return (
     <span className={`${GUTTER} ${tone ? `${TONED_GUTTER} ${tone}` : ''}`}>
+      {onDraft && <DraftThreadButton onDraft={onDraft} />}
       <span className="min-w-0 flex-1 text-right">{line}</span>
       {/* flex, not inline: an inline-block button leaves a baseline gap that unsettles a wrapped row. */}
       <span className="flex w-3 shrink-0 justify-center">{anchor && <CollapseChevron anchor={anchor} />}</span>
     </span>
+  );
+}
+
+function DraftThreadButton({ onDraft }: { onDraft: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-label="Comment on this line"
+      onClick={(event) => {
+        event.stopPropagation();
+        onDraft();
+      }}
+      className={DRAFT_BTN}
+    >
+      +
+    </button>
   );
 }
 

@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { reviewReactionPath, reviewReplyPath, reviewResolvePath } from './pullPaths';
+import { isDraftThread, type DraftAnchor } from './draftThread';
+import { clearDraftThread, useDraftAnchor } from './draftThreadStore';
+import { reviewCommentPath, reviewReactionPath, reviewReplyPath, reviewResolvePath } from './pullPaths';
 import type { ReviewComment, ReviewThread } from './reviewThreads';
 import { useReviewTarget, type ReviewThreadTarget } from './reviewThreadStore';
 import { AuthorPortrait, COMMENT_ACTION, OpenOnGithub } from './CommentByline';
@@ -13,7 +15,46 @@ import { RelativeTime } from '@/features/surface-ui/RelativeTime';
 import { useGithubToken } from '@/features/sources/sourceStore';
 import { apiPost, apiPostJson } from '@/features/sources/apiClient';
 
+const CARD = 'overflow-hidden rounded border border-panel-edge bg-tip shadow-card';
+
 export function ThreadCard({ thread }: { thread: ReviewThread }) {
+  if (isDraftThread(thread)) return <DraftThreadCard />;
+  return <PostedThreadCard thread={thread} />;
+}
+
+function DraftThreadCard() {
+  const anchor = useDraftAnchor();
+  const target = useReviewTarget();
+  const token = useGithubToken();
+  const action = useThreadAction(() => clearThenReload(target));
+  if (anchor === null) return null;
+  return (
+    <article className={CARD}>
+      <header className="px-1.5 pt-[2px] text-[9px] leading-4 text-ink-dim">New comment · line {anchor.line}</header>
+      <ThreadReplyBox
+        key={`${anchor.side}:${anchor.line}`}
+        busy={action.busy}
+        placeholder="Comment…"
+        onCancel={clearDraftThread}
+        onSend={(body) => action.run(() => sendNewThread(anchor, body, token))}
+      />
+      <ActionFailure message={action.failure} />
+    </article>
+  );
+}
+
+// Clear before reloading: a failed reload must not re-offer an already posted comment.
+function clearThenReload(target: ReviewThreadTarget): Promise<unknown> {
+  clearDraftThread();
+  return target.reload();
+}
+
+function ActionFailure({ message }: { message: string | null }) {
+  if (message === null) return null;
+  return <p className="px-1.5 pb-0.5 text-[9px] leading-3 text-error-ink">{message}</p>;
+}
+
+function PostedThreadCard({ thread }: { thread: ReviewThread }) {
   const target = useReviewTarget();
   const token = useGithubToken();
   const action = useThreadAction(target.reload);
@@ -22,9 +63,7 @@ export function ThreadCard({ thread }: { thread: ReviewThread }) {
   const open = toggled ?? !thread.resolved;
   const shown = open ? thread.comments : thread.comments.slice(0, 1);
   return (
-    <article
-      className={`group relative overflow-hidden rounded border border-panel-edge bg-tip shadow-card ${thread.resolved ? 'opacity-70 hover:opacity-100' : ''}`}
-    >
+    <article className={`group relative ${CARD} ${thread.resolved ? 'opacity-70 hover:opacity-100' : ''}`}>
       {shown.map((comment, index) => (
         <ThreadComment
           key={comment.id}
@@ -45,7 +84,7 @@ export function ThreadCard({ thread }: { thread: ReviewThread }) {
           }}
         />
       )}
-      {action.failure && <p className="px-1.5 pb-0.5 text-[9px] leading-3 text-error-ink">{action.failure}</p>}
+      <ActionFailure message={action.failure} />
       {!replying && (
         <ThreadActions
           thread={thread}
@@ -153,6 +192,11 @@ function ThreadActions({
       <OpenOnGithub url={first?.url} />
     </div>
   );
+}
+
+function sendNewThread(anchor: DraftAnchor, body: string, token: string | null): Promise<unknown> {
+  const { owner, repo, number, commitId, path, line, side } = anchor;
+  return apiPostJson(reviewCommentPath(owner, repo, number), token, { body, commitId, path, line, side });
 }
 
 function sendReply(

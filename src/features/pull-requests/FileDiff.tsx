@@ -5,6 +5,8 @@ import { CodeBlockEditor } from './CodeBlockEditor';
 import { CommitEditModal } from './CommitEditModal';
 import { DiffSide, type HunkControl } from './DiffSide';
 import { useDiffLayout } from './diffLayoutStore';
+import { withDraftThread, type DraftAnchor } from './draftThread';
+import { startDraftThread, useDraftAnchor } from './draftThreadStore';
 import { columnLines, resultLines, shownLines, unifiedLines, type DiffLine } from './diffLines';
 import { langForPath } from './diffHighlight';
 import { linesHeight, ROW_HEIGHT, SAVE_BAR, type RowHeights } from './diffMetrics';
@@ -28,9 +30,10 @@ import { useDiffTokens, useIntralineEmphasis } from './useDiffSideHighlight';
 import { useHeightTransition } from './useHeightTransition';
 import { useHunkEdit, type HunkEdit, type HunkEditControls } from './useHunkEdit';
 import { hunkHint, useWholeFile, type WholeFile } from './useWholeFile';
-import type { ChangedFile } from './pullRequests';
+import type { ChangedFile, PullRequestSummary } from './pullRequests';
 import { WHOLE_FILE_STATUS } from './wholeFileEntry';
 import { useGithubToken } from '@/features/sources/sourceStore';
+import { COMMIT_SHA_PATTERN } from '@/features/sources/sourceTypes';
 
 export function FileDiff({
   owner,
@@ -75,7 +78,12 @@ export function FileDiff({
   });
   useFoldCommandWholeFile(hunkEdit, setWantWholeFile);
   const editBlock = hunkEdit.edit?.block ?? null;
-  const threads = useFileThreads(file.filename);
+  const fileThreads = useFileThreads(file.filename);
+  const draftAnchor = useDraftAnchor();
+  const threads = useMemo(
+    () => withDraftThread(fileThreads, draftAnchor, { owner, repo, number: pull?.number ?? null, path: file.filename }),
+    [fileThreads, draftAnchor, owner, repo, pull, file.filename],
+  );
   const collapse = useCodeCollapse(rows, showingWholeFile, file.filename, threads, editBlock);
   const commentedRows = useMemo(() => new Set(threads.map((thread) => rowOf(thread, rows))), [threads, rows]);
   const alwaysDrawn = useMemo(() => rowsAlwaysDrawn(commentedRows, editBlock), [commentedRows, editBlock]);
@@ -89,7 +97,20 @@ export function FileDiff({
   const growing = useHeightTransition(rows, undrawn, rowHeights);
   const expand = expandControl(wholeFile, showingWholeFile, hunkEdit, setWantWholeFile);
   const pointer = useDefinitionPointer(file, baseRef, headRef);
-  const shared = { rows, tokens, emphasis, expand, anchors: collapse.anchors, pointer, wrap, heights: rowHeights, onUntruncate: untruncate };
+  const draftable = useMemo(() => (showingWholeFile ? patchLineKeys(patchRows) : null), [showingWholeFile, patchRows]);
+  const draftThreadAt = draftThreadStarter(draftBase(owner, repo, pull, headRef, file.filename, token), draftable);
+  const shared = {
+    rows,
+    tokens,
+    emphasis,
+    expand,
+    anchors: collapse.anchors,
+    pointer,
+    wrap,
+    heights: rowHeights,
+    onUntruncate: untruncate,
+    draftThreadAt,
+  };
   const bounds = { hidden: undrawn, stopAtBlankLines: showingWholeFile };
   const editing = {
     editable: pull !== null,
@@ -141,6 +162,42 @@ export function FileDiff({
       )}
     </div>
   );
+}
+
+type DraftBase = Omit<DraftAnchor, 'line' | 'side'>;
+
+function draftBase(
+  owner: string,
+  repo: string,
+  pull: PullRequestSummary | null,
+  commitId: string,
+  path: string,
+  token: string | null,
+): DraftBase | null {
+  if (pull === null || token === null || !COMMIT_SHA_PATTERN.test(commitId)) return null;
+  return { owner, repo, number: pull.number, commitId, path };
+}
+
+function draftThreadStarter(base: DraftBase | null, draftable: Set<string> | null) {
+  if (base === null) return undefined;
+  return (line: number, side: 'left' | 'right') =>
+    draftable && !draftable.has(lineKey(side, line)) ? null : () => startDraftThread({ ...base, line, side });
+}
+
+// GitHub rejects a comment on a line outside the diff, so expanded rows offer no button.
+function patchLineKeys(rows: DiffRow[]): Set<string> {
+  return new Set(rows.filter((row) => row.kind !== 'hunk').flatMap(rowLineKeys));
+}
+
+function rowLineKeys(row: DiffRow): string[] {
+  const keys: string[] = [];
+  if (row.left) keys.push(lineKey('left', row.left.line));
+  if (row.right) keys.push(lineKey('right', row.right.line));
+  return keys;
+}
+
+function lineKey(side: 'left' | 'right', line: number): string {
+  return `${side}:${line}`;
 }
 
 interface MeasuredSides {

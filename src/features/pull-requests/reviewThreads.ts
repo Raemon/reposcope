@@ -1,5 +1,6 @@
 import { githubGraphql, githubJson, githubSend } from '@/features/codebases/githubRequest';
 import { requireGithubUser } from '@/features/github-auth/requireGithubUser';
+import { openPullAtHead } from './pullRequests';
 
 const API = 'https://api.github.com';
 
@@ -13,6 +14,14 @@ export interface ReviewComment {
   url: string;
   thumbsUp: number;
   viewerReacted: boolean;
+}
+
+export interface NewReviewComment {
+  body: string;
+  commitId: string;
+  path: string;
+  line: number;
+  side: 'left' | 'right';
 }
 
 export interface ReviewThread {
@@ -70,6 +79,26 @@ export async function replyToReviewThread(
     { body },
   );
   return reviewComment(posted);
+}
+
+export async function createReviewThread(
+  owner: string,
+  name: string,
+  number: number,
+  comment: NewReviewComment,
+): Promise<ReviewComment> {
+  requireGithubUser('starting a review thread');
+  await openPullAtHead(owner, name, number, comment.commitId, comment.path);
+  const posted = await githubSend<GithubReviewComment>(
+    `${API}/repos/${owner}/${name}/pulls/${number}/comments`,
+    'POST',
+    githubCommentFields(comment),
+  );
+  return reviewComment(posted);
+}
+
+function githubCommentFields({ body, commitId, path, line, side }: NewReviewComment): Record<string, unknown> {
+  return { body, commit_id: commitId, path, line, side: side.toUpperCase() };
 }
 
 export async function setThreadResolved(threadId: string, resolved: boolean): Promise<{ resolved: boolean }> {

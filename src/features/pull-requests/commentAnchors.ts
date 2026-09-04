@@ -1,5 +1,6 @@
 import { linesHeight, ROW_HEIGHT, type RowHeights } from './diffMetrics';
 import type { DiffLine } from './diffLines';
+import { isDraftThread } from './draftThread';
 import type { ReviewThread } from './reviewThreads';
 import type { DiffRow } from './splitDiff';
 
@@ -34,9 +35,15 @@ function stackedTops(anchors: AnchoredThread[], heights: Record<number, number>,
   let floor = 0;
   return anchors.map(({ thread, anchorTop }) => {
     const top = Math.max(anchorTop, floor);
-    floor = top + Math.min(heights[thread.rootId] ?? ROW_HEIGHT, minSlot) + gap;
+    floor = top + reservedHeight(thread, heights, minSlot) + gap;
     return top;
   });
+}
+
+// A composer must never be clipped, so it reserves its full height instead of one slot.
+function reservedHeight(thread: ReviewThread, heights: Record<number, number>, minSlot: number): number {
+  const natural = heights[thread.rootId] ?? ROW_HEIGHT;
+  return isDraftThread(thread) ? natural : Math.min(natural, minSlot);
 }
 
 function anchoredThread(thread: ReviewThread, rows: DiffRow[], lines: DiffLine[], heights: RowHeights): AnchoredThread | null {

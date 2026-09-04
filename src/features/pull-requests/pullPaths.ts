@@ -30,6 +30,10 @@ export function reviewReplyPath(owner: string, repo: string, number: number, roo
   return `/api/github/review-reply?${repoParams(owner, repo)}&number=${number}&comment=${rootId}`;
 }
 
+export function reviewCommentPath(owner: string, repo: string, number: number): string {
+  return `/api/github/review-comment?${repoParams(owner, repo)}&number=${number}`;
+}
+
 export function reviewResolvePath(threadId: string, resolved: boolean): string {
   return `/api/github/review-resolve?thread=${encodeURIComponent(threadId)}&resolved=${resolved}`;
 }
