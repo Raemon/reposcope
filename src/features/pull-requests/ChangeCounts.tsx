@@ -1,8 +1,10 @@
 type Counts = { additions: number; deletions: number };
 
+export const COUNT_CELL = 'shrink-0 text-[9px] leading-4';
+
 export function ChangeCounts(counts: Counts) {
   return (
-    <span className="flex shrink-0 gap-x-1 text-[9px] leading-4">
+    <span className={`${COUNT_CELL} flex gap-x-1`}>
       <ChangeCountCells {...counts} />
     </span>
   );

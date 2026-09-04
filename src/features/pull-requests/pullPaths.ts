@@ -70,6 +70,10 @@ export function repoFilesAtRefPath(owner: string, repo: string, ref: string): st
   return `${repoFilesPath(owner, repo)}&ref=${encodeURIComponent(ref)}`;
 }
 
+export function repoLinesPath(owner: string, repo: string, ref: string): string {
+  return `/api/github/repo-lines?${repoParams(owner, repo)}&ref=${encodeURIComponent(ref)}`;
+}
+
 export function fileTextPath(owner: string, repo: string, ref: string, path: string): string {
   return `/api/github/file?${repoParams(owner, repo)}&ref=${encodeURIComponent(ref)}&path=${encodeURIComponent(path)}`;
 }

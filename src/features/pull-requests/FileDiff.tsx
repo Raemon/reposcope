@@ -22,7 +22,6 @@ import { setDiffPaneWidth, useDiffPaneWidth } from './diffPaneWidth';
 import { DragHandle, useDragWidth } from './ResizableColumn';
 import { rowOf } from './commentAnchors';
 import { useFileThreads } from './reviewThreadStore';
-import { SHA_PATTERN } from './routeParams';
 import { splitDiff, type DiffRow } from './splitDiff';
 import { truncateFarRows, NO_TRUNCATION, type Truncation } from './truncateRows';
 import { useCodeCollapse } from './useCodeCollapse';
@@ -34,6 +33,7 @@ import { hunkHint, useWholeFile, type WholeFile } from './useWholeFile';
 import type { ChangedFile, PullRequestSummary } from './pullRequests';
 import { WHOLE_FILE_STATUS } from './wholeFileEntry';
 import { useGithubToken } from '@/features/sources/sourceStore';
+import { COMMIT_SHA_PATTERN } from '@/features/sources/sourceTypes';
 
 export function FileDiff({
   owner,
@@ -174,7 +174,7 @@ function draftBase(
   path: string,
   token: string | null,
 ): DraftBase | null {
-  if (pull === null || token === null || !SHA_PATTERN.test(commitId)) return null;
+  if (pull === null || token === null || !COMMIT_SHA_PATTERN.test(commitId)) return null;
   return { owner, repo, number: pull.number, commitId, path };
 }
 

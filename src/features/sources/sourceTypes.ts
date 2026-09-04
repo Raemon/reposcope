@@ -5,6 +5,7 @@ export type CodebaseSource =
 
 export const LOGIN_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/;
 export const REPO_NAME_PATTERN = /^[A-Za-z0-9_.-]{1,100}$/;
+export const COMMIT_SHA_PATTERN = /^[0-9a-f]{40}$/;
 export const REF_PATTERN = /^(?!.*\.\.)[A-Za-z0-9._/-]{1,255}$/;
 const MAX_SOURCES = 40;
 

@@ -1,7 +1,8 @@
 import { GithubRequestError } from '@/features/codebases/githubRequest';
 import { counting, matching, text } from './fieldChecks';
 import type { NewReviewComment } from './reviewThreads';
-import { PATH_PATTERN, SHA_PATTERN } from './routeParams';
+import { PATH_PATTERN } from './routeParams';
+import { COMMIT_SHA_PATTERN } from '@/features/sources/sourceTypes';
 
 const MAX_BODY_CHARS = 65_536;
 
@@ -9,7 +10,7 @@ export function newReviewComment(body: unknown): NewReviewComment {
   const asked = body as Partial<NewReviewComment> | null;
   return {
     body: commentBody(asked?.body),
-    commitId: matching(asked?.commitId, 'commitId', SHA_PATTERN),
+    commitId: matching(asked?.commitId, 'commitId', COMMIT_SHA_PATTERN),
     path: matching(asked?.path, 'path', PATH_PATTERN),
     line: counting(asked?.line, 'line'),
     side: commentSide(asked?.side),
