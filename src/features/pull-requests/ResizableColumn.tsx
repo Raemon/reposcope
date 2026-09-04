@@ -182,19 +182,19 @@ export function ResizableColumn(props: ColumnProps) {
   return <PaneColumn {...props} frame={pane} />;
 }
 
-const PANE_FRAME: Record<PaneFrame, string> = {
-  pane: 'min-h-0 flex-1',
-  preface: 'max-h-[50vh] shrink-0 border-b border-panel-edge',
+const PANE_FRAME: Record<PaneFrame, { section: string; body: string }> = {
+  pane: { section: 'min-h-0 flex-1', body: 'min-h-0 flex-1 overflow-auto' },
+  preface: { section: 'shrink-0 border-b border-panel-edge', body: '' },
 };
 
 function PaneColumn({ navId, title, icon, note, action, footer, frame, children }: ColumnProps & { frame: PaneFrame }) {
   const nav = useColumnNav(navId);
   return (
-    <section onPointerDown={nav.focus} onPointerLeave={nav.clearHover} className={`flex min-w-0 flex-col bg-panel ${PANE_FRAME[frame]}`}>
+    <section onPointerDown={nav.focus} onPointerLeave={nav.clearHover} className={`flex min-w-0 flex-col bg-panel ${PANE_FRAME[frame].section}`}>
       <div className={`${PANE_WIDTH} shrink-0`}>
         <ColumnHeader navId={navId} title={title} icon={icon} note={note} action={action} onCollapse={null} />
       </div>
-      <div ref={nav.bodyRef} className="min-h-0 flex-1 overflow-auto">
+      <div ref={nav.bodyRef} className={PANE_FRAME[frame].body}>
         <div className={PANE_WIDTH}>
           <ColumnBoundary>{children}</ColumnBoundary>
         </div>

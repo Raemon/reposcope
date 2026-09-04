@@ -148,7 +148,12 @@ function activateColumn(column: NavColumn, cursor: string | null) {
 }
 
 function scrollBody(node: HTMLElement | undefined, delta: number) {
-  node?.scrollBy({ top: delta * SCROLL_STEP, behavior: 'smooth' });
+  scrollerOf(node)?.scrollBy({ top: delta * SCROLL_STEP, behavior: 'smooth' });
+}
+
+function scrollerOf(node: HTMLElement | undefined): HTMLElement | null {
+  for (let at = node ?? null; at; at = at.parentElement) if (at.scrollHeight > at.clientHeight) return at;
+  return null;
 }
 
 function listenForNavKeys(apply: (action: NavAction) => void) {
