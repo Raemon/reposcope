@@ -89,8 +89,12 @@ export function headingsBefore(items: ReadingItem[], shown: ReadonlySet<string>)
   const before = new Map<string, FolderHeading[]>();
   let pending: FolderHeading[] = [];
   for (const item of items) {
-    if (!isFileItem(item)) pending = populated.has(item.path) ? [...pending, item] : pending;
-    else if (shown.has(item.path)) [before.set(item.path, pending), (pending = [])];
+    if (!isFileItem(item)) {
+      if (populated.has(item.path)) pending.push(item);
+    } else if (shown.has(item.path)) {
+      before.set(item.path, pending);
+      pending = [];
+    }
   }
   return before;
 }

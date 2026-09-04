@@ -1,7 +1,6 @@
-import { Readable } from 'node:stream';
+import { Readable, pipeline } from 'node:stream';
 import type { ReadableStream as NodeReadableStream } from 'node:stream/web';
 import { createGunzip } from 'node:zlib';
-import { GithubRequestError } from '@/features/codebases/githubRequest';
 
 const BLOCK = 512;
 const MAX_UNPACKED_BYTES = 512 * 1024 * 1024;
@@ -25,15 +24,24 @@ interface OpenEntry {
   lastByte: number;
 }
 
-export async function countTarballLines(body: ReadableStream<Uint8Array> | null): Promise<Record<string, number>> {
-  const counter = new TarLineCounter();
-  if (body === null) return counter.lines;
-  for await (const chunk of gunzipped(body)) counter.push(chunk as Buffer);
-  return counter.lines;
+export interface TarballLines {
+  lines: Record<string, number>;
+  tooLarge: boolean;
 }
 
+export async function countTarballLines(body: ReadableStream<Uint8Array> | null): Promise<TarballLines> {
+  const counter = new TarLineCounter();
+  if (body === null) return counter.result();
+  for await (const chunk of gunzipped(body)) {
+    counter.push(chunk as Buffer);
+    if (counter.ended) break;
+  }
+  return counter.result();
+}
+
+// pipeline() forwards download errors to gunzip; pipe() would hang the loop forever.
 function gunzipped(body: ReadableStream<Uint8Array>): Readable {
-  return Readable.fromWeb(body as NodeReadableStream<Uint8Array>).pipe(createGunzip());
+  return pipeline(Readable.fromWeb(body as NodeReadableStream<Uint8Array>), createGunzip(), () => {});
 }
 
 class TarLineCounter {
@@ -42,16 +50,23 @@ class TarLineCounter {
   private entry: OpenEntry | null = null;
   private longName: string | null = null;
   private unpacked = 0;
-  private ended = false;
+  private tooLarge = false;
+  ended = false;
 
   push(chunk: Buffer): void {
     this.guardSize(chunk);
     for (let at = 0; at < chunk.length && !this.ended; ) at = this.feedFrom(chunk, at);
   }
 
+  result(): TarballLines {
+    return { lines: this.tooLarge ? {} : this.lines, tooLarge: this.tooLarge };
+  }
+
   private guardSize(chunk: Buffer): void {
     this.unpacked += chunk.length;
-    if (this.unpacked > MAX_UNPACKED_BYTES) throw new GithubRequestError(413, 'Repository too large to count lines');
+    if (this.unpacked <= MAX_UNPACKED_BYTES) return;
+    this.tooLarge = true;
+    this.ended = true;
   }
 
   private feedFrom(chunk: Buffer, at: number): number {
