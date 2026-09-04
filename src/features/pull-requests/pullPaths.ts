@@ -91,8 +91,8 @@ export function freshPreviewPath(owner: string, repo: string, number: number): s
   return `/api/github/preview-branch?${repoParams(owner, repo)}&number=${number}`;
 }
 
-export function previewForRefPath(owner: string, repo: string, ref: string): string {
-  return `/api/github/preview-branch?${repoParams(owner, repo)}&ref=${encodeURIComponent(ref)}`;
+export function pullPreviewsPath(owner: string, repo: string, number: number): string {
+  return `/api/github/pull-previews?${repoParams(owner, repo)}&number=${number}`;
 }
 
 export function pullRoute(owner: string, repo: string, number: number): string {
