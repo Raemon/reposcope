@@ -3,7 +3,7 @@
 import { Fragment, useLayoutEffect, useMemo, useRef, type CSSProperties, type ReactNode } from 'react';
 import { hunkHasEditableLines, type EditableBlock } from './editableBlocks';
 import { codeSegments, type DimmedSegment, type SegmentRole } from './codeSegments';
-import { collapsedSegments, foldLayout, type FoldLayout } from './foldDimming';
+import { collapsedSegments, expandedSegments, foldLayout, type FoldLayout } from './foldDimming';
 import { abbreviatedLength } from './keywordAbbreviations';
 import { collapsedPreview } from './collapsedPreview';
 import { diffEditModeOn } from './editModeStore';
@@ -295,7 +295,7 @@ function DiffLineView({
   const raw = codeSegments(cell.text, lineTokens, changed ? ranges : null);
   const layout = dim ? foldLayout(lineTokens) : null;
   const folded = layout !== null && foldsTail(line, collapsed, layout);
-  const segments = collapsedSegments(raw, layout, collapsed ? longestPrefix : Infinity);
+  const segments = collapsed ? collapsedSegments(raw, layout, longestPrefix) : expandedSegments(raw, layout);
   const fold = folded ? prefixStyle(longestPrefix) : null;
   const tones = rowTones(line);
   return (
