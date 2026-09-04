@@ -75,9 +75,9 @@ function FolderNotes({ left, skipped }: { left: number; skipped: number }) {
 function useFolderContents(items: ReadingItem[]) {
   const { texts, hold } = useHeldTexts();
   const paths = useMemo(() => items.filter(isFileItem).map((item) => item.path), [items]);
-  const shown = paths.slice(0, AT_ONCE);
-  const read = shown.filter((path) => !isImagePath(path));
-  const files = useMemo(() => readableFiles(paths.slice(0, AT_ONCE), texts), [paths, texts]);
+  const shown = useMemo(() => paths.slice(0, AT_ONCE), [paths]);
+  const read = useMemo(() => shown.filter((path) => !isImagePath(path)), [shown]);
+  const files = useMemo(() => readableFiles(shown, texts), [shown, texts]);
   const headings = useMemo(() => headingsBefore(items, new Set(files.map((file) => file.filename))), [items, files]);
   const waiting = read.filter((path) => !texts.has(path)).length;
   return { paths, shown, read, files, headings, waiting, hold };
