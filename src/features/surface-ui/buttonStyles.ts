@@ -9,8 +9,6 @@ export const CHOICE = `${BUTTON} ${CHOICE_SIZE}`;
 
 export const ACCENT_CHOICE = `${BUTTON_SHAPE} ${CHOICE_SIZE} text-accent hover:text-ink disabled:hover:text-accent`;
 
-export const SMALL_CHOICE = `${BUTTON} px-1.5 py-[2px] text-[9px]`;
-
 export const TEXT_ACTION = 'rounded text-ink-dim hover:bg-btn-hover hover:text-ink';
 
 const ICON_BUTTON = 'flex items-center justify-center rounded';

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { CursorModel } from './cursorTypes';
-import { SMALL_CHOICE } from '@/features/surface-ui/buttonStyles';
+import { SmallChoiceButton } from '@/features/surface-ui/SmallChoiceButton';
 import { FIELD_FOCUS, TEXT_FIELD } from '@/features/surface-ui/fieldStyles';
 
 export function ChatComposer({
@@ -40,9 +40,9 @@ export function ChatComposer({
       <div className="mt-0.5 flex items-center gap-1">
         <ModelSelect models={models} model={model} onModel={onModel} />
         <span className="ml-auto shrink-0 text-[9px] tracking-[0.14em] text-ink-dim">⌘↩</span>
-        <button type="button" onClick={send} disabled={disabled || !draft.trim()} className={SMALL_CHOICE}>
+        <SmallChoiceButton type="button" onClick={send} disabled={disabled || !draft.trim()}>
           send
-        </button>
+        </SmallChoiceButton>
       </div>
     </div>
   );

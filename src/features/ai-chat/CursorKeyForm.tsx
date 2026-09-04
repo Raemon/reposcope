@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { writeCursorKey } from './cursorKeyStore';
-import { SMALL_CHOICE } from '@/features/surface-ui/buttonStyles';
+import { SmallChoiceButton } from '@/features/surface-ui/SmallChoiceButton';
 import { MONO_FIELD } from '@/features/surface-ui/fieldStyles';
 
 export function CursorKeyForm({ error }: { error: string | null }) {
@@ -36,9 +36,9 @@ export function CursorKeyForm({ error }: { error: string | null }) {
         >
           create a key
         </a>
-        <button type="submit" disabled={!draft.trim()} className={`${SMALL_CHOICE} ml-auto`}>
+        <SmallChoiceButton type="submit" disabled={!draft.trim()} className="ml-auto">
           save key
-        </button>
+        </SmallChoiceButton>
       </div>
     </form>
   );

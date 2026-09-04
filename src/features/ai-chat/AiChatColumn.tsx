@@ -12,10 +12,10 @@ import { useRegisterColumn } from '@/features/pull-requests/columnNav';
 import { usePaneMode } from '@/features/pull-requests/centralLayout';
 import { useCollapsibleColumn, ResizableColumn } from '@/features/pull-requests/ResizableColumn';
 import { useStickyColumn } from '@/features/pull-requests/stickyColumns';
-import { SMALL_CHOICE } from '@/features/surface-ui/buttonStyles';
+import { SmallChoiceButton, SmallChoiceLink } from '@/features/surface-ui/SmallChoiceButton';
 
 const ICON = '✳';
-const ACTION = `${SMALL_CHOICE} mr-1 shrink-0`;
+const ACTION = 'mr-1 shrink-0';
 
 export function AiChatColumn({ owner, repo, subject, headRef }: { owner: string; repo: string; subject: string; headRef: string | null }) {
   const [size, setSize] = useStickyColumn('ai-chat');
@@ -64,16 +64,16 @@ function HeaderActions({ session, onRestart }: { session: ChatSession; onRestart
   return (
     <>
       {session.agentUrl !== null && (
-        <a href={session.agentUrl} target="_blank" rel="noopener noreferrer" className={`${ACTION} inline-block`}>
+        <SmallChoiceLink href={session.agentUrl} target="_blank" rel="noopener noreferrer" className={`${ACTION} inline-block`}>
           cursor ↗
-        </a>
+        </SmallChoiceLink>
       )}
-      <button type="button" onClick={onRestart} className={ACTION}>
+      <SmallChoiceButton type="button" onClick={onRestart} className={ACTION}>
         new
-      </button>
-      <button type="button" onClick={() => writeCursorKey(null)} className={ACTION}>
+      </SmallChoiceButton>
+      <SmallChoiceButton type="button" onClick={() => writeCursorKey(null)} className={ACTION}>
         key
-      </button>
+      </SmallChoiceButton>
     </>
   );
 }
