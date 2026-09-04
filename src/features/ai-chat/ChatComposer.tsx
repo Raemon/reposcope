@@ -40,7 +40,7 @@ export function ChatComposer({
       <div className="mt-0.5 flex items-center gap-1">
         <ModelSelect models={models} model={model} onModel={onModel} />
         <span className="ml-auto shrink-0 text-[9px] tracking-[0.14em] text-ink-dim">⌘↩</span>
-        <SmallChoiceButton type="button" onClick={send} disabled={disabled || !draft.trim()}>
+        <SmallChoiceButton onClick={send} disabled={disabled || !draft.trim()}>
           send
         </SmallChoiceButton>
       </div>

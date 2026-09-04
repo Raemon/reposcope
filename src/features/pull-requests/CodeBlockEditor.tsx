@@ -66,7 +66,7 @@ export function CodeBlockEditor({
       </div>
       <div className="sticky bottom-0 z-10 mt-auto flex h-7 items-center justify-end px-1">
         <HoverCardTrigger label="Save and commit (⌘⏎)" focusable={false} tooltipStyle>
-          <SmallChoiceButton type="button" onClick={onSave} disabled={saving} className="shadow-card">
+          <SmallChoiceButton onClick={onSave} disabled={saving} className="shadow-card">
             {saving ? 'Saving…' : 'Save'}
           </SmallChoiceButton>
         </HoverCardTrigger>

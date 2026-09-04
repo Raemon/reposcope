@@ -15,7 +15,7 @@ import { useStickyColumn } from '@/features/pull-requests/stickyColumns';
 import { SmallChoiceButton, SmallChoiceLink } from '@/features/surface-ui/SmallChoiceButton';
 
 const ICON = '✳';
-const ACTION = 'mr-1 shrink-0';
+const HEADER_BTN = 'mr-1 shrink-0';
 
 export function AiChatColumn({ owner, repo, subject, headRef }: { owner: string; repo: string; subject: string; headRef: string | null }) {
   const [size, setSize] = useStickyColumn('ai-chat');
@@ -64,14 +64,14 @@ function HeaderActions({ session, onRestart }: { session: ChatSession; onRestart
   return (
     <>
       {session.agentUrl !== null && (
-        <SmallChoiceLink href={session.agentUrl} target="_blank" rel="noopener noreferrer" className={`${ACTION} inline-block`}>
+        <SmallChoiceLink href={session.agentUrl} target="_blank" rel="noopener noreferrer" className={`${HEADER_BTN} inline-block`}>
           cursor ↗
         </SmallChoiceLink>
       )}
-      <SmallChoiceButton type="button" onClick={onRestart} className={ACTION}>
+      <SmallChoiceButton onClick={onRestart} className={HEADER_BTN}>
         new
       </SmallChoiceButton>
-      <SmallChoiceButton type="button" onClick={() => writeCursorKey(null)} className={ACTION}>
+      <SmallChoiceButton onClick={() => writeCursorKey(null)} className={HEADER_BTN}>
         key
       </SmallChoiceButton>
     </>

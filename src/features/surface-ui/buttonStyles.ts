@@ -3,9 +3,16 @@ const BUTTON_SHAPE =
 
 const CHOICE_SIZE = 'px-2 py-1 text-[10px]';
 
+const SMALL_CHOICE_SIZE = 'px-1.5 py-[2px] text-[9px]';
+
 export const BUTTON = `${BUTTON_SHAPE} text-ink-dim hover:text-ink disabled:hover:text-ink-dim`;
 
 export const CHOICE = `${BUTTON} ${CHOICE_SIZE}`;
+
+export const smallChoiceClass = (className?: string) => {
+  const base = `${BUTTON} ${SMALL_CHOICE_SIZE}`;
+  return className ? `${base} ${className}` : base;
+};
 
 export const ACCENT_CHOICE = `${BUTTON_SHAPE} ${CHOICE_SIZE} text-accent hover:text-ink disabled:hover:text-accent`;
 

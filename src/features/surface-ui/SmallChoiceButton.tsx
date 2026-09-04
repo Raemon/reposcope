@@ -1,32 +1,16 @@
 'use client';
 
-import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from 'react';
-import { BUTTON } from './buttonStyles';
-
-const CLASS = `${BUTTON} px-1.5 py-[2px] text-[9px]`;
-
-const joinClass = (className?: string) => (className ? `${CLASS} ${className}` : CLASS);
+import type { AnchorHTMLAttributes, ButtonHTMLAttributes } from 'react';
+import { smallChoiceClass } from './buttonStyles';
 
 export function SmallChoiceButton({
   className,
-  children,
+  type = 'button',
   ...props
-}: ButtonHTMLAttributes<HTMLButtonElement> & { children: ReactNode }) {
-  return (
-    <button {...props} className={joinClass(className)}>
-      {children}
-    </button>
-  );
+}: ButtonHTMLAttributes<HTMLButtonElement>) {
+  return <button type={type} {...props} className={smallChoiceClass(className)} />;
 }
 
-export function SmallChoiceLink({
-  className,
-  children,
-  ...props
-}: AnchorHTMLAttributes<HTMLAnchorElement> & { children: ReactNode }) {
-  return (
-    <a {...props} className={joinClass(className)}>
-      {children}
-    </a>
-  );
+export function SmallChoiceLink({ className, ...props }: AnchorHTMLAttributes<HTMLAnchorElement>) {
+  return <a {...props} className={smallChoiceClass(className)} />;
 }
