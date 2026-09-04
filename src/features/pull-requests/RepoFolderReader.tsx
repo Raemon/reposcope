@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { DiffPanes } from './DiffPanes';
-import type { ReadingItem } from './fileTreeNodes';
-import { headingsBefore, type FolderHeading } from './FolderHeading';
+import { headingsBefore, isFileItem, type FolderHeading, type ReadingItem } from './fileTreeNodes';
 import { isImagePath } from './imageFiles';
 import { fileTextPath } from './pullPaths';
 import type { ChangedFile, FileText } from './pullRequests';
@@ -26,13 +25,7 @@ export function RepoFolderReader({
   refName: string;
   items: ReadingItem[];
 }) {
-  const paths = useMemo(() => items.flatMap((item) => (item.kind === 'file' ? [item.path] : [])), [items]);
-  const shown = useMemo(() => paths.slice(0, AT_ONCE), [paths]);
-  const read = useMemo(() => shown.filter((path) => !isImagePath(path)), [shown]);
-  const { texts, hold } = useHeldTexts();
-  const files = useMemo(() => readableFiles(shown, texts), [shown, texts]);
-  const headings = useMemo(() => headingsBefore(items, new Set(files.map((file) => file.filename))), [items, files]);
-  const waiting = read.filter((path) => !texts.has(path)).length;
+  const { paths, shown, read, files, headings, waiting, hold } = useFolderContents(items);
 
   if (paths.length === 0) return <PaneStatusLine tone="dim" className="flex-1">No files in this folder.</PaneStatusLine>;
   return (
@@ -77,6 +70,17 @@ function FolderNotes({ left, skipped }: { left: number; skipped: number }) {
       {skipped > 0 && <PaneStatusLine tone="dim" className="shrink-0">{skipped} files left out — too large to show, or unreadable.</PaneStatusLine>}
     </>
   );
+}
+
+function useFolderContents(items: ReadingItem[]) {
+  const { texts, hold } = useHeldTexts();
+  const paths = useMemo(() => items.filter(isFileItem).map((item) => item.path), [items]);
+  const shown = paths.slice(0, AT_ONCE);
+  const read = shown.filter((path) => !isImagePath(path));
+  const files = useMemo(() => readableFiles(paths.slice(0, AT_ONCE), texts), [paths, texts]);
+  const headings = useMemo(() => headingsBefore(items, new Set(files.map((file) => file.filename))), [items, files]);
+  const waiting = read.filter((path) => !texts.has(path)).length;
+  return { paths, shown, read, files, headings, waiting, hold };
 }
 
 function useHeldTexts() {

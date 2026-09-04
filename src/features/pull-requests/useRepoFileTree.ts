@@ -46,7 +46,7 @@ export function useRepoFileTree({
   const isOpen = useCallback((path: string) => filtering || opened.has(path), [filtering, opened]);
   const rows = useMemo(() => visibleRows(nodes, isOpen), [nodes, isOpen]);
   const counts = repoFiles.lineCounts;
-  const lines = useMemo(() => (counts ? lineTotals(nodes, counts) : new Map<string, number>()), [nodes, counts]);
+  const lines = useMemo(() => (counts ? lineTotals(counts) : new Map<string, number>()), [counts]);
   const toggle = useCallback((path: string) => setOpened((held) => withToggled(held, path)), []);
 
   useEffect(() => {

@@ -22,7 +22,7 @@ export async function listRepoFiles(owner: string, name: string, fresh = false, 
   return { ref, truncated: tree.truncated, files: blobPaths(tree) };
 }
 
-function encodePath(ref: string): string {
+export function encodePath(ref: string): string {
   return ref.split('/').map(encodeURIComponent).join('/');
 }
 

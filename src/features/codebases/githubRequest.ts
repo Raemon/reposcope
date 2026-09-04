@@ -12,12 +12,13 @@ export class GithubRequestError extends Error {
 
 const ACCEPT = 'application/vnd.github+json';
 const DEFAULT_FRESHNESS_MS = 30_000;
-const IMMUTABLE_PATTERNS = [/\/commits\/[0-9a-f]{7,40}$/];
+const IMMUTABLE_PATTERNS = [/\/commits\/[0-9a-f]{7,40}$/, /\/tarball\/[0-9a-f]{40}$/];
 const STALE_ON_STATUS = [403, 408, 429, 500, 502, 503, 504];
 
 const inFlight = new Map<string, Promise<CachedResponse>>();
 
 type Derive<T> = (body: Buffer) => T;
+type Derivation = { what: string; derive: Derive<string> };
 
 export async function githubJson<T>(url: string, fresh = false): Promise<T> {
   return JSON.parse(decodeBody(await cachedResponse(url, ACCEPT, fresh)).toString('utf8')) as T;
@@ -28,9 +29,9 @@ export async function githubBytes(url: string, accept: string): Promise<Uint8Arr
 }
 
 // Caches only what `derive` makes of the body, so a tarball never sits in the cache.
-export async function githubDerived<T>(url: string, accept: string, derive: Derive<T>): Promise<T> {
-  const entry = await cachedResponse(url, accept, false, (body) => JSON.stringify(derive(body)));
-  return JSON.parse(decodeBody(entry).toString('utf8')) as T;
+export async function githubDerived<T>(url: string, what: string, derive: Derive<T>): Promise<T> {
+  const stored = { what, derive: (body: Buffer) => JSON.stringify(derive(body)) };
+  return JSON.parse(decodeBody(await cachedResponse(url, ACCEPT, false, stored)).toString('utf8')) as T;
 }
 
 export async function githubSend<T>(url: string, method: string, body: unknown): Promise<T> {
@@ -77,15 +78,20 @@ async function cachedResponse(
   url: string,
   accept: string,
   fresh = false,
-  derive: Derive<string> | null = null,
+  derivation: Derivation | null = null,
 ): Promise<CachedResponse> {
   const scope = scopeOf(url);
-  const key = cacheKey(derive ? [githubTokenIdentity(), url, accept, 'derived'] : [githubTokenIdentity(), url, accept]);
+  const key = responseKey(url, accept, derivation);
   const held = await readCachedResponse(scope, key);
   if (held && !fresh && Date.now() - held.storedAt < freshnessOf(url)) return held;
   return shareInFlight(scope + key + (fresh ? ':fresh' : ''), () =>
-    revalidate(url, accept, scope, key, held, fresh, derive),
+    revalidate(url, accept, scope, key, held, fresh, derivation),
   );
+}
+
+function responseKey(url: string, accept: string, derivation: Derivation | null): string {
+  const base = [githubTokenIdentity(), url, accept];
+  return cacheKey(derivation ? [...base, `derived:${derivation.what}`] : base);
 }
 
 function shareInFlight(key: string, work: () => Promise<CachedResponse>): Promise<CachedResponse> {
@@ -103,16 +109,16 @@ async function revalidate(
   key: string,
   held: CachedResponse | null,
   fresh: boolean,
-  derive: Derive<string> | null,
+  derivation: Derivation | null,
 ): Promise<CachedResponse> {
   const tokenUsed = githubToken();
   const fallback = fresh ? null : held;
   const response = await fetch(url, { cache: 'no-store', headers: conditionalHeaders(accept, held, tokenUsed) }).catch(() => null);
   if (!response) return unreachable(url, fallback);
   if (response.status === 304 && held) return store(scope, key, { ...held, storedAt: Date.now() });
-  if (response.status === 401 && tokenUsed) return readAfterRejectedToken(url, accept, tokenUsed, response);
+  if (response.status === 401 && tokenUsed) return readAfterRejectedToken(url, accept, tokenUsed, response, derivation);
   if (!response.ok) return staleOrThrow(response, url, fallback);
-  return store(scope, key, await capture(response, derive));
+  return store(scope, key, await capture(response, derivation));
 }
 
 function unreachable(url: string, held: CachedResponse | null): CachedResponse {
@@ -130,11 +136,12 @@ async function readAfterRejectedToken(
   accept: string,
   tokenUsed: string,
   unauthorized: Response,
+  derivation: Derivation | null,
 ): Promise<CachedResponse> {
   rejectGithubToken(tokenUsed);
   if (githubToken() === tokenUsed) throw unauthorizedError(unauthorized, url);
   try {
-    return await cachedResponse(url, accept);
+    return await cachedResponse(url, accept, false, derivation);
   } catch (error) {
     throw remapUnauthorizedFallback(error, unauthorized, url);
   }
@@ -151,17 +158,22 @@ function remapUnauthorizedFallback(error: unknown, unauthorized: Response, url: 
   return error;
 }
 
-async function capture(response: Response, derive: Derive<string> | null): Promise<CachedResponse> {
+async function capture(response: Response, derivation: Derivation | null): Promise<CachedResponse> {
   const body = Buffer.from(await response.arrayBuffer());
-  const textual = derive !== null || /json|text|javascript/.test(response.headers.get('content-type') ?? '');
+  const storedAsText = derivation !== null || /json|text|javascript/.test(response.headers.get('content-type') ?? '');
   return {
     status: response.status,
     etag: response.headers.get('etag'),
     lastModified: response.headers.get('last-modified'),
     storedAt: Date.now(),
-    encoding: textual ? 'utf8' : 'base64',
-    body: derive ? derive(body) : textual ? body.toString('utf8') : body.toString('base64'),
+    encoding: storedAsText ? 'utf8' : 'base64',
+    body: storedBody(body, derivation, storedAsText),
   };
+}
+
+function storedBody(body: Buffer, derivation: Derivation | null, storedAsText: boolean): string {
+  if (derivation) return derivation.derive(body);
+  return body.toString(storedAsText ? 'utf8' : 'base64');
 }
 
 async function store(scope: string, key: string, entry: CachedResponse): Promise<CachedResponse> {
