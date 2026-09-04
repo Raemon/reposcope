@@ -23,6 +23,7 @@ import { ReviewThreadProvider, useReviewTarget } from './reviewThreadStore';
 import { useStickyColumn, useStickyOpen } from './stickyColumns';
 import { useFileDeletion } from './useFileDeletion';
 import { useRepoFileTree } from './useRepoFileTree';
+import { usePageScrollFirst } from './usePageScrollFirst';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 import { useCachedJson } from '@/features/sources/useCachedJson';
 import { usePollWhileVisible } from '@/features/sources/usePollWhileVisible';
@@ -156,6 +157,7 @@ function Workspace({
 
   const stacked = useCentralLayout().central;
   const showsDiff = useShowsColumn('diff');
+  const reviewRow = usePageScrollFirst(stacked && showsDiff);
   const showsDiscussion = useShowsColumn('discussion');
   const showsCommits = useShowsColumn('commits');
   const showsFiles = useShowsColumn('files');
@@ -212,7 +214,7 @@ function Workspace({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <CentralTabBar />
-      <div className={`flex min-h-0 flex-1 max-md:flex-col max-md:overflow-y-auto ${stacked ? 'flex-col' : ''}`}>
+      <div className={`flex min-h-0 flex-1 max-md:flex-col max-md:overflow-y-auto ${stacked ? 'flex-col overflow-y-auto' : ''}`}>
         {listColumn}
         {discussion !== null && (
           <ResizableColumn
@@ -227,7 +229,7 @@ function Workspace({
           </ResizableColumn>
         )}
         {showsDiff && (
-          <div className="flex min-h-0 min-w-0 flex-1 max-md:flex-none max-md:flex-col">
+          <div ref={reviewRow} className={stacked ? STACKED_ROW : COLUMNS_ROW}>
             <ResizableColumn
               navId="commits"
               icon="◆"
@@ -310,6 +312,9 @@ function Workspace({
     </div>
   );
 }
+
+const COLUMNS_ROW = 'flex min-h-0 min-w-0 flex-1 max-md:flex-none max-md:flex-col';
+const STACKED_ROW = 'flex h-full min-w-0 shrink-0 max-md:h-auto max-md:flex-col';
 
 const DISCUSSION_TOKENS: PreviewToken[] = [{ key: 'discussion', label: '❝', title: 'discussion' }];
 
