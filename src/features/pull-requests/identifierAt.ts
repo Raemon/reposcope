@@ -1,4 +1,5 @@
 const WORD_CHAR = /[A-Za-z0-9_$]/;
+const WORD_RUN = /[A-Za-z0-9_$]+/g;
 
 export const NON_SYMBOL_WORDS = new Set([
   'const', 'let', 'var', 'function', 'class', 'interface', 'type', 'enum', 'namespace', 'module',
@@ -17,13 +18,29 @@ export interface ClickedIdentifier {
   column: number;
 }
 
-export function identifierAtPoint(event: { clientX: number; clientY: number }, code: HTMLElement): ClickedIdentifier | null {
+export interface PointedIdentifier extends ClickedIdentifier {
+  rect: DOMRect;
+}
+
+export function identifierAtPoint(event: { clientX: number; clientY: number }, code: HTMLElement): PointedIdentifier | null {
   const selection = window.getSelection();
   if (selection && !selection.isCollapsed) return null;
   const caret = caretAt(event.clientX, event.clientY);
   if (!caret || !code.contains(caret.node)) return null;
   const offset = offsetWithin(code, caret);
-  return offset === null ? null : identifierAround(code.textContent ?? '', offset);
+  const found = offset === null ? null : identifierAround(code.textContent ?? '', offset);
+  if (!found) return null;
+  const rect = wordRect(code, found.column, found.column + found.word.length);
+  return { ...found, rect };
+}
+
+export function identifiersIn(text: string): ClickedIdentifier[] {
+  const found: ClickedIdentifier[] = [];
+  for (const match of text.matchAll(WORD_RUN)) {
+    const identifier = asIdentifier(match[0], match.index);
+    if (identifier) found.push(identifier);
+  }
+  return found;
 }
 
 function identifierAround(text: string, offset: number): ClickedIdentifier | null {
@@ -54,11 +71,34 @@ function caretAt(x: number, y: number): Caret | null {
 }
 
 function offsetWithin(code: HTMLElement, caret: Caret): number | null {
-  const walker = document.createTreeWalker(code, NodeFilter.SHOW_TEXT);
-  let offset = 0;
-  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-    if (node === caret.node) return offset + caret.offset;
-    offset += node.textContent?.length ?? 0;
-  }
+  for (const span of textSpans(code)) if (span.node === caret.node) return span.from + caret.offset;
   return null;
+}
+
+function wordRect(code: HTMLElement, start: number, end: number): DOMRect {
+  const range = document.createRange();
+  for (const span of textSpans(code)) {
+    if (start >= span.from && start < span.to) range.setStart(span.node, start - span.from);
+    if (end > span.from && end <= span.to) {
+      range.setEnd(span.node, end - span.from);
+      break;
+    }
+  }
+  return range.getBoundingClientRect();
+}
+
+interface TextSpan {
+  node: Node;
+  from: number;
+  to: number;
+}
+
+function* textSpans(code: HTMLElement): Generator<TextSpan> {
+  const walker = document.createTreeWalker(code, NodeFilter.SHOW_TEXT);
+  let from = 0;
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const to = from + (node.textContent?.length ?? 0);
+    yield { node, from, to };
+    from = to;
+  }
 }

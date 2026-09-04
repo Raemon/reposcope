@@ -7,6 +7,7 @@ import type { PeekView } from './definitionContext';
 import {
   useDefinitionPeekActions,
   useDefinitionPeekShown,
+  type PeekAnchor,
   type PeekFrame,
   type PeekOrigin,
   type PeekSession,
@@ -14,7 +15,7 @@ import {
 import type { DefinitionSite } from './definitionResolver';
 import { unifiedLines, type DiffLine } from './diffLines';
 import { lineTone } from './DiffSide';
-import { originAtPress } from './useDefinitionClick';
+import { originAtPoint } from './useDefinitionPointer';
 import { useDiffTokens } from './useDiffSideHighlight';
 
 export function DefinitionPeek() {
@@ -27,13 +28,15 @@ function PeekPanel({ session }: { session: PeekSession }) {
   const actions = useDefinitionPeekActions();
   const panel = useRef<HTMLDivElement | null>(null);
   const frame = session.frames[session.frames.length - 1];
-  useDismiss(panel, actions?.close);
+  useDismiss(panel, actions?.close, session.pinned);
   if (!actions || !frame) return null;
   return (
     <div
       ref={panel}
       className="fixed z-50 flex w-[680px] max-w-[92vw] flex-col overflow-hidden rounded border border-panel-edge bg-panel shadow-card"
       style={panelPlacement(session.anchor)}
+      onMouseEnter={actions.hold}
+      onMouseLeave={actions.release}
     >
       <PeekHeader frame={frame} depth={session.frames.length} onBack={actions.back} onClose={actions.close} />
       {frame.sites.length > 1 && <CandidateRow frame={frame} onPick={(site) => actions.pick(site, frame)} />}
@@ -42,12 +45,12 @@ function PeekPanel({ session }: { session: PeekSession }) {
   );
 }
 
-function useDismiss(panel: React.RefObject<HTMLDivElement | null>, close: (() => void) | undefined) {
+function useDismiss(panel: React.RefObject<HTMLDivElement | null>, close: (() => void) | undefined, pinned: boolean) {
   useEffect(() => {
     if (!close) return;
     const onKey = (event: KeyboardEvent) => event.key === 'Escape' && close();
     const outside = (event: Event) => panel.current !== null && !panel.current.contains(event.target as Node);
-    const onPress = (event: PointerEvent) => outside(event) && close();
+    const onPress = (event: PointerEvent) => pinned && outside(event) && close();
     const onScroll = (event: Event) => outside(event) && close();
     document.addEventListener('keydown', onKey);
     document.addEventListener('pointerdown', onPress);
@@ -57,15 +60,21 @@ function useDismiss(panel: React.RefObject<HTMLDivElement | null>, close: (() =>
       document.removeEventListener('pointerdown', onPress);
       document.removeEventListener('scroll', onScroll, true);
     };
-  }, [panel, close]);
+  }, [panel, close, pinned]);
 }
 
-function panelPlacement(anchor: { x: number; y: number }): CSSProperties {
+const PANEL_GAP = 1;
+const MIN_BELOW = 280;
+const MAX_PANEL_HEIGHT = 420;
+const VIEWPORT_PAD = 16;
+
+function panelPlacement(anchor: PeekAnchor): CSSProperties {
   const width = Math.min(680, window.innerWidth * 0.92);
-  const left = Math.min(Math.max(8, anchor.x - 80), window.innerWidth - width - 8);
-  const below = window.innerHeight - anchor.y;
-  if (below > 280) return { left, top: anchor.y + 12, maxHeight: Math.min(420, below - 24) };
-  return { left, bottom: below + 12, maxHeight: Math.min(420, anchor.y - 24) };
+  const left = Math.min(Math.max(8, anchor.left - 12), window.innerWidth - width - 8);
+  const below = window.innerHeight - anchor.bottom;
+  const above = window.innerHeight - anchor.top;
+  if (below > MIN_BELOW) return { left, top: anchor.bottom + PANEL_GAP, maxHeight: Math.min(MAX_PANEL_HEIGHT, below - VIEWPORT_PAD) };
+  return { left, bottom: above + PANEL_GAP, maxHeight: Math.min(MAX_PANEL_HEIGHT, anchor.top - VIEWPORT_PAD) };
 }
 
 function PeekHeader({
@@ -145,8 +154,8 @@ function PeekCode({ view, path, onPush }: { view: PeekView; path: string; onPush
           tokens={line.cell ? tokens?.[line.side][line.row] ?? null : null}
           onPress={(event) => {
             if (event.detail !== 1) return;
-            const origin = originAtPress(view.sides, line, event);
-            if (origin) onPush(origin);
+            const pointed = originAtPoint(view.sides, line, event);
+            if (pointed) onPush(pointed.origin);
           }}
         />
       ))}
