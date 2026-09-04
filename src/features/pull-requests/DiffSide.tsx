@@ -3,7 +3,8 @@
 import { Fragment, useLayoutEffect, useMemo, useRef, type CSSProperties, type ReactNode } from 'react';
 import { hunkHasEditableLines, type EditableBlock } from './editableBlocks';
 import { codeSegments, type DimmedSegment, type SegmentRole } from './codeSegments';
-import { collapsedSegments, foldLayout, prefixChars, type FoldLayout } from './foldDimming';
+import { collapsedSegments, foldLayout, type FoldLayout } from './foldDimming';
+import { abbreviatedLength } from './keywordAbbreviations';
 import { collapsedPreview } from './collapsedPreview';
 import { diffEditModeOn } from './editModeStore';
 import { foldsCollapsed, useFoldCommand } from './foldModeStore';
@@ -37,9 +38,7 @@ const WRAPPED_CODE = 'diff-code min-w-0 flex-1 whitespace-pre-wrap [overflow-wra
 const FOLDED_TEXT = 'flex min-w-0 max-w-[calc(100cqw-100px)] overflow-hidden';
 const STRIP = `${ROW} bg-procgen px-1 text-left text-[9px] text-ink-dim`;
 const TRUNCATED_STRIP = `${STRIP} w-full italic hover:bg-btn-hover hover:text-ink`;
-const PREFIX_FONT = 11;
-const PREFIX_MIN_FONT = 8;
-const PREFIX_MIN_CHARS = 9;
+const PREFIX_FONT = 9;
 
 export interface HunkControl {
   expanded: boolean;
@@ -98,14 +97,14 @@ function longestFoldedPrefix(lines: DiffLine[], tokens: SideTokens | null, ancho
   for (const line of lines) {
     const layout = foldLayout(line.cell ? (tokens?.[line.side][line.row] ?? null) : null);
     const collapsed = anchors.get(line.row)?.collapsed ?? false;
-    if (layout && foldsTail(line, collapsed, layout)) longest = Math.max(longest, prefixChars(layout));
+    if (layout && foldsTail(line, collapsed, layout)) longest = Math.max(longest, abbreviatedLength(layout.prefix));
   }
   return longest;
 }
 
 // Only top-level, unchanged lines fold: a changed line's change is usually in its tail.
 function foldsTail(line: DiffLine, collapsed: boolean, layout: FoldLayout): boolean {
-  if (prefixChars(layout) === 0) return false;
+  if (layout.prefix.length === 0) return false;
   return collapsed || (line.kind !== 'change' && layout.indent === 0);
 }
 
@@ -274,7 +273,7 @@ function DiffLineView({
   const raw = codeSegments(cell.text, lineTokens, changed ? ranges : null);
   const layout = dim ? foldLayout(lineTokens) : null;
   const segments = collapsedSegments(raw, layout);
-  const fold = foldedPrefixStyle(line, collapsed, layout, longestPrefix);
+  const fold = layout && foldsTail(line, collapsed, layout) ? prefixStyle(longestPrefix) : null;
   const tones = rowTones(line, collapsed);
   return (
     <div
@@ -300,24 +299,22 @@ function DiffLineView({
   );
 }
 
-function foldedPrefixStyle(line: DiffLine, collapsed: boolean, layout: FoldLayout | null, longest: number): CSSProperties | null {
-  if (!layout || !foldsTail(line, collapsed, layout)) return null;
-  return prefixStyle(prefixChars(layout), longest);
+// One column for every abbreviated prefix in the pane, as wide as the longest.
+function prefixStyle(longest: number): CSSProperties {
+  return { fontSize: PREFIX_FONT, minWidth: `${longest}ch` };
 }
 
-// All folded prefixes in a pane share a width: long ones shrink, short ones pad.
-function prefixStyle(chars: number, longest: number): CSSProperties {
-  const width = Math.max(longest * PREFIX_MIN_FONT, PREFIX_MIN_CHARS * PREFIX_FONT);
-  const fontSize = Math.min(PREFIX_FONT, width / chars);
-  return { fontSize, minWidth: `${width / fontSize}ch` };
-}
-
-// A collapsed row keeps its ink but moves the change colour to the gutter, off the text.
+// A collapsed row fades its change colour so the text reads; the gutter keeps it at full strength.
 function rowTones(line: DiffLine, collapsed: boolean): { row: string; gutter: string } {
+  if (line.blank) return { row: '', gutter: '' };
   const changed = line.kind === 'change';
-  const background = lineBackground(line.side, changed, line.touched);
   const ink = lineInk(line.side, changed);
-  return collapsed ? { row: ink, gutter: background } : { row: `${background} ${ink}`, gutter: '' };
+  if (!collapsed || !changed) return { row: `${lineBackground(line.side, changed, line.touched)} ${ink}`, gutter: '' };
+  return { row: `${faintBackground(line.side)} ${ink}`, gutter: lineBackground(line.side, changed, false) };
+}
+
+function faintBackground(side: 'left' | 'right'): string {
+  return side === 'left' ? 'bg-del-bg/40' : 'bg-add-bg/40';
 }
 
 interface RoleGroup {
@@ -347,7 +344,7 @@ function CodeText({ segments, side, fold }: { segments: DimmedSegment[]; side: '
 
 function SegmentSpan({ segment, side }: { segment: DimmedSegment; side: 'left' | 'right' }) {
   return (
-    <span className={segment.emphasized ? emphasisTone(side) : undefined} style={{ ...segment.style, opacity: segment.opacity }}>
+    <span hidden={segment.elided} className={segment.emphasized ? emphasisTone(side) : undefined} style={{ ...segment.style, opacity: segment.opacity }}>
       {segment.content}
     </span>
   );

@@ -1,5 +1,6 @@
 import { DIM_INK_STYLE, type CodeSegment, type DimmedSegment, type SegmentRole } from './codeSegments';
 import type { ThemedToken } from './diffHighlight';
+import { abbreviated } from './keywordAbbreviations';
 
 const DIM_OPACITY = 0.45;
 const LEADING_SCOPES = /^(keyword|storage|punctuation|comment|meta\.brace)/;
@@ -12,17 +13,15 @@ interface NameSpan {
 export interface FoldLayout {
   indent: number;
   name: NameSpan;
+  prefix: string;
 }
 
 export function foldLayout(tokens: ThemedToken[] | null): FoldLayout | null {
   const name = tokens && declaredName(tokens);
   if (!name) return null;
   const text = tokens.map((token) => token.content).join('');
-  return { indent: text.length - text.trimStart().length, name };
-}
-
-export function prefixChars(layout: FoldLayout): number {
-  return layout.name.start - layout.indent;
+  const indent = text.length - text.trimStart().length;
+  return { indent, name, prefix: text.slice(indent, name.start) };
 }
 
 export function collapsedSegments(segments: CodeSegment[], layout: FoldLayout | null): DimmedSegment[] {
@@ -55,9 +54,9 @@ function innermostScope(token: ThemedToken): string {
 
 function roleSlices(segment: CodeSegment, start: number, layout: FoldLayout): DimmedSegment[] {
   const boundaries = [layout.indent, layout.name.start, layout.name.end];
-  return slicesAt(segment.content, start, boundaries).map(([from, to]) => {
-    const content = segment.content.slice(from, to);
-    return withRole(segment, content, roleAt(start + from, layout));
+  return slicesAt(segment.content, start, boundaries).flatMap(([from, to]) => {
+    const piece = withRole(segment, segment.content.slice(from, to), roleAt(start + from, layout));
+    return piece.role === 'prefix' ? abbreviated(piece) : [piece];
   });
 }
 
