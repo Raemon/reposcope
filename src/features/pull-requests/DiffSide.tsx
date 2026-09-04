@@ -34,6 +34,8 @@ const CODE = 'diff-code whitespace-pre pr-2 text-[11px]';
 const WRAPPED_CODE = 'diff-code min-w-0 flex-1 whitespace-pre-wrap [overflow-wrap:break-word] [tab-size:8] pr-2 text-[11px]';
 // 150px keeps the fold badge clear of the ellipsis; 100cqw is the visible column width.
 const FOLDED_TEXT = 'flex min-w-0 max-w-[calc(100cqw-150px)] overflow-hidden';
+const STRIP = `${ROW} bg-procgen px-1 text-left text-[9px] text-ink-dim`;
+const TRUNCATED_STRIP = `${STRIP} w-full italic hover:bg-btn-hover hover:text-ink`;
 
 export interface HunkControl {
   expanded: boolean;
@@ -58,6 +60,7 @@ export interface SideProps {
   wrap: boolean;
   heights: RowHeights;
   onMeasured: (heights: RowHeights) => void;
+  onUntruncate?: (run: number) => void;
 }
 
 export function DiffSide(props: SideProps) {
@@ -125,6 +128,7 @@ function DiffLines({
   onCodePress,
   wrap,
   heights,
+  onUntruncate,
 }: SideProps & { from: number; to: number }) {
   const dim = foldsCollapsed(useFoldCommand().mode);
   if (from >= to) return null;
@@ -153,6 +157,7 @@ function DiffLines({
                 editable={editable}
                 onEdit={editStarter(rows, line.row, onEditBlock)}
                 onCodePress={onCodePress}
+                onUntruncate={onUntruncate}
               />
               {spacerLine === index && <div style={{ height: spacer?.height }} />}
             </Fragment>
@@ -181,6 +186,7 @@ function previewFor(rows: DiffRow[], line: DiffLine, anchor: CollapseAnchor | nu
 }
 
 function anchorOf(line: DiffLine, anchors: Map<number, CollapseAnchor>, rowsWithRightLine: Set<number>): CollapseAnchor | null {
+  if (line.kind === 'truncated') return null;
   if (line.side === 'left' && rowsWithRightLine.has(line.row)) return null;
   return anchors.get(line.row) ?? null;
 }
@@ -207,6 +213,7 @@ function DiffLineView({
   editable,
   onEdit,
   onCodePress,
+  onUntruncate,
 }: {
   line: DiffLine;
   labels: boolean;
@@ -222,8 +229,12 @@ function DiffLineView({
   editable?: boolean;
   onEdit?: () => void;
   onCodePress?: CodePress;
+  onUntruncate?: (run: number) => void;
 }) {
   const { cell, side } = line;
+  if (line.kind === 'truncated') {
+    return <TruncatedStrip count={line.truncated} onExpand={() => onUntruncate?.(line.row)} />;
+  }
   if (line.kind === 'hunk') {
     return <HunkLine label={labels ? line.label : ''} expand={expand} onEdit={editable && side === 'right' ? onEdit : undefined} />;
   }
@@ -286,6 +297,15 @@ function hangingIndentStyle(text: string): { paddingLeft: string; textIndent: st
 
 function opensEditor(clickCount: number): boolean {
   return clickCount >= 3 || (diffEditModeOn() && !window.getSelection()?.toString());
+}
+
+function TruncatedStrip({ count, onExpand }: { count: number; onExpand: () => void }) {
+  return (
+    <SelectableRow onActivate={onExpand} expanded={false} className={TRUNCATED_STRIP}>
+      <span aria-hidden className="text-[11px]">▸</span>
+      <span>truncated {plural(count, 'line')}</span>
+    </SelectableRow>
+  );
 }
 
 function FoldBadge({ anchor }: { anchor: CollapseAnchor }) {
@@ -361,7 +381,7 @@ function HunkLine({ label, expand, onEdit }: { label: string; expand: HunkContro
       )}
     </>
   );
-  const line = `${ROW} w-full bg-procgen px-1 text-left text-[9px] text-ink-dim`;
+  const line = `${STRIP} w-full`;
   if (!expand.onToggle) {
     return (
       <div className={line}>
@@ -372,7 +392,7 @@ function HunkLine({ label, expand, onEdit }: { label: string; expand: HunkContro
   }
   return (
     <div className={`${ROW} w-full bg-procgen text-[9px] text-ink-dim`}>
-      <SelectableRow onActivate={expand.onToggle} expanded={expand.expanded} className={`${ROW} min-w-0 flex-1 bg-procgen px-1 text-left text-[9px] text-ink-dim hover:bg-btn-hover`}>
+      <SelectableRow onActivate={expand.onToggle} expanded={expand.expanded} className={`${STRIP} min-w-0 flex-1 hover:bg-btn-hover`}>
         {body}
       </SelectableRow>
       {edit}
