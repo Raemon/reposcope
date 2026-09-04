@@ -4,10 +4,18 @@ import { abbreviated, wordsToClip } from './keywordAbbreviations';
 
 const DIM_OPACITY = 0.45;
 const LEADING_SCOPES = /^(keyword|storage|punctuation|comment|meta\.brace)/;
+const KEYWORD_SCOPES = /^(keyword|storage)/;
 
 interface NameSpan {
   start: number;
   end: number;
+}
+
+type Explanation = NonNullable<ThemedToken['explanation']>[number];
+
+interface GrammarPiece {
+  content: string;
+  scope: string;
 }
 
 export interface FoldLayout {
@@ -17,11 +25,37 @@ export interface FoldLayout {
 }
 
 export function foldLayout(tokens: ThemedToken[] | null): FoldLayout | null {
-  const name = tokens && declaredName(tokens);
+  const pieces = tokens && grammarPieces(tokens);
+  const name = pieces && declaredName(pieces);
   if (!name) return null;
-  const text = tokens.map((token) => token.content).join('');
+  const text = pieces.map((piece) => piece.content).join('');
   const indent = text.length - text.trimStart().length;
   return { indent, name, prefix: text.slice(indent, name.start) };
+}
+
+// Same-coloured grammar pieces merge into one token; theme-split halves share one explanation.
+function grammarPieces(tokens: ThemedToken[]): GrammarPiece[] {
+  const pieces: GrammarPiece[] = [];
+  let shared: Explanation[] | undefined;
+  let consumed = 0;
+  for (const token of tokens) {
+    if (token.explanation !== shared) [shared, consumed] = [token.explanation, 0];
+    const own = shared ? sliceOf(shared, consumed, token.content.length) : [{ content: token.content, scope: '' }];
+    pieces.push(...own);
+    consumed += token.content.length;
+  }
+  return pieces;
+}
+
+function sliceOf(explanation: Explanation[], from: number, length: number): GrammarPiece[] {
+  const pieces: GrammarPiece[] = [];
+  let at = 0;
+  for (const piece of explanation) {
+    const content = piece.content.slice(Math.max(from - at, 0), Math.max(from + length - at, 0));
+    if (content) pieces.push({ content, scope: piece.scopes[piece.scopes.length - 1]?.scopeName ?? '' });
+    at += piece.content.length;
+  }
+  return pieces;
 }
 
 // The prefix is clipped only when its full words overflow the pane's prefix column.
@@ -36,22 +70,24 @@ export function collapsedSegments(segments: CodeSegment[], layout: FoldLayout | 
   });
 }
 
-function declaredName(tokens: ThemedToken[]): NameSpan | null {
+// No keyword before the first word means no prefix (CSS selectors, YAML keys).
+function declaredName(pieces: GrammarPiece[]): NameSpan | null {
   let at = 0;
-  for (const token of tokens) {
-    if (namesTheBlock(token)) return { start: at, end: at + token.content.length };
-    at += token.content.length;
+  let keyworded = false;
+  for (const piece of pieces) {
+    if (namesTheBlock(piece)) return keyworded ? { start: at, end: at + piece.content.length } : null;
+    keyworded ||= isKeyword(piece);
+    at += piece.content.length;
   }
   return null;
 }
 
-function namesTheBlock(token: ThemedToken): boolean {
-  return /\w/.test(token.content) && !LEADING_SCOPES.test(innermostScope(token));
+function namesTheBlock({ content, scope }: GrammarPiece): boolean {
+  return /\w/.test(content) && !LEADING_SCOPES.test(scope);
 }
 
-function innermostScope(token: ThemedToken): string {
-  const scopes = token.explanation?.[0]?.scopes ?? [];
-  return scopes[scopes.length - 1]?.scopeName ?? '';
+function isKeyword({ content, scope }: GrammarPiece): boolean {
+  return /\w/.test(content) && KEYWORD_SCOPES.test(scope);
 }
 
 function roleSlices(segment: CodeSegment, start: number, layout: FoldLayout, clip: ReadonlySet<string>): DimmedSegment[] {
