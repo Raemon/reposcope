@@ -5,22 +5,29 @@ import { useColumnNav } from './columnNav';
 import type { ColumnId } from './navColumn';
 import { useViewMode } from './viewModeStore';
 
-export type CentralTab = 'pulls' | 'discussion' | 'commits' | 'files' | 'ai-chat';
+export type CentralTab = 'pulls' | 'review' | 'ai-chat';
+
+export type PaneFrame = 'pane' | 'preface';
+
+export type PaneMode = 'hidden' | 'column' | PaneFrame;
 
 interface TabEntry {
   tab: CentralTab;
   label: string;
-  columns: [ColumnId, ...ColumnId[]];
-  centered: boolean;
+  columns: Partial<Record<ColumnId, PaneMode>>;
+  focus: ColumnId;
 }
 
-const PULLS_TAB: TabEntry = { tab: 'pulls', label: 'pull requests', columns: ['pulls'], centered: true };
+const PULLS_TAB: TabEntry = { tab: 'pulls', label: 'pull requests', columns: { pulls: 'pane' }, focus: 'pulls' };
 
 const SUBJECT_TABS: TabEntry[] = [
-  { tab: 'discussion', label: 'discussion', columns: ['discussion'], centered: true },
-  { tab: 'commits', label: 'commits', columns: ['commits', 'files', 'diff'], centered: false },
-  { tab: 'files', label: 'files & diff', columns: ['files', 'diff'], centered: false },
-  { tab: 'ai-chat', label: 'ai chat', columns: ['ai-chat'], centered: true },
+  {
+    tab: 'review',
+    label: 'review',
+    columns: { discussion: 'preface', commits: 'column', files: 'column', diff: 'column' },
+    focus: 'files',
+  },
+  { tab: 'ai-chat', label: 'ai chat', columns: { 'ai-chat': 'pane' }, focus: 'ai-chat' },
 ];
 
 const ENTRY_OF_TAB = new Map<CentralTab, TabEntry>([PULLS_TAB, ...SUBJECT_TABS].map((entry) => [entry.tab, entry]));
@@ -36,10 +43,10 @@ interface CentralValue {
   setTab: (tab: CentralTab) => void;
 }
 
-const CentralContext = createContext<CentralValue>({ central: false, tab: 'files', setTab: () => {} });
+const CentralContext = createContext<CentralValue>({ central: false, tab: 'review', setTab: () => {} });
 
 export function CentralLayoutProvider({ children }: { children: ReactNode }) {
-  const [tab, setTab] = useState<CentralTab>('files');
+  const [tab, setTab] = useState<CentralTab>('review');
   const central = useViewMode() === 'central';
   return <CentralContext.Provider value={{ central, tab, setTab }}>{children}</CentralContext.Provider>;
 }
@@ -52,26 +59,16 @@ function entryOf(tab: CentralTab): TabEntry {
   return ENTRY_OF_TAB.get(tab) ?? PULLS_TAB;
 }
 
-export function useShowsColumn(id: ColumnId): boolean {
-  const { central, tab } = useCentralLayout();
-  return !central || entryOf(tab).columns.includes(id);
-}
-
-export type PaneMode = 'hidden' | 'column' | 'pane';
-
 export function usePaneMode(id: ColumnId): PaneMode {
   const { central, tab } = useCentralLayout();
-  const shown = useShowsColumn(id);
-  if (!shown) return 'hidden';
-  return central && entryOf(tab).centered ? 'pane' : 'column';
+  return central ? entryOf(tab).columns[id] ?? 'hidden' : 'column';
 }
 
-// Central tabs pick which columns to show, so a column left collapsed in the column view must not come up empty here.
-export function useForcedOpen(): boolean {
-  return useCentralLayout().central;
+export function useShowsColumn(id: ColumnId): boolean {
+  return usePaneMode(id) !== 'hidden';
 }
 
-export function CentralTabBar({ hasDiscussion }: { hasDiscussion: boolean }) {
+export function CentralTabBar() {
   const { central } = useCentralLayout();
   if (!central) return null;
   return (
@@ -81,7 +78,7 @@ export function CentralTabBar({ hasDiscussion }: { hasDiscussion: boolean }) {
           <TabButton {...PULLS_TAB} />
         </div>
         <div className="mx-auto flex items-center gap-1">
-          {subjectTabs(hasDiscussion).map((entry) => (
+          {SUBJECT_TABS.map((entry) => (
             <TabButton key={entry.tab} {...entry} />
           ))}
         </div>
@@ -90,13 +87,9 @@ export function CentralTabBar({ hasDiscussion }: { hasDiscussion: boolean }) {
   );
 }
 
-function subjectTabs(hasDiscussion: boolean): TabEntry[] {
-  return hasDiscussion ? SUBJECT_TABS : SUBJECT_TABS.filter((entry) => entry.tab !== 'discussion');
-}
-
-function TabButton({ tab, label, columns }: TabEntry) {
+function TabButton({ tab, label, focus }: TabEntry) {
   const { tab: active, setTab } = useCentralLayout();
-  const nav = useColumnNav(columns[0]);
+  const nav = useColumnNav(focus);
   return (
     <button
       type="button"

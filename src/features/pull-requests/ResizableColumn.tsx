@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
-import { PANE_WIDTH, useForcedOpen, usePaneMode } from './centralLayout';
+import { PANE_WIDTH, usePaneMode, type PaneFrame } from './centralLayout';
 import { useColumnNav, type ColumnRow } from './columnNav';
 import { COLUMN_HEADER, type ColumnId } from './navColumn';
 import { ColumnBoundary } from '@/features/surface-ui/ColumnBoundary';
@@ -23,11 +23,11 @@ export interface ColumnSize {
   open: boolean;
 }
 
-export function useCollapsibleColumn(size: ColumnSize, onSize: (next: ColumnSize) => void) {
-  const forcedOpen = useForcedOpen();
+export function useCollapsibleColumn(id: ColumnId, size: ColumnSize, onSize: (next: ColumnSize) => void) {
+  const fixed = usePaneMode(id) !== 'column';
   return {
-    open: size.open || forcedOpen,
-    collapsible: !forcedOpen,
+    open: size.open || fixed,
+    collapsible: !fixed,
     setOpen: (open: boolean) => onSize({ ...size, open }),
   };
 }
@@ -177,17 +177,20 @@ interface ColumnProps {
 
 export function ResizableColumn(props: ColumnProps) {
   const pane = usePaneMode(props.navId);
-  const forcedOpen = useForcedOpen();
   if (pane === 'hidden') return null;
-  if (pane === 'pane') return <PaneColumn {...props} />;
-  if (!props.size.open && !forcedOpen) return <StripColumn {...props} />;
-  return <OpenColumn {...props} collapsible={!forcedOpen} />;
+  if (pane === 'column') return props.size.open ? <OpenColumn {...props} /> : <StripColumn {...props} />;
+  return <PaneColumn {...props} frame={pane} />;
 }
 
-function PaneColumn({ navId, title, icon, note, action, footer, children }: ColumnProps) {
+const PANE_FRAME: Record<PaneFrame, string> = {
+  pane: 'min-h-0 flex-1',
+  preface: 'max-h-[50vh] shrink-0 border-b border-panel-edge',
+};
+
+function PaneColumn({ navId, title, icon, note, action, footer, frame, children }: ColumnProps & { frame: PaneFrame }) {
   const nav = useColumnNav(navId);
   return (
-    <section onPointerDown={nav.focus} onPointerLeave={nav.clearHover} className="flex min-h-0 min-w-0 flex-1 flex-col bg-panel">
+    <section onPointerDown={nav.focus} onPointerLeave={nav.clearHover} className={`flex min-w-0 flex-col bg-panel ${PANE_FRAME[frame]}`}>
       <div className={`${PANE_WIDTH} shrink-0`}>
         <ColumnHeader navId={navId} title={title} icon={icon} note={note} action={action} onCollapse={null} />
       </div>
@@ -231,9 +234,8 @@ function OpenColumn({
   footer,
   tone = 'bg-panel',
   side = 'left',
-  collapsible,
   children,
-}: ColumnProps & { collapsible: boolean }) {
+}: ColumnProps) {
   const nav = useColumnNav(navId);
   const startDrag = useDragWidth(size, onSize);
   return (
@@ -249,7 +251,7 @@ function OpenColumn({
         icon={icon}
         note={note}
         action={action}
-        onCollapse={collapsible ? () => onSize({ ...size, open: false }) : null}
+        onCollapse={() => onSize({ ...size, open: false })}
       />
       <div ref={nav.bodyRef} className="max-h-[50vh] overflow-auto md:max-h-none md:min-h-0 md:flex-1">
         <ColumnBoundary>{children}</ColumnBoundary>
