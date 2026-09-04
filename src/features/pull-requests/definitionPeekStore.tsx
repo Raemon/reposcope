@@ -2,12 +2,11 @@
 
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
 import { definitionView, scanChangedFiles, type PeekView } from './definitionContext';
-import { refineSite, resolveDefinition, type DefinitionSite, type ResolverFiles } from './definitionResolver';
-import { fileTextPath, repoFilesAtRefPath } from './pullPaths';
-import type { ChangedFileSet, FileText } from './pullRequests';
-import type { RepoFileSet } from './repoFiles';
-import { apiJson } from '@/features/sources/apiClient';
-import { useGithubToken } from '@/features/sources/sourceStore';
+import { refineSite, resolveDefinition, type DefinitionSite, type Resolution, type ResolverFiles } from './definitionResolver';
+import type { ChangedFileSet } from './pullRequests';
+import { changedTypescriptPaths, useCodeIntel } from '@/features/code-intel/codeIntelStore';
+import { isTypescriptPath, type ReferenceSite } from '@/features/code-intel/codeIntelTypes';
+import type { CodeIntelClient } from '@/features/code-intel/tsClient';
 
 export interface PeekOrigin {
   path: string;
@@ -23,10 +22,11 @@ export interface PeekAnchor {
 }
 
 export interface PeekFrame {
-  word: string;
+  origin: PeekOrigin;
   site: DefinitionSite | null;
   sites: DefinitionSite[];
   view: PeekView | null;
+  references: ReferenceSite[] | null;
   note: string | null;
   loading: boolean;
 }
@@ -40,6 +40,9 @@ export interface PeekActions {
   open(origin: PeekOrigin, anchor: PeekAnchor): void;
   push(origin: PeekOrigin): void;
   pick(site: DefinitionSite, from: PeekFrame): void;
+  references(from: PeekFrame): void;
+  openReferences(origin: PeekOrigin, anchor: PeekAnchor): void;
+  jump(site: ReferenceSite, from: PeekFrame): void;
   back(): void;
   close(): void;
 }
@@ -60,57 +63,41 @@ export function useDefinitionPeekShown(): PeekShown | null {
   return useContext(PeekShownContext);
 }
 
-export function DefinitionPeekProvider({
-  owner,
-  repo,
-  fileSet,
-  children,
-}: {
-  owner: string;
-  repo: string;
-  fileSet: ChangedFileSet | null;
-  children: ReactNode;
-}) {
+export function DefinitionPeekProvider({ fileSet, children }: { fileSet: ChangedFileSet | null; children: ReactNode }) {
   const [session, setSession] = useState<PeekSession | null>(null);
   const generation = useRef(0);
   const fileSetRef = useRef(fileSet);
   fileSetRef.current = fileSet;
-  const files = useResolverFiles(owner, repo);
+  const { files, client } = useCodeIntel();
 
   const replaceTop = useCallback((frame: PeekFrame) => {
     setSession((held) => held && { ...held, frames: [...held.frames.slice(0, -1), frame] });
   }, []);
 
-  const showSite = useCallback(
-    async (site: DefinitionSite, sites: DefinitionSite[], word: string, wanted: number) => {
-      try {
-        const refined = site.rough ? await refineSite(site, word, files) : site;
-        const view = await definitionView(refined, fileSetRef.current, files.readFile);
-        if (wanted !== generation.current) return;
-        replaceTop({ word, site: refined, sites, view, note: view ? null : 'file unavailable', loading: false });
-      } catch (issue: unknown) {
-        if (wanted === generation.current) replaceTop(emptyFrame(word, describe(issue)));
-      }
+  const settle = useCallback(
+    async (origin: PeekOrigin, wanted: number, work: () => Promise<PeekFrame>) => {
+      const frame = await work().catch((issue: unknown) => emptyFrame(origin, describe(issue)));
+      if (wanted === generation.current) replaceTop(frame);
     },
-    [files, replaceTop],
+    [replaceTop],
+  );
+
+  const showSite = useCallback(
+    (site: DefinitionSite, sites: DefinitionSite[], origin: PeekOrigin, wanted: number) =>
+      settle(origin, wanted, () => siteFrame(site, sites, origin, files, fileSetRef.current)),
+    [files, settle],
   );
 
   const load = useCallback(
-    async (origin: PeekOrigin, wanted: number) => {
-      const found = await resolveDefinition(origin, files).catch(failedResolution);
-      const sites = withPatchFallback(found.sites, found.note, origin, fileSetRef.current);
-      if (wanted !== generation.current) return;
-      const first = sites[0];
-      if (!first) return replaceTop(emptyFrame(origin.word, found.note));
-      await showSite(first, sites, origin.word, wanted);
-    },
-    [files, replaceTop, showSite],
+    (origin: PeekOrigin, wanted: number) =>
+      settle(origin, wanted, () => firstSiteFrame(origin, client, files, fileSetRef.current)),
+    [client, files, settle],
   );
 
   const open = useCallback(
     (origin: PeekOrigin, anchor: PeekAnchor) => {
       const wanted = ++generation.current;
-      setSession({ anchor, frames: [loadingFrame(origin.word)] });
+      setSession({ anchor, frames: [loadingFrame(origin)] });
       void load(origin, wanted);
     },
     [load],
@@ -119,7 +106,7 @@ export function DefinitionPeekProvider({
   const push = useCallback(
     (origin: PeekOrigin) => {
       const wanted = ++generation.current;
-      setSession((held) => held && { ...held, frames: [...held.frames, loadingFrame(origin.word)] });
+      setSession((held) => held && { ...held, frames: [...held.frames, loadingFrame(origin)] });
       void load(origin, wanted);
     },
     [load],
@@ -129,7 +116,44 @@ export function DefinitionPeekProvider({
     (site: DefinitionSite, from: PeekFrame) => {
       const wanted = ++generation.current;
       setSession((held) => held && { ...held, frames: [...held.frames.slice(0, -1), { ...from, loading: true }] });
-      void showSite(site, from.sites, from.word, wanted);
+      void showSite(site, from.sites, from.origin, wanted);
+    },
+    [showSite],
+  );
+
+  const listReferences = useCallback(
+    (origin: PeekOrigin, wanted: number) =>
+      settle(origin, wanted, async () => {
+        const seeds = changedTypescriptPaths(fileSetRef.current, origin.ref);
+        return referencesFrame(origin, await client.references(origin, seeds));
+      }),
+    [client, settle],
+  );
+
+  const references = useCallback(
+    (from: PeekFrame) => {
+      const wanted = ++generation.current;
+      setSession((held) => held && { ...held, frames: [...held.frames, loadingFrame(from.origin)] });
+      void listReferences(from.origin, wanted);
+    },
+    [listReferences],
+  );
+
+  const openReferences = useCallback(
+    (origin: PeekOrigin, anchor: PeekAnchor) => {
+      const wanted = ++generation.current;
+      setSession({ anchor, frames: [loadingFrame(origin)] });
+      void listReferences(origin, wanted);
+    },
+    [listReferences],
+  );
+
+  const jump = useCallback(
+    (site: ReferenceSite, from: PeekFrame) => {
+      const wanted = ++generation.current;
+      const origin = { path: site.path, ref: site.ref, line: site.line, column: site.column, word: from.origin.word };
+      setSession((held) => held && { ...held, frames: [...held.frames, loadingFrame(origin)] });
+      void showSite(contextSite(site), [contextSite(site)], origin, wanted);
     },
     [showSite],
   );
@@ -144,7 +168,10 @@ export function DefinitionPeekProvider({
     setSession(null);
   }, []);
 
-  const actions = useMemo(() => ({ open, push, pick, back, close }), [open, push, pick, back, close]);
+  const actions = useMemo(
+    () => ({ open, push, pick, references, openReferences, jump, back, close }),
+    [open, push, pick, references, openReferences, jump, back, close],
+  );
   const shown = useMemo(() => ({ session, fileSet }), [session, fileSet]);
   return (
     <PeekActionsContext value={actions}>
@@ -153,12 +180,65 @@ export function DefinitionPeekProvider({
   );
 }
 
-function loadingFrame(word: string): PeekFrame {
-  return { word, site: null, sites: [], view: null, note: null, loading: true };
+function loadingFrame(origin: PeekOrigin): PeekFrame {
+  return { origin, site: null, sites: [], view: null, references: null, note: null, loading: true };
 }
 
-function emptyFrame(word: string, note: string | null): PeekFrame {
-  return { word, site: null, sites: [], view: null, note: note ?? `no definition found for ${word}`, loading: false };
+function referencesFrame(origin: PeekOrigin, references: ReferenceSite[]): PeekFrame {
+  const note = references.length === 0 ? `no references found for ${origin.word}` : null;
+  return { ...loadingFrame(origin), references, note, loading: false };
+}
+
+const REFERENCE_CONTEXT = { before: 6, after: 8 };
+
+function contextSite(site: ReferenceSite): DefinitionSite {
+  const startLine = Math.max(1, site.line - REFERENCE_CONTEXT.before);
+  return { path: site.path, ref: site.ref, nameLine: site.line, startLine, endLine: site.line + REFERENCE_CONTEXT.after };
+}
+
+function emptyFrame(origin: PeekOrigin, note: string | null): PeekFrame {
+  return { ...loadingFrame(origin), note: note ?? `no definition found for ${origin.word}`, loading: false };
+}
+
+async function siteFrame(
+  site: DefinitionSite,
+  sites: DefinitionSite[],
+  origin: PeekOrigin,
+  files: ResolverFiles,
+  fileSet: ChangedFileSet | null,
+): Promise<PeekFrame> {
+  const refined = site.rough ? await refineSite(site, origin.word, files) : site;
+  const view = await definitionView(refined, fileSet, files.readFile);
+  return { ...loadingFrame(origin), site: refined, sites, view, note: view ? null : 'file unavailable', loading: false };
+}
+
+async function firstSiteFrame(
+  origin: PeekOrigin,
+  client: CodeIntelClient,
+  files: ResolverFiles,
+  fileSet: ChangedFileSet | null,
+): Promise<PeekFrame> {
+  const found = await resolveAnywhere(origin, client, files);
+  const sites = withPatchFallback(found.sites, found.note, origin, fileSet);
+  const first = sites[0];
+  return first ? siteFrame(first, sites, origin, files, fileSet) : emptyFrame(origin, found.note);
+}
+
+async function resolveAnywhere(origin: PeekOrigin, client: CodeIntelClient, files: ResolverFiles): Promise<Resolution> {
+  const typed = isTypescriptPath(origin.path) ? await typedResolution(origin, client) : null;
+  if (typed && typed.sites.length > 0) return typed;
+  const heuristic = await resolveDefinition(origin, files).catch(failedResolution);
+  const heuristicAnswered = heuristic.sites.length > 0 || heuristic.note !== null;
+  return heuristicAnswered ? heuristic : typed ?? heuristic;
+}
+
+async function typedResolution(origin: PeekOrigin, client: CodeIntelClient): Promise<Resolution> {
+  try {
+    return { sites: await client.definition(origin), note: null };
+  } catch (issue: unknown) {
+    console.warn('typed definition failed, falling back to tree-sitter', issue);
+    return { sites: [], note: describe(issue) };
+  }
 }
 
 function describe(issue: unknown): string {
@@ -177,59 +257,4 @@ function withPatchFallback(
 ): DefinitionSite[] {
   if (sites.length > 0 || note !== null || !fileSet) return sites;
   return scanChangedFiles(fileSet, origin.word, origin.path);
-}
-
-interface RefListing {
-  names: Set<string>;
-  truncated: boolean;
-}
-
-function useResolverFiles(owner: string, repo: string): ResolverFiles {
-  const token = useGithubToken();
-  const tokenRef = useRef(token);
-  tokenRef.current = token;
-  const texts = useRef(new Map<string, Promise<string | null>>());
-  const listings = useRef(new Map<string, Promise<RefListing | null>>());
-  return useMemo(
-    () => makeResolverFiles(owner, repo, tokenRef, texts.current, listings.current),
-    [owner, repo],
-  );
-}
-
-function makeResolverFiles(
-  owner: string,
-  repo: string,
-  token: { current: string | null },
-  texts: Map<string, Promise<string | null>>,
-  listings: Map<string, Promise<RefListing | null>>,
-): ResolverFiles {
-  const readFile = (ref: string, path: string) =>
-    once(texts, `${owner}/${repo}\0${ref}\0${path}`, () =>
-      apiJson<FileText>(fileTextPath(owner, repo, ref, path), token.current).then((got) => got.text),
-    );
-  const listFiles = (ref: string) =>
-    once(listings, `${owner}/${repo}\0${ref}`, () =>
-      apiJson<RepoFileSet>(repoFilesAtRefPath(owner, repo, ref), token.current).then((got) => ({
-        names: new Set(got.files),
-        truncated: got.truncated,
-      })),
-    );
-  const hasFile = async (ref: string, path: string) => {
-    const listing = await listFiles(ref);
-    if (listing?.names.has(path)) return true;
-    if (listing && !listing.truncated) return false;
-    return (await readFile(ref, path)) !== null;
-  };
-  return { readFile, hasFile };
-}
-
-function once<T>(held: Map<string, Promise<T | null>>, key: string, work: () => Promise<T | null>): Promise<T | null> {
-  const running = held.get(key);
-  if (running) return running;
-  const started = work().catch(() => {
-    held.delete(key);
-    return null;
-  });
-  held.set(key, started);
-  return started;
 }

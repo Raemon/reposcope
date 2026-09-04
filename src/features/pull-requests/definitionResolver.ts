@@ -1,4 +1,5 @@
 import type { Node } from '@vscode/tree-sitter-wasm';
+import { dirOf, joinPath } from './relativePaths';
 import { lastLineOf, parseSource } from './treeSitterFolds';
 
 export interface DefinitionQuery {
@@ -23,9 +24,15 @@ export interface Resolution {
   note: string | null;
 }
 
+export interface FileListing {
+  files: string[];
+  truncated: boolean;
+}
+
 export interface ResolverFiles {
   readFile(ref: string, path: string): Promise<string | null>;
   hasFile(ref: string, path: string): Promise<boolean>;
+  listFiles(ref: string): Promise<FileListing | null>;
 }
 
 const MAX_EXPORT_HOPS = 4;
@@ -410,19 +417,6 @@ async function probeModule(base: string, ref: string, files: ResolverFiles): Pro
   return null;
 }
 
-function dirOf(path: string): string {
-  return path.split('/').slice(0, -1).join('/');
-}
-
-function joinPath(dir: string, spec: string): string {
-  const kept: string[] = [];
-  for (const part of [...dir.split('/'), ...spec.split('/')]) {
-    if (part === '' || part === '.') continue;
-    if (part === '..') kept.pop();
-    else kept.push(part);
-  }
-  return kept.join('/');
-}
 
 async function aliasTargets(spec: string, ref: string, files: ResolverFiles): Promise<string[]> {
   const out: string[] = [];

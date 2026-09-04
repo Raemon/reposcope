@@ -12,7 +12,7 @@ import type { ThemedToken } from './diffHighlight';
 import type { CharRange, IntralineRanges } from './intralineDiff';
 import type { DiffRow } from './splitDiff';
 import type { CollapseAnchor } from './useCodeCollapse';
-import type { CodePress } from './useDefinitionClick';
+import { keepSelectionOnShiftClick, type CodeHover, type CodePress } from './useDefinitionClick';
 import type { SideTokens } from './useDiffSideHighlight';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
@@ -50,6 +50,7 @@ export interface SideProps {
   editedRows?: EditableBlock | null;
   spacer?: { afterRow: number; height: number } | null;
   onCodePress?: CodePress;
+  onCodeHover?: CodeHover;
 }
 
 export function DiffSide(props: SideProps) {
@@ -84,6 +85,7 @@ function DiffLines({
   onEditBlock,
   spacer,
   onCodePress,
+  onCodeHover,
 }: SideProps & { from: number; to: number }) {
   const dim = foldsCollapsed(useFoldCommand().mode);
   if (from >= to) return null;
@@ -109,6 +111,7 @@ function DiffLines({
                 editable={editable}
                 onEdit={editStarter(rows, line.row, onEditBlock)}
                 onCodePress={onCodePress}
+                onCodeHover={onCodeHover}
               />
               {spacerLine === index && <div style={{ height: spacer?.height }} />}
             </Fragment>
@@ -160,6 +163,7 @@ function DiffLineView({
   editable,
   onEdit,
   onCodePress,
+  onCodeHover,
 }: {
   line: DiffLine;
   labels: boolean;
@@ -172,6 +176,7 @@ function DiffLineView({
   editable?: boolean;
   onEdit?: () => void;
   onCodePress?: CodePress;
+  onCodeHover?: CodeHover;
 }) {
   const { cell, side } = line;
   if (line.kind === 'hunk') {
@@ -193,6 +198,9 @@ function DiffLineView({
         <span
           className={folded ? `${CODE} min-w-0 overflow-hidden text-ellipsis` : CODE}
           onClick={onCodePress ? (event) => onCodePress(line, event) : undefined}
+          onMouseDown={onCodePress ? keepSelectionOnShiftClick : undefined}
+          onMouseMove={onCodeHover ? (event) => onCodeHover.move(line, event) : undefined}
+          onMouseLeave={onCodeHover?.leave}
         >
           {(dim ? dimAroundName(segments, lineTokens) : segments).map((segment, index) => (
             <span

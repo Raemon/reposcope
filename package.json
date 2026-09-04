@@ -12,9 +12,10 @@
     "start": "next start --port 2111",
     "typecheck": "tsc --noEmit",
     "check:caching": "node scripts/checkGithubCaching.mjs",
-    "predev": "node scripts/copyTreeSitterWasm.mjs",
-    "prebuild": "node scripts/copyTreeSitterWasm.mjs",
-    "check:folds": "tsx scripts/checkFolds.mjs"
+    "predev": "node scripts/copyTreeSitterWasm.mjs && node scripts/copyTypescriptLibs.mjs",
+    "prebuild": "node scripts/copyTreeSitterWasm.mjs && node scripts/copyTypescriptLibs.mjs",
+    "check:folds": "tsx scripts/checkFolds.mjs",
+    "test": "tsx --test 'src/**/*.test.ts'"
   },
   "dependencies": {
     "@tailwindcss/postcss": "4.3.3",
@@ -23,14 +24,14 @@
     "next": "16.3.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "shiki": "3.12.0"
+    "shiki": "3.12.0",
+    "typescript": "5.9.3"
   },
   "devDependencies": {
     "@types/node": "22.20.1",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.4",
     "tailwindcss": "4.3.3",
-    "tsx": "^4.23.12",
-    "typescript": "5.9.3"
+    "tsx": "^4.23.12"
   }
 }

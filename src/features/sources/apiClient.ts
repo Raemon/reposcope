@@ -63,6 +63,11 @@ async function readJson<T>(response: Response): Promise<T> {
   throw new ApiClientError(response.status, message);
 }
 
+export async function apiText(path: string): Promise<string | null> {
+  const response = await fetch(path);
+  return response.ok ? response.text() : null;
+}
+
 export async function apiKeyedJson<T>(path: string, headers: Record<string, string>): Promise<T> {
   return readJson<T>(await fetch(path, { headers }));
 }

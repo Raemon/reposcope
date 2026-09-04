@@ -241,7 +241,7 @@ function HoverCardPopper({
   );
 }
 
-function floatingTipPosition(tip: DOMRect, anchor: DOMRect, placement: TipPlacement): TipPosition {
+export function floatingTipPosition(tip: DOMRect, anchor: DOMRect, placement: TipPlacement): TipPosition {
   if (placement === 'below') {
     return {
       left: Math.max(VIEWPORT_MARGIN, Math.min(anchor.left, window.innerWidth - tip.width - VIEWPORT_MARGIN)),

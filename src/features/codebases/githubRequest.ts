@@ -12,7 +12,8 @@ export class GithubRequestError extends Error {
 
 const ACCEPT = 'application/vnd.github+json';
 const DEFAULT_FRESHNESS_MS = 30_000;
-const IMMUTABLE_PATTERNS = [/\/commits\/[0-9a-f]{7,40}$/];
+const IMMUTABLE_PATTERNS = [/\/commits\/[0-9a-f]{7,40}$/, /\/git\/trees\/[0-9a-f]{40}$/];
+const IMMUTABLE_URL_PATTERNS = [/\/contents\/[^?]*\?ref=[0-9a-f]{40}$/];
 const STALE_ON_STATUS = [403, 408, 429, 500, 502, 503, 504];
 
 const inFlight = new Map<string, Promise<CachedResponse>>();
@@ -157,9 +158,9 @@ function decodeBody(entry: CachedResponse): Buffer {
 }
 
 function freshnessOf(url: string): number {
-  return IMMUTABLE_PATTERNS.some((pattern) => pattern.test(pathOf(url)))
-    ? Number.POSITIVE_INFINITY
-    : DEFAULT_FRESHNESS_MS;
+  const immutable =
+    IMMUTABLE_PATTERNS.some((pattern) => pattern.test(pathOf(url))) || IMMUTABLE_URL_PATTERNS.some((pattern) => pattern.test(url));
+  return immutable ? Number.POSITIVE_INFINITY : DEFAULT_FRESHNESS_MS;
 }
 
 function scopeOf(url: string): string {

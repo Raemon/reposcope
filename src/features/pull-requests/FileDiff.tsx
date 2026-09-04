@@ -19,7 +19,7 @@ import { rowOf } from './commentAnchors';
 import { useFileThreads } from './reviewThreadStore';
 import { splitDiff, type DiffRow } from './splitDiff';
 import { useCodeCollapse } from './useCodeCollapse';
-import { useDefinitionClick } from './useDefinitionClick';
+import { useCodeHover, useDefinitionClick } from './useDefinitionClick';
 import { useDiffTokens, useIntralineEmphasis } from './useDiffSideHighlight';
 import { useHeightTransition } from './useHeightTransition';
 import { useHunkEdit, type HunkEdit, type HunkEditControls } from './useHunkEdit';
@@ -79,7 +79,8 @@ export function FileDiff({
   const growing = useHeightTransition(rows, collapse.hidden);
   const expand = expandControl(wholeFile, showingWholeFile, hunkEdit, setWantWholeFile);
   const onCodePress = useDefinitionClick(file, baseRef, headRef);
-  const shared = { rows, tokens, emphasis, expand, anchors: collapse.anchors, onCodePress };
+  const onCodeHover = useCodeHover(file, baseRef, headRef);
+  const shared = { rows, tokens, emphasis, expand, anchors: collapse.anchors, onCodePress, onCodeHover };
   const bounds = { hidden: collapse.hidden, stopAtBlankLines: showingWholeFile };
   const editing = {
     editable: pull !== null,
