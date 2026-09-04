@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { groupByFolder } from './fileTree';
+import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 
 export function FolderGroupedRows<T>({
   items,
@@ -27,8 +28,12 @@ export function FolderGroupedRows<T>({
 function FolderLabel({ folder }: { folder: string }) {
   if (!folder) return null;
   return (
-    <p dir="rtl" className="truncate px-1.5 py-[1px] text-left text-[10px] leading-4 text-ink-dim opacity-50">
-      <bdi dir="ltr">{folder}</bdi>
-    </p>
+    <div className="flex">
+      <HoverCardTrigger label={folder} className="min-w-0 flex-1" focusable={false} tooltipStyle>
+        <span dir="rtl" className="min-w-0 flex-1 truncate px-1.5 py-[1px] text-left text-[10px] leading-4 text-ink-dim opacity-50">
+          <bdi dir="ltr">{folder}</bdi>
+        </span>
+      </HoverCardTrigger>
+    </div>
   );
 }

@@ -1,43 +1,32 @@
 'use client';
 
-import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
-import { definitionView, scanChangedFiles, type PeekView } from './definitionContext';
-import { refineSite, resolveDefinition, type DefinitionSite, type ResolverFiles } from './definitionResolver';
-import { fileTextPath, repoFilesAtRefPath } from './pullPaths';
-import type { ChangedFileSet, FileText } from './pullRequests';
-import type { RepoFileSet } from './repoFiles';
-import { apiJson } from '@/features/sources/apiClient';
-import { useGithubToken } from '@/features/sources/sourceStore';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createFrameCache, loadingFrame, originKey, type FrameCache, type PeekFrame, type PeekOrigin } from './definitionFrames';
+import { patchOrigins, preloadDefinitions } from './definitionPreload';
+import type { DefinitionSite } from './definitionResolver';
+import type { ChangedFileSet } from './pullRequests';
+import { useResolverFiles, type TrimmableFiles } from './resolverFiles';
 
-export interface PeekOrigin {
-  path: string;
-  ref: string;
-  line: number;
-  column: number;
-  word: string;
-}
+export type { PeekFrame, PeekOrigin } from './definitionFrames';
 
 export interface PeekAnchor {
-  x: number;
-  y: number;
-}
-
-export interface PeekFrame {
-  word: string;
-  site: DefinitionSite | null;
-  sites: DefinitionSite[];
-  view: PeekView | null;
-  note: string | null;
-  loading: boolean;
+  left: number;
+  top: number;
+  bottom: number;
 }
 
 export interface PeekSession {
   anchor: PeekAnchor;
   frames: PeekFrame[];
+  pinned: boolean;
 }
 
 export interface PeekActions {
   open(origin: PeekOrigin, anchor: PeekAnchor): void;
+  hover(origin: PeekOrigin, anchor: PeekAnchor): void;
+  unhover(): void;
+  hold(): void;
+  release(): void;
   push(origin: PeekOrigin): void;
   pick(site: DefinitionSite, from: PeekFrame): void;
   back(): void;
@@ -48,6 +37,9 @@ export interface PeekShown {
   session: PeekSession | null;
   fileSet: ChangedFileSet | null;
 }
+
+const HOVER_SWITCH_MS = 100;
+const HOVER_GRACE_MS = 300;
 
 const PeekActionsContext = createContext<PeekActions | null>(null);
 const PeekShownContext = createContext<PeekShown | null>(null);
@@ -72,79 +64,9 @@ export function DefinitionPeekProvider({
   children: ReactNode;
 }) {
   const [session, setSession] = useState<PeekSession | null>(null);
-  const generation = useRef(0);
-  const fileSetRef = useRef(fileSet);
-  fileSetRef.current = fileSet;
   const files = useResolverFiles(owner, repo);
-
-  const replaceTop = useCallback((frame: PeekFrame) => {
-    setSession((held) => held && { ...held, frames: [...held.frames.slice(0, -1), frame] });
-  }, []);
-
-  const showSite = useCallback(
-    async (site: DefinitionSite, sites: DefinitionSite[], word: string, wanted: number) => {
-      try {
-        const refined = site.rough ? await refineSite(site, word, files) : site;
-        const view = await definitionView(refined, fileSetRef.current, files.readFile);
-        if (wanted !== generation.current) return;
-        replaceTop({ word, site: refined, sites, view, note: view ? null : 'file unavailable', loading: false });
-      } catch (issue: unknown) {
-        if (wanted === generation.current) replaceTop(emptyFrame(word, describe(issue)));
-      }
-    },
-    [files, replaceTop],
-  );
-
-  const load = useCallback(
-    async (origin: PeekOrigin, wanted: number) => {
-      const found = await resolveDefinition(origin, files).catch(failedResolution);
-      const sites = withPatchFallback(found.sites, found.note, origin, fileSetRef.current);
-      if (wanted !== generation.current) return;
-      const first = sites[0];
-      if (!first) return replaceTop(emptyFrame(origin.word, found.note));
-      await showSite(first, sites, origin.word, wanted);
-    },
-    [files, replaceTop, showSite],
-  );
-
-  const open = useCallback(
-    (origin: PeekOrigin, anchor: PeekAnchor) => {
-      const wanted = ++generation.current;
-      setSession({ anchor, frames: [loadingFrame(origin.word)] });
-      void load(origin, wanted);
-    },
-    [load],
-  );
-
-  const push = useCallback(
-    (origin: PeekOrigin) => {
-      const wanted = ++generation.current;
-      setSession((held) => held && { ...held, frames: [...held.frames, loadingFrame(origin.word)] });
-      void load(origin, wanted);
-    },
-    [load],
-  );
-
-  const pick = useCallback(
-    (site: DefinitionSite, from: PeekFrame) => {
-      const wanted = ++generation.current;
-      setSession((held) => held && { ...held, frames: [...held.frames.slice(0, -1), { ...from, loading: true }] });
-      void showSite(site, from.sites, from.word, wanted);
-    },
-    [showSite],
-  );
-
-  const back = useCallback(() => {
-    generation.current += 1;
-    setSession((held) => (held && held.frames.length > 1 ? { ...held, frames: held.frames.slice(0, -1) } : null));
-  }, []);
-
-  const close = useCallback(() => {
-    generation.current += 1;
-    setSession(null);
-  }, []);
-
-  const actions = useMemo(() => ({ open, push, pick, back, close }), [open, push, pick, back, close]);
+  const frames = useFrameCache(files, fileSet);
+  const actions = useMemo(() => createPeekActions(frames, setSession), [frames]);
   const shown = useMemo(() => ({ session, fileSet }), [session, fileSet]);
   return (
     <PeekActionsContext value={actions}>
@@ -153,83 +75,156 @@ export function DefinitionPeekProvider({
   );
 }
 
-function loadingFrame(word: string): PeekFrame {
-  return { word, site: null, sites: [], view: null, note: null, loading: true };
+type FileSetRef = { current: ChangedFileSet | null };
+
+function useFrameCache(files: TrimmableFiles, fileSet: ChangedFileSet | null): FrameCache {
+  const fileSetRef = useRef(fileSet);
+  fileSetRef.current = fileSet;
+  const refs = fileSet ? `${fileSet.baseRef}\0${fileSet.headRef}` : null;
+  const frames = useHeldFrameCache(files, refs, fileSetRef);
+  usePreload(frames, files, refs, fileSetRef);
+  return frames;
 }
 
-function emptyFrame(word: string, note: string | null): PeekFrame {
-  return { word, site: null, sites: [], view: null, note: note ?? `no definition found for ${word}`, loading: false };
+interface HeldCache {
+  refs: string | null;
+  files: TrimmableFiles;
+  frames: FrameCache;
 }
 
-function describe(issue: unknown): string {
-  return issue instanceof Error ? issue.message : String(issue);
+function useHeldFrameCache(files: TrimmableFiles, refs: string | null, fileSetRef: FileSetRef): FrameCache {
+  const held = useRef<HeldCache | null>(null);
+  if (!held.current || held.current.refs !== refs || held.current.files !== files) {
+    held.current = { refs, files, frames: createFrameCache(files, fileSetRef) };
+  }
+  return held.current.frames;
 }
 
-function failedResolution(issue: unknown): { sites: DefinitionSite[]; note: string } {
-  return { sites: [], note: describe(issue) };
+function usePreload(frames: FrameCache, files: TrimmableFiles, refs: string | null, fileSetRef: FileSetRef) {
+  useEffect(() => {
+    if (!fileSetRef.current || refs === null) return;
+    return preloadDefinitions(patchOrigins(fileSetRef.current), frames.warm, files.trimParsed);
+  }, [frames, files, refs, fileSetRef]);
 }
 
-function withPatchFallback(
-  sites: DefinitionSite[],
-  note: string | null,
-  origin: PeekOrigin,
-  fileSet: ChangedFileSet | null,
-): DefinitionSite[] {
-  if (sites.length > 0 || note !== null || !fileSet) return sites;
-  return scanChangedFiles(fileSet, origin.word, origin.path);
+type SessionUpdate = (held: PeekSession | null) => PeekSession | null;
+type SetSession = (update: SessionUpdate) => void;
+
+interface HoverState {
+  hovering: string | null;
+  shownKey: string | null;
+  pinned: boolean;
+  switchTimer?: ReturnType<typeof setTimeout>;
+  hideTimer?: ReturnType<typeof setTimeout>;
 }
 
-interface RefListing {
-  names: Set<string>;
-  truncated: boolean;
+function createPeekActions(frames: FrameCache, setSession: SetSession): PeekActions {
+  const state: HoverState = { hovering: null, shownKey: null, pinned: false };
+  const session = sessionControls(state, setSession);
+  const pinned = pinActions(frames, state, session, setSession);
+  const hovered = hoverActions(frames, state, session);
+  return { ...pinned, ...hovered, release: hovered.unhover, close: session.hide };
 }
 
-function useResolverFiles(owner: string, repo: string): ResolverFiles {
-  const token = useGithubToken();
-  const tokenRef = useRef(token);
-  tokenRef.current = token;
-  const texts = useRef(new Map<string, Promise<string | null>>());
-  const listings = useRef(new Map<string, Promise<RefListing | null>>());
-  return useMemo(
-    () => makeResolverFiles(owner, repo, tokenRef, texts.current, listings.current),
-    [owner, repo],
-  );
+interface SessionControls {
+  settle(loading: Promise<PeekFrame>, wanted: number): void;
+  next(): number;
+  show(key: string, anchor: PeekAnchor, frame: PeekFrame): void;
+  hide(): void;
 }
 
-function makeResolverFiles(
-  owner: string,
-  repo: string,
-  token: { current: string | null },
-  texts: Map<string, Promise<string | null>>,
-  listings: Map<string, Promise<RefListing | null>>,
-): ResolverFiles {
-  const readFile = (ref: string, path: string) =>
-    once(texts, `${owner}/${repo}\0${ref}\0${path}`, () =>
-      apiJson<FileText>(fileTextPath(owner, repo, ref, path), token.current).then((got) => got.text),
-    );
-  const listFiles = (ref: string) =>
-    once(listings, `${owner}/${repo}\0${ref}`, () =>
-      apiJson<RepoFileSet>(repoFilesAtRefPath(owner, repo, ref), token.current).then((got) => ({
-        names: new Set(got.files),
-        truncated: got.truncated,
-      })),
-    );
-  const hasFile = async (ref: string, path: string) => {
-    const listing = await listFiles(ref);
-    if (listing?.names.has(path)) return true;
-    if (listing && !listing.truncated) return false;
-    return (await readFile(ref, path)) !== null;
+function sessionControls(state: HoverState, setSession: SetSession): SessionControls {
+  let generation = 0;
+  const next = () => ++generation;
+  const settle = (loading: Promise<PeekFrame>, wanted: number) => {
+    void loading.then((frame) => wanted === generation && setSession(withTopReplaced(frame)));
   };
-  return { readFile, hasFile };
+  const show = (key: string, anchor: PeekAnchor, frame: PeekFrame) => {
+    next();
+    Object.assign(state, { shownKey: key, pinned: false });
+    setSession(() => ({ anchor, frames: [frame], pinned: false }));
+  };
+  const hide = () => {
+    next();
+    clearHoverTimers(state);
+    Object.assign(state, { shownKey: null, pinned: false });
+    setSession(() => null);
+  };
+  return { settle, next, show, hide };
 }
 
-function once<T>(held: Map<string, Promise<T | null>>, key: string, work: () => Promise<T | null>): Promise<T | null> {
-  const running = held.get(key);
-  if (running) return running;
-  const started = work().catch(() => {
-    held.delete(key);
-    return null;
-  });
-  held.set(key, started);
-  return started;
+function pinActions(frames: FrameCache, state: HoverState, session: SessionControls, setSession: SetSession) {
+  const pinOrigin = (origin: PeekOrigin, place: (frame: PeekFrame) => SessionUpdate) => {
+    const wanted = session.next();
+    state.pinned = true;
+    const known = frames.settled(origin);
+    setSession(place(known ?? loadingFrame(origin.word)));
+    if (!known) session.settle(frames.frameFor(origin), wanted);
+  };
+  const open = (origin: PeekOrigin, anchor: PeekAnchor) => {
+    clearHoverTimers(state);
+    state.shownKey = originKey(origin);
+    pinOrigin(origin, (frame) => () => ({ anchor, frames: [frame], pinned: true }));
+  };
+  const push = (origin: PeekOrigin) => pinOrigin(origin, withPushed);
+  const pick = (site: DefinitionSite, from: PeekFrame) => {
+    const wanted = session.next();
+    state.pinned = true;
+    setSession(withTopReplaced({ ...from, loading: true }, true));
+    session.settle(frames.siteFrame(site, from.sites, from.word), wanted);
+  };
+  const back = () => {
+    session.next();
+    setSession(withPopped);
+  };
+  return { open, push, pick, back };
+}
+
+function hoverActions(frames: FrameCache, state: HoverState, session: SessionControls) {
+  const scheduleHide = () => {
+    clearTimeout(state.hideTimer);
+    state.hideTimer = setTimeout(session.hide, HOVER_GRACE_MS);
+  };
+  const reveal = (origin: PeekOrigin, anchor: PeekAnchor, key: string) => {
+    const present = (frame: PeekFrame) => (frame.view ? session.show(key, anchor, frame) : scheduleHide());
+    const known = frames.settled(origin);
+    if (known) return present(known);
+    void frames.frameFor(origin).then((frame) => state.hovering === key && !state.pinned && present(frame));
+  };
+  const hover = (origin: PeekOrigin, anchor: PeekAnchor) => {
+    const key = originKey(origin);
+    if (key === state.hovering) return;
+    state.hovering = key;
+    clearHoverTimers(state);
+    if (state.pinned || key === state.shownKey) return;
+    if (state.shownKey === null) reveal(origin, anchor, key);
+    else state.switchTimer = setTimeout(() => reveal(origin, anchor, key), HOVER_SWITCH_MS);
+  };
+  const unhover = () => {
+    state.hovering = null;
+    clearTimeout(state.switchTimer);
+    if (!state.pinned && state.shownKey !== null) scheduleHide();
+  };
+  const hold = () => {
+    state.hovering = null;
+    clearHoverTimers(state);
+  };
+  return { hover, unhover, hold };
+}
+
+function clearHoverTimers(state: HoverState) {
+  clearTimeout(state.switchTimer);
+  clearTimeout(state.hideTimer);
+}
+
+function withTopReplaced(frame: PeekFrame, pinned?: boolean): SessionUpdate {
+  return (held) => held && { ...held, pinned: pinned ?? held.pinned, frames: [...held.frames.slice(0, -1), frame] };
+}
+
+function withPushed(frame: PeekFrame): SessionUpdate {
+  return (held) => held && { ...held, pinned: true, frames: [...held.frames, frame] };
+}
+
+function withPopped(held: PeekSession | null): PeekSession | null {
+  return held && held.frames.length > 1 ? { ...held, frames: held.frames.slice(0, -1) } : held;
 }

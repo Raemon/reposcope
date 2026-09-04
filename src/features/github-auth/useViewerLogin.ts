@@ -5,17 +5,32 @@ import { readCachedJson, useCachedJson } from '@/features/sources/useCachedJson'
 
 const VIEWER_PATH = '/api/github/me';
 
-export function useIsOwnAuthor(): (author: string) => boolean {
+type Viewer = { login: string };
+
+export type AuthorCheck = (author: string) => boolean;
+
+export function useIsOwnAuthor(): AuthorCheck {
+  return matchesLogin(useViewerLogin());
+}
+
+export function useOwnAuthorFilter(): AuthorCheck | null {
+  return ownAuthorFilter(useViewerLogin());
+}
+
+export function cachedOwnAuthorFilter(token: string | null): AuthorCheck | null {
+  return ownAuthorFilter(readCachedJson<Viewer>(VIEWER_PATH, token)?.login);
+}
+
+function ownAuthorFilter(login: string | undefined): AuthorCheck | null {
+  return login ? matchesLogin(login) : null;
+}
+
+function useViewerLogin(): string | undefined {
   const token = useGithubToken();
   const ready = useStoreReady();
-  const { data } = useCachedJson<{ login: string }>(token ? VIEWER_PATH : null, token, ready);
-  return matchesLogin(data?.login);
+  return useCachedJson<Viewer>(token ? VIEWER_PATH : null, token, ready).data?.login;
 }
 
-export function ownAuthorCheck(token: string | null): (author: string) => boolean {
-  return matchesLogin(readCachedJson<{ login: string }>(VIEWER_PATH, token)?.login);
-}
-
-function matchesLogin(login: string | undefined): (author: string) => boolean {
+function matchesLogin(login: string | undefined): AuthorCheck {
   return (author) => author.toLowerCase() === login?.toLowerCase();
 }

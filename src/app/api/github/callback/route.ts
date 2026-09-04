@@ -5,6 +5,7 @@ import { grantToParams } from '@/features/github-auth/grantParams';
 import { callbackUrl, failHome, NOT_CONFIGURED } from '@/features/github-auth/oauthRoute';
 import { consumeOauthState, parseOauthState } from '@/features/github-auth/oauthState';
 import { requestOrigin } from '@/features/github-auth/requestOrigin';
+import { errorMessage } from '@/features/sources/errorMessage';
 
 export async function GET(request: Request) {
   const origin = requestOrigin(request);
@@ -23,6 +24,6 @@ export async function GET(request: Request) {
     const { access, returnTo } = parseOauthState(state);
     return NextResponse.redirect(`${returnTo ?? origin}/connect#${grantToParams(grant, access)}`);
   } catch (error) {
-    return fail(error instanceof Error ? error.message : 'GitHub sign-in failed');
+    return fail(errorMessage(error, 'GitHub sign-in failed'));
   }
 }

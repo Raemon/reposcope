@@ -1,5 +1,6 @@
 import { declarationPattern, roughSite, MAX_ROUGH_SITES, type DefinitionSite } from './definitionResolver';
 import { expandDiff, splitLines } from './expandDiff';
+import { memoPromise } from './promiseMemo';
 import { splitDiff, type DiffRow } from './splitDiff';
 import type { ChangedFile, ChangedFileSet } from './pullRequests';
 
@@ -19,35 +20,70 @@ export interface PeekSides {
 
 export type PeekReadFile = (ref: string, path: string) => Promise<string | null>;
 
+export interface PeekSources {
+  readFile: PeekReadFile;
+  changedRows(changed: ChangedFile, fileSet: ChangedFileSet): Promise<DiffRow[] | null>;
+}
+
 const MAX_PEEK_LINES = 60;
+
+export function peekSources(readFile: PeekReadFile): PeekSources {
+  const rows = new Map<string, Promise<DiffRow[] | null>>();
+  return {
+    readFile,
+    changedRows: (changed, fileSet) =>
+      memoPromise(rows, `${fileSet.baseRef}\0${fileSet.headRef}\0${changed.filename}`, () =>
+        wholeFileRows(changed, fileSet, readFile),
+      ),
+  };
+}
+
+export function changedFileSides(file: ChangedFile, baseRef: string, headRef: string): PeekSides {
+  return { leftRef: baseRef, leftPath: file.previousFilename ?? file.filename, rightRef: headRef, rightPath: file.filename };
+}
 
 export async function definitionView(
   site: DefinitionSite,
   fileSet: ChangedFileSet | null,
-  readFile: PeekReadFile,
+  sources: PeekSources,
 ): Promise<PeekView | null> {
   const changed = changedEntry(site, fileSet);
   if (changed?.patch && fileSet) {
-    const overlaid = await diffView(site, changed, fileSet, readFile);
+    const overlaid = await diffView(site, changed, fileSet, sources);
     if (overlaid) return overlaid;
   }
-  const text = await readFile(site.ref, site.path);
+  const text = await sources.readFile(site.ref, site.path);
   return text === null ? null : plainView(site, splitLines(text));
 }
 
 export function scanChangedFiles(fileSet: ChangedFileSet, word: string, excludePath: string): DefinitionSite[] {
   const pattern = declarationPattern(word);
   const sites: DefinitionSite[] = [];
-  for (const file of fileSet.files) {
-    if (file.filename === excludePath || !file.patch) continue;
-    collectPatchSites(file, fileSet.headRef, pattern, sites);
+  for (const { file, rows } of patchRowsOf(fileSet)) {
+    if (file.filename === excludePath) continue;
+    collectPatchSites(file, rows, fileSet.headRef, pattern, sites);
     if (sites.length >= MAX_ROUGH_SITES) break;
   }
   return sites.slice(0, MAX_ROUGH_SITES);
 }
 
-function collectPatchSites(file: ChangedFile, headRef: string, pattern: RegExp, sites: DefinitionSite[]) {
-  for (const row of splitDiff(file.patch ?? '')) {
+export interface PatchRows {
+  file: ChangedFile;
+  rows: DiffRow[];
+}
+
+const splitPatches = new WeakMap<ChangedFileSet, PatchRows[]>();
+
+export function patchRowsOf(fileSet: ChangedFileSet): PatchRows[] {
+  const held = splitPatches.get(fileSet);
+  if (held) return held;
+  const split = fileSet.files.filter((file) => file.patch).map((file) => ({ file, rows: splitDiff(file.patch ?? '') }));
+  splitPatches.set(fileSet, split);
+  return split;
+}
+
+function collectPatchSites(file: ChangedFile, rows: DiffRow[], headRef: string, pattern: RegExp, sites: DefinitionSite[]) {
+  for (const row of rows) {
     if (row.right && pattern.test(row.right.text)) sites.push(roughSite(file.filename, headRef, row.right.line));
   }
 }
@@ -63,18 +99,12 @@ async function diffView(
   site: DefinitionSite,
   changed: ChangedFile,
   fileSet: ChangedFileSet,
-  readFile: PeekReadFile,
+  sources: PeekSources,
 ): Promise<PeekView | null> {
-  const rows = await wholeFileRows(changed, fileSet, readFile);
+  const rows = await sources.changedRows(changed, fileSet);
   if (rows === null) return null;
   const side = site.ref === fileSet.baseRef ? 'left' : 'right';
-  const sides = {
-    leftRef: fileSet.baseRef,
-    leftPath: changed.previousFilename ?? changed.filename,
-    rightRef: fileSet.headRef,
-    rightPath: changed.filename,
-  };
-  return slicedView(rows, side, clampSpan(site), sides);
+  return slicedView(rows, side, clampSpan(site), changedFileSides(changed, fileSet.baseRef, fileSet.headRef));
 }
 
 async function wholeFileRows(

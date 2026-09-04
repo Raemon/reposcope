@@ -10,7 +10,7 @@ import type { ChatSession } from './aiChatStore';
 import { ColumnPreview, type PreviewToken } from '@/features/pull-requests/ColumnPreview';
 import { useRegisterColumn } from '@/features/pull-requests/columnNav';
 import { usePaneMode } from '@/features/pull-requests/centralLayout';
-import { collapsibleColumn, ResizableColumn } from '@/features/pull-requests/ResizableColumn';
+import { useCollapsibleColumn, ResizableColumn } from '@/features/pull-requests/ResizableColumn';
 import { useStickyColumn } from '@/features/pull-requests/stickyColumns';
 import { BUTTON } from '@/features/surface-ui/buttonStyles';
 
@@ -23,7 +23,7 @@ export function AiChatColumn({ owner, repo, subject, headRef }: { owner: string;
   const key = useCursorKey();
   const chat = useAiChat({ subject, owner, repo, headRef, active: pane === 'pane' || size.open });
   const { session, account } = chat;
-  useRegisterColumn('ai-chat', { ...collapsibleColumn(size, setSize), items: [], selected: null }, pane !== 'hidden');
+  useRegisterColumn('ai-chat', { ...useCollapsibleColumn('ai-chat', size, setSize), items: [], selected: null }, pane !== 'hidden');
   return (
     <ResizableColumn
       navId="ai-chat"

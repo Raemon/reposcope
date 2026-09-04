@@ -1,27 +1,32 @@
 'use client';
 
-import { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { CodeBlockEditor } from './CodeBlockEditor';
 import { CommitEditModal } from './CommitEditModal';
 import { DiffSide, type HunkControl } from './DiffSide';
 import { useDiffLayout } from './diffLayoutStore';
 import { withDraftThread, type DraftAnchor } from './draftThread';
 import { startDraftThread, useDraftAnchor } from './draftThreadStore';
-import { columnLines, unifiedLines, visibleLines, type DiffLine } from './diffLines';
+import { columnLines, resultLines, shownLines, unifiedLines, type DiffLine } from './diffLines';
 import { langForPath } from './diffHighlight';
-import { linesHeight, ROW_HEIGHT, SAVE_BAR } from './diffMetrics';
+import { linesHeight, ROW_HEIGHT, SAVE_BAR, type RowHeights } from './diffMetrics';
+import { useDiffWrap } from './diffWrapStore';
+import { evenedRowHeights } from './rowHeights';
 import { EditTarget } from './editTarget';
 import { type EditableBlock } from './editableBlocks';
 import { expandDiff } from './expandDiff';
-import { useFoldCommand, wholeFileFor, wholeFileWanted, type FoldMode } from './foldModeStore';
+import { foldsCollapsed, useFoldCommand, wholeFileFor, wholeFileWanted, type FoldMode } from './foldModeStore';
 import { InlineThreads } from './InlineThreads';
+import { FILE_DIFF_ATTR } from './litRow';
 import { setDiffPaneWidth, useDiffPaneWidth } from './diffPaneWidth';
 import { DragHandle, useDragWidth } from './ResizableColumn';
+import { rowOf } from './commentAnchors';
 import { useFileThreads } from './reviewThreadStore';
 import { SHA_PATTERN } from './routeParams';
 import { splitDiff, type DiffRow } from './splitDiff';
+import { truncateFarRows, NO_TRUNCATION, type Truncation } from './truncateRows';
 import { useCodeCollapse } from './useCodeCollapse';
-import { useDefinitionClick } from './useDefinitionClick';
+import { useDefinitionPointer } from './useDefinitionPointer';
 import { useDiffTokens, useIntralineEmphasis } from './useDiffSideHighlight';
 import { useHeightTransition } from './useHeightTransition';
 import { useHunkEdit, type HunkEdit, type HunkEditControls } from './useHunkEdit';
@@ -46,9 +51,12 @@ export function FileDiff({
   const token = useGithubToken();
   const target = useContext(EditTarget);
   const entireFile = file.status === WHOLE_FILE_STATUS;
-  const unified = useDiffLayout() === 'unified' || entireFile;
+  const layout = useDiffLayout();
+  const singleColumn = layout !== 'split' || entireFile;
   const removedSize = { width: useDiffPaneWidth(), open: true };
   const startDrag = useDragWidth(removedSize, setDiffPaneWidth);
+  const wrap = useDiffWrap();
+  const measured = useMeasuredSides();
   const [wantWholeFile, setWantWholeFile] = useState(wholeFileWanted);
   const [threadOverflow, setThreadOverflow] = useState(0);
   const wholeFile = useWholeFile(owner, repo, file, baseRef, headRef, wantWholeFile);
@@ -77,33 +85,58 @@ export function FileDiff({
     [fileThreads, draftAnchor, owner, repo, pull, file.filename],
   );
   const collapse = useCodeCollapse(rows, showingWholeFile, file.filename, threads, editBlock);
-  const lines = useMemo(() => foldedLines(rows, collapse.hidden), [rows, collapse.hidden]);
-  const growing = useHeightTransition(rows, collapse.hidden);
+  const commentedRows = useMemo(() => new Set(threads.map((thread) => rowOf(thread, rows))), [threads, rows]);
+  const alwaysDrawn = useMemo(() => rowsAlwaysDrawn(commentedRows, editBlock), [commentedRows, editBlock]);
+  const [truncation, untruncate] = useRowTruncation(rows, collapse.hidden, alwaysDrawn, showingWholeFile);
+  const undrawn = useMemo(() => undrawnRows(collapse.hidden, truncation), [collapse.hidden, truncation]);
+  const rowHeights = singleColumn ? measured.right : evenedRowHeights(measured.left, measured.right);
+  const resultView = layout === 'result' && !entireFile && anyLineSurvives(rows);
+  const drawn = { hidden: collapse.hidden, commentedRows, truncation };
+  const mainLines = useShownLines(rows, mainColumn(singleColumn, resultView), drawn);
+  const leftLines = useShownLines(rows, singleColumn ? null : 'left', drawn);
+  const growing = useHeightTransition(rows, undrawn, rowHeights);
   const expand = expandControl(wholeFile, showingWholeFile, hunkEdit, setWantWholeFile);
-  const onCodePress = useDefinitionClick(file, baseRef, headRef);
+  const pointer = useDefinitionPointer(file, baseRef, headRef);
   const draftable = useMemo(() => (showingWholeFile ? patchLineKeys(patchRows) : null), [showingWholeFile, patchRows]);
   const draftThreadAt = draftThreadStarter(draftBase(owner, repo, pull, headRef, file.filename, token), draftable);
-  const shared = { rows, tokens, emphasis, expand, anchors: collapse.anchors, onCodePress, draftThreadAt };
-  const bounds = { hidden: collapse.hidden, stopAtBlankLines: showingWholeFile };
+  const shared = {
+    rows,
+    tokens,
+    emphasis,
+    expand,
+    anchors: collapse.anchors,
+    pointer,
+    wrap,
+    heights: rowHeights,
+    onUntruncate: untruncate,
+    draftThreadAt,
+  };
+  const bounds = { hidden: undrawn, stopAtBlankLines: showingWholeFile };
   const editing = {
     editable: pull !== null,
     onEditBlock: (rowIndex: number) => hunkEdit.begin(rowIndex, bounds),
     editedRows: editBlock,
-    editor: hunkEditor(file.filename, hunkEdit, unified ? lines.unified : lines.right),
+    editor: hunkEditor(file.filename, hunkEdit, mainLines, rowHeights),
   };
   return (
-    <div ref={growing} className="flex" style={{ paddingBottom: threadOverflow }}>
-      <div className="min-w-0 flex-1" style={{ flexBasis: unified ? 0 : removedSize.width * 2 }}>
-        {unified ? (
-          <DiffSide {...shared} lines={lines.unified} labels {...editing} />
+    <div ref={growing} {...{ [FILE_DIFF_ATTR]: '' }} className="flex" style={{ paddingBottom: threadOverflow }}>
+      <div className="min-w-0 flex-1" style={{ flexBasis: singleColumn ? 0 : removedSize.width * 2 }}>
+        {singleColumn ? (
+          <DiffSide {...shared} lines={mainLines} labels onMeasured={measured.onRight} {...editing} />
         ) : (
           <div className="flex">
             <section className="relative flex shrink-0 flex-col border-r border-panel-edge" style={{ width: removedSize.width }}>
-              <DiffSide {...shared} lines={lines.left} labels spacer={spacerFor(hunkEdit.edit, lines.right)} />
+              <DiffSide
+                {...shared}
+                lines={leftLines}
+                labels
+                onMeasured={measured.onLeft}
+                spacer={spacerFor(hunkEdit.edit, mainLines, rowHeights)}
+              />
               <DragHandle onPointerDown={startDrag} />
             </section>
             <section className="flex min-w-0 flex-1 flex-col">
-              <DiffSide {...shared} lines={lines.right} labels={false} {...editing} />
+              <DiffSide {...shared} lines={mainLines} labels={false} onMeasured={measured.onRight} {...editing} />
             </section>
           </div>
         )}
@@ -111,7 +144,8 @@ export function FileDiff({
       <InlineThreads
         threads={threads}
         rows={rows}
-        lines={unified ? lines.unified : lines.right}
+        lines={mainLines}
+        heights={rowHeights}
         onOverflow={setThreadOverflow}
       />
       {hunkEdit.message !== null && hunkEdit.edit !== null && (
@@ -166,6 +200,20 @@ function lineKey(side: 'left' | 'right', line: number): string {
   return `${side}:${line}`;
 }
 
+interface MeasuredSides {
+  left: RowHeights;
+  right: RowHeights;
+  onLeft: (heights: RowHeights) => void;
+  onRight: (heights: RowHeights) => void;
+}
+
+// A single-column layout reports as the right side, the one every layout draws.
+function useMeasuredSides(): MeasuredSides {
+  const [left, onLeft] = useState<RowHeights>(null);
+  const [right, onRight] = useState<RowHeights>(null);
+  return { left, right, onLeft, onRight };
+}
+
 function useFoldCommandWholeFile(hunkEdit: HunkEditControls, setWantWholeFile: (next: boolean) => void) {
   const command = useFoldCommand();
   const applied = useRef(command.epoch);
@@ -186,12 +234,88 @@ function rowsForDisplay(patchRows: DiffRow[], lines: WholeFile['lines'], entireF
   return entireFile ? patchRows.filter((row) => row.kind !== 'hunk') : patchRows;
 }
 
-function foldedLines(rows: DiffRow[], hidden: Set<number>) {
-  return {
-    left: visibleLines(columnLines(rows, 'left'), hidden),
-    right: visibleLines(columnLines(rows, 'right'), hidden),
-    unified: visibleLines(unifiedLines(rows), hidden),
-  };
+// A wholly deleted file has no surviving lines, so its result view falls back to the diff.
+function anyLineSurvives(rows: DiffRow[]): boolean {
+  return rows.some((row) => row.right !== null);
+}
+
+type Column = 'left' | 'right' | 'unified' | 'result';
+
+interface DrawnRows {
+  hidden: Set<number>;
+  commentedRows: Set<number>;
+  truncation: Truncation;
+}
+
+function mainColumn(singleColumn: boolean, resultView: boolean): Column {
+  if (!singleColumn) return 'right';
+  return resultView ? 'result' : 'unified';
+}
+
+// A null column is one this layout never draws, so its lines are never laid out.
+function useShownLines(rows: DiffRow[], column: Column | null, drawn: DrawnRows): DiffLine[] {
+  const { hidden, commentedRows, truncation } = drawn;
+  return useMemo(
+    () => (column ? shownLines(columnOf(rows, column, commentedRows), hidden, truncation) : []),
+    [rows, column, commentedRows, hidden, truncation],
+  );
+}
+
+function columnOf(rows: DiffRow[], column: Column, commentedRows: Set<number>): DiffLine[] {
+  if (column === 'unified') return unifiedLines(rows);
+  if (column === 'result') return resultLines(rows, commentedRows);
+  return columnLines(rows, column);
+}
+
+const NO_RUNS: ReadonlySet<number> = new Set<number>();
+
+type Untruncate = (run: number) => void;
+
+// The memoized truncation is returned as-is: a fresh object here would re-lay-out every line each render.
+function useRowTruncation(rows: DiffRow[], folded: Set<number>, anchored: Set<number>, wholeFile: boolean): [Truncation, Untruncate] {
+  const [expanded, untruncate] = useExpandedRuns(rows, folded);
+  const mode = useFoldCommand().mode;
+  const truncating = wholeFile && foldsCollapsed(mode);
+  const cut = useMemo(
+    () => (truncating ? truncateFarRows({ rows, folded, anchored, expanded }) : NO_TRUNCATION),
+    [truncating, rows, folded, anchored, expanded],
+  );
+  return [cut, untruncate];
+}
+
+interface HeldRuns {
+  rows: DiffRow[];
+  folded: Set<number>;
+  runs: ReadonlySet<number>;
+}
+
+// A run is named by its first row, and refolding moves that row, so held names only fit the fold they came from.
+function useExpandedRuns(rows: DiffRow[], folded: Set<number>): [ReadonlySet<number>, Untruncate] {
+  const [held, setHeld] = useState<HeldRuns>({ rows, folded, runs: NO_RUNS });
+  const untruncate = useCallback(
+    (run: number) => setHeld((was) => ({ rows, folded, runs: new Set(runsAt(was, rows, folded)).add(run) })),
+    [rows, folded],
+  );
+  return [runsAt(held, rows, folded), untruncate];
+}
+
+function runsAt(held: HeldRuns, rows: DiffRow[], folded: Set<number>): ReadonlySet<number> {
+  return held.rows === rows && held.folded === folded ? held.runs : NO_RUNS;
+}
+
+// The open editor's rows have to keep drawing: cut, the editor would detach from the code it edits.
+function rowsAlwaysDrawn(commentedRows: Set<number>, edit: EditableBlock | null): Set<number> {
+  if (!edit) return commentedRows;
+  const drawn = new Set(commentedRows);
+  for (let row = edit.firstRow; row <= edit.lastRow; row += 1) drawn.add(row);
+  return drawn;
+}
+
+function undrawnRows(hidden: Set<number>, cut: Truncation): Set<number> {
+  if (cut.runOf.size === 0) return hidden;
+  const undrawn = new Set(hidden);
+  for (const row of cut.runOf.keys()) undrawn.add(row);
+  return undrawn;
 }
 
 function expandControl(
@@ -217,7 +341,7 @@ function leaveEdit(hunkEdit: HunkEditControls): boolean {
   return true;
 }
 
-function hunkEditor(filename: string, hunkEdit: HunkEditControls, shown: DiffLine[]) {
+function hunkEditor(filename: string, hunkEdit: HunkEditControls, shown: DiffLine[], heights: RowHeights) {
   const edit = hunkEdit.edit;
   if (!edit) return null;
   return (
@@ -226,7 +350,7 @@ function hunkEditor(filename: string, hunkEdit: HunkEditControls, shown: DiffLin
       value={edit.draft}
       lang={langForPath(filename)}
       caretLine={edit.block.caretLine}
-      minHeight={coveredHeight(shown, edit.block)}
+      minHeight={coveredHeight(shown, edit.block, heights)}
       saving={hunkEdit.committing}
       onChange={hunkEdit.setDraft}
       onSave={hunkEdit.askToCommit}
@@ -236,13 +360,13 @@ function hunkEditor(filename: string, hunkEdit: HunkEditControls, shown: DiffLin
 }
 
 // Rendered lines, not rows: a unified change row draws its before and after line.
-function coveredHeight(shown: DiffLine[], block: EditableBlock): number {
-  return linesHeight(shown.filter((line) => line.row >= block.firstRow && line.row <= block.lastRow));
+function coveredHeight(shown: DiffLine[], block: EditableBlock, heights: RowHeights): number {
+  return linesHeight(shown.filter((line) => line.row >= block.firstRow && line.row <= block.lastRow), heights);
 }
 
-function spacerFor(edit: HunkEdit | null, shown: DiffLine[]): { afterRow: number; height: number } | null {
+function spacerFor(edit: HunkEdit | null, shown: DiffLine[], heights: RowHeights): { afterRow: number; height: number } | null {
   if (!edit) return null;
-  const covered = coveredHeight(shown, edit.block);
+  const covered = coveredHeight(shown, edit.block, heights);
   const drawn = Math.max(covered, edit.draft.split('\n').length * ROW_HEIGHT + SAVE_BAR);
   return { afterRow: edit.block.lastRow, height: drawn - covered };
 }

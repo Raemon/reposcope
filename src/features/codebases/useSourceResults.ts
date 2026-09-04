@@ -7,6 +7,7 @@ import type { GithubAccess } from '@/features/github-auth/githubAccess';
 import { apiJson } from '@/features/sources/apiClient';
 import { readBrowserCache, writeBrowserCache } from '@/features/sources/browserCache';
 import { sourceKey, type CodebaseSource } from '@/features/sources/sourceTypes';
+import { errorMessage } from '@/features/sources/errorMessage';
 
 const NONE = new Map<string, SourceResult>();
 const inFlight = new Map<string, Promise<SourceResult>>();
@@ -58,7 +59,7 @@ function requestSource(
     })
     .catch(
       (error: unknown): SourceResult =>
-        cached ?? { state: 'error', message: error instanceof Error ? error.message : String(error) },
+        cached ?? { state: 'error', message: errorMessage(error) },
     )
     .finally(() => inFlight.delete(name));
   inFlight.set(name, request);

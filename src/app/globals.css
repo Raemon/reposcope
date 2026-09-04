@@ -31,6 +31,8 @@
   --color-danger-ink: var(--danger-ink);
 
   --color-tip: var(--tip);
+  --color-tooltip-bg: var(--tooltip-bg);
+  --color-tooltip-ink: var(--tooltip-ink);
   --color-error-bg: var(--error-bg);
   --color-error-ink: var(--error-ink);
 
@@ -79,6 +81,8 @@
   --danger-ink: #8c1414;
 
   --tip: #ffffff;
+  --tooltip-bg: #0a0e14d9;
+  --tooltip-ink: #f8fafc;
   --error-bg: #fbeced;
   --error-ink: #8c1414;
 
@@ -123,6 +127,8 @@
     --danger-ink: #ffa199;
 
     --tip: #242220;
+    --tooltip-bg: #f8f4ece6;
+    --tooltip-ink: #14120f;
     --error-bg: #2e201f;
     --error-ink: #ffa199;
 
@@ -153,6 +159,18 @@
 
 .diff-code span {
   color: var(--shiki-light, inherit);
+}
+
+@utility row-shade {
+  background-image: linear-gradient(rgb(0 0 0 / 0.05), rgb(0 0 0 / 0.05));
+}
+
+@utility row-lit {
+  background-image: linear-gradient(rgb(0 0 0 / 0.2), rgb(0 0 0 / 0.2));
+}
+
+.diff-line-lit {
+  @apply row-lit;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -193,6 +211,8 @@
   --danger-ink: #ffa199;
 
   --tip: #242220;
+  --tooltip-bg: #f8f4ece6;
+  --tooltip-ink: #14120f;
   --error-bg: #2e201f;
   --error-ink: #ffa199;
 

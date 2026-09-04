@@ -26,9 +26,10 @@ export function ThreadReplyBox({
         placeholder={placeholder}
         onChange={(event) => setDraft(event.target.value)}
         onKeyDown={(event) => replyKey(event, send, onCancel)}
-        className="w-full resize-y rounded bg-field px-1 py-0.5 font-serif text-[13px] leading-[1.5] text-ink outline-none"
+        className="w-full resize-y rounded bg-field px-1 py-0.5 font-serif text-[13px] leading-[1.5] text-ink placeholder:text-ink-dim focus:outline-none focus:ring-1 focus:ring-accent"
       />
-      <div className="mt-0.5 flex justify-end gap-1 text-[9px] tracking-[0.14em]">
+      <div className="mt-0.5 flex items-center justify-end gap-1 text-[9px] tracking-[0.14em]">
+        <span className="shrink-0 text-ink-dim">⌘↩</span>
         <button type="button" onClick={onCancel} className={`${BUTTON} px-1`}>
           esc
         </button>

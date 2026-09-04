@@ -6,7 +6,7 @@ import { allPullsRoute, pullRoute, repoPullsPath } from './pullPaths';
 import type { CrossRepoPulls, PullRequestSummary } from './pullRequests';
 import { allPullsCacheKey } from './useAllPullRequests';
 import { repoRoute } from '@/features/codebases/repoPaths';
-import { ownAuthorCheck } from '@/features/github-auth/useViewerLogin';
+import { cachedOwnAuthorFilter } from '@/features/github-auth/useViewerLogin';
 import { readCachedJson } from '@/features/sources/useCachedJson';
 
 export function viewingAcrossRepos(): boolean {
@@ -36,12 +36,12 @@ export function pullListRoute(target: PullTarget, acrossRepos: boolean): string 
 
 function cachedRepoPulls({ owner, repo }: PullTarget, token: string | null, filters: PullFilters): PullTarget[] {
   const pulls = readCachedJson<PullRequestSummary[]>(repoPullsPath(owner, repo, filters.state), token) ?? [];
-  return listedPulls(pulls, filters, ownAuthorCheck(token)).map((pull) => ({ owner, repo, number: pull.number }));
+  return listedPulls(pulls, filters, cachedOwnAuthorFilter(token)).map((pull) => ({ owner, repo, number: pull.number }));
 }
 
 function cachedAllPulls(token: string | null, filters: PullFilters): PullTarget[] {
   const found = readCachedJson<CrossRepoPulls>(allPullsCacheKey(filters.state), token);
-  return listedPulls(found?.pulls ?? [], filters, ownAuthorCheck(token));
+  return listedPulls(found?.pulls ?? [], filters, cachedOwnAuthorFilter(token));
 }
 
 function samePull(a: PullTarget, b: PullTarget): boolean {

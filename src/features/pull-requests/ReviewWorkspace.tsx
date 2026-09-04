@@ -4,15 +4,15 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { AiChatColumn } from '@/features/ai-chat/AiChatColumn';
 import { ColumnBoundary } from '@/features/surface-ui/ColumnBoundary';
 import { AllFilesSection } from './AllFilesSection';
-import { CentralTabBar, useShowsColumn } from './centralLayout';
-import { ColumnPreview } from './ColumnPreview';
+import { CentralTabBar, useCentralLayout, useShowsColumn } from './centralLayout';
+import { ColumnPreview, type PreviewToken } from './ColumnPreview';
 import { DiffPanes, type DiffPanesHandle } from './DiffPanes';
 import { PullCommitColumn, WHOLE_CHANGE, commitItems, commitTokens } from './PullCommitColumn';
 import { PullFilesColumn, fileTokens } from './PullFilesColumn';
 import { isTreeItem } from './fileTreeNodes';
 import { RepoBrowseReader } from './RepoBrowseReader';
 import { useRepoFiles } from './repoFileStore';
-import { ResizableColumn, collapsibleColumn, type ColumnSize } from './ResizableColumn';
+import { ResizableColumn, useCollapsibleColumn, type ColumnSize } from './ResizableColumn';
 import { useRegisterColumn } from './columnNav';
 import { commentCountsOf, sortChangedFiles } from './diffSort';
 import { useDiffSort } from './diffSortStore';
@@ -23,9 +23,11 @@ import { ReviewThreadProvider, useReviewTarget } from './reviewThreadStore';
 import { useStickyColumn, useStickyOpen } from './stickyColumns';
 import { useFileDeletion } from './useFileDeletion';
 import { useRepoFileTree } from './useRepoFileTree';
+import { usePageScrollFirst } from './usePageScrollFirst';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 import { useCachedJson } from '@/features/sources/useCachedJson';
 import { usePollWhileVisible } from '@/features/sources/usePollWhileVisible';
+import { errorMessage } from '@/features/sources/errorMessage';
 
 interface ReviewWorkspaceProps {
   owner: string;
@@ -153,19 +155,22 @@ function Workspace({
     },
   });
 
+  const stacked = useCentralLayout().central;
   const showsDiff = useShowsColumn('diff');
+  const reviewRow = usePageScrollFirst(stacked && showsDiff);
   const showsDiscussion = useShowsColumn('discussion');
   const showsCommits = useShowsColumn('commits');
   const showsFiles = useShowsColumn('files');
+  const discussionColumn = useCollapsibleColumn('discussion', discussionSize, setDiscussionSize);
   useRegisterColumn(
     'discussion',
-    { ...collapsibleColumn(discussionSize, setDiscussionSize), items: [], selected: null },
+    { ...discussionColumn, items: [], selected: null, onActivate: () => discussionColumn.setOpen(true) },
     discussion !== null && showsDiscussion,
   );
   useRegisterColumn(
     'commits',
     {
-      ...collapsibleColumn(commitSize, setCommitSize),
+      ...useCollapsibleColumn('commits', commitSize, setCommitSize),
       items: commitItems(change),
       selected: selection,
       onSelect: setSelection,
@@ -175,7 +180,7 @@ function Workspace({
   useRegisterColumn(
     'files',
     {
-      ...collapsibleColumn(fileSize, setFileSize),
+      ...useCollapsibleColumn('files', fileSize, setFileSize),
       items: [...fileItems, ...browseItems],
       selected: browsed ?? path,
       onSelect: selectFileItem,
@@ -209,71 +214,86 @@ function Workspace({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <CentralTabBar />
-      <div className="flex min-h-0 flex-1 max-md:flex-col max-md:overflow-y-auto">
+      <div className={`flex min-h-0 flex-1 max-md:flex-col max-md:overflow-y-auto ${stacked ? 'flex-col overflow-y-auto' : ''}`}>
         {listColumn}
         {discussion !== null && (
-          <ResizableColumn navId="discussion" icon="❝" title="discussion" size={discussionSize} onSize={setDiscussionSize}>
+          <ResizableColumn
+            navId="discussion"
+            icon="❝"
+            title="discussion"
+            preview={<ColumnPreview column="discussion" tokens={DISCUSSION_TOKENS} />}
+            size={discussionSize}
+            onSize={setDiscussionSize}
+          >
             {discussion}
           </ResizableColumn>
         )}
-        <ResizableColumn
-          navId="commits"
-          icon="◆"
-          title="commits"
-          preview={<ColumnPreview column="commits" tokens={commitTokens(change, selection)} />}
-          size={commitSize}
-          onSize={setCommitSize}
-        >
-          <PullCommitColumn change={change} selection={selection} onSelect={setSelection} />
-        </ResizableColumn>
-        <ResizableColumn
-          navId="files"
-          icon="▤"
-          title="files"
-          tone="bg-shade"
-          preview={<ColumnPreview column="files" tokens={fileTokens(files, path)} />}
-          size={fileSize}
-          onSize={setFileSize}
-          footer={
-            <AllFilesSection
-              repoFiles={repoFiles}
-              tree={browseTree}
-              expanded={allFilesOpen}
-              onExpanded={setAllFilesOpen}
-              selected={browsed}
-              onSelect={setBrowsed}
-              query={fileQuery}
-              onQuery={setFileQuery}
-            />
-          }
-        >
-          <PullFilesColumn
-            files={loadedFiles}
-            fileError={fileError}
-            path={path}
-            onSelect={revealFile}
-            onDelete={editableFiles !== null && fileSet !== null ? deletion.ask : null}
-          />
-        </ResizableColumn>
-        {!showsDiff ? null : browsed !== null && repoFiles.fileSet !== null ? (
-          <div className="flex min-w-0 flex-1 flex-col max-md:h-[80vh] max-md:flex-none">
-            <RepoBrowseReader owner={owner} repo={repo} fileSet={repoFiles.fileSet} tree={browseTree} item={browsed} />
-          </div>
-        ) : fileSet === null && fileError !== null ? (
-          <p className="flex-1 px-2 py-1 text-[11px] text-error-ink">{fileError}</p>
-        ) : (
-          <div className="flex min-w-0 flex-1 flex-col max-md:h-[80vh] max-md:flex-none">
-            {notice !== null && <p className="shrink-0 px-2 py-1 text-[11px] text-error-ink">{notice}</p>}
-            <DiffPanes
-              ref={diffPanes}
-              owner={owner}
-              repo={repo}
-              fileSet={fileSet}
-              files={files}
-              selected={path}
-              editablePull={editableFiles}
-              onCommitted={reloadInPlace}
-            />
+        {showsDiff && (
+          <div ref={reviewRow} className={stacked ? STACKED_ROW : COLUMNS_ROW}>
+            <ResizableColumn
+              navId="commits"
+              icon="◆"
+              title="commits"
+              note={countNote(change.commits.length, 'commit')}
+              preview={<ColumnPreview column="commits" tokens={commitTokens(change, selection)} />}
+              size={commitSize}
+              onSize={setCommitSize}
+            >
+              <PullCommitColumn owner={owner} repo={repo} change={change} selection={selection} onSelect={setSelection} />
+            </ResizableColumn>
+            <ResizableColumn
+              navId="files"
+              icon="▤"
+              title="files"
+              note={filesNote(loadedFiles, showingWhole)}
+              tone="bg-shade"
+              preview={<ColumnPreview column="files" tokens={fileTokens(files, path)} />}
+              size={fileSize}
+              onSize={setFileSize}
+              footer={
+                <AllFilesSection
+                  repoFiles={repoFiles}
+                  tree={browseTree}
+                  expanded={allFilesOpen}
+                  onExpanded={setAllFilesOpen}
+                  selected={browsed}
+                  onSelect={setBrowsed}
+                  query={fileQuery}
+                  onQuery={setFileQuery}
+                />
+              }
+            >
+              <PullFilesColumn
+                files={loadedFiles}
+                fileError={fileError}
+                path={path}
+                onSelect={revealFile}
+                onDelete={editableFiles !== null && fileSet !== null ? deletion.ask : null}
+              />
+            </ResizableColumn>
+            <ColumnBoundary>
+              {browsed !== null && repoFiles.fileSet !== null ? (
+                <div className="flex min-w-0 flex-1 flex-col max-md:h-[80vh] max-md:flex-none">
+                  <RepoBrowseReader owner={owner} repo={repo} fileSet={repoFiles.fileSet} tree={browseTree} item={browsed} />
+                </div>
+              ) : fileSet === null && fileError !== null ? (
+                <p className="flex-1 px-2 py-1 text-[11px] text-error-ink">{fileError}</p>
+              ) : (
+                <div className="flex min-w-0 flex-1 flex-col max-md:h-[80vh] max-md:flex-none">
+                  {notice !== null && <p className="shrink-0 px-2 py-1 text-[11px] text-error-ink">{notice}</p>}
+                  <DiffPanes
+                    ref={diffPanes}
+                    owner={owner}
+                    repo={repo}
+                    fileSet={fileSet}
+                    files={files}
+                    selected={path}
+                    editablePull={editableFiles}
+                    onCommitted={reloadInPlace}
+                  />
+                </div>
+              )}
+            </ColumnBoundary>
           </div>
         )}
         <ColumnBoundary>
@@ -291,6 +311,20 @@ function Workspace({
       )}
     </div>
   );
+}
+
+const COLUMNS_ROW = 'flex min-h-0 min-w-0 flex-1 max-md:flex-none max-md:flex-col';
+const STACKED_ROW = 'flex h-full min-w-0 shrink-0 max-md:h-auto max-md:flex-col';
+
+const DISCUSSION_TOKENS: PreviewToken[] = [{ key: 'discussion', label: '❝', title: 'discussion' }];
+
+function countNote(count: number, noun: string): string {
+  return `${count} ${noun}${count === 1 ? '' : 's'}`;
+}
+
+function filesNote(loaded: ChangedFile[] | null, showingWhole: boolean): string | undefined {
+  if (!showingWhole) return 'read-only · historical commit';
+  return loaded === null ? undefined : countNote(loaded.length, 'file');
 }
 
 function remaining(files: ChangedFile[], deleted: string[]): ChangedFile[] {
@@ -329,5 +363,5 @@ function useReloadOnRetarget(subjectKey: string, baseRef: string | null, reload:
 }
 
 function reloadFailure(issue: unknown): string {
-  return `Commit saved; reloading the diff failed: ${issue instanceof Error ? issue.message : String(issue)}`;
+  return `Commit saved; reloading the diff failed: ${errorMessage(issue)}`;
 }

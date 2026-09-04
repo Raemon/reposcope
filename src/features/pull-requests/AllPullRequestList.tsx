@@ -3,7 +3,8 @@
 import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { useColumnNav } from './columnNav';
-import { LIST_NOTE as NOTE, NO_PULLS, PullListRow, PullRowFields } from './PullListRow';
+import { useCurrentRowInView } from './NavListRow';
+import { LIST_NOTE as NOTE, NoMatchingPulls, PullListRow, PullRowFields } from './PullListRow';
 import { allPullsRoute, pullRoute } from './pullPaths';
 import type { CrossRepoPull } from './pullRequests';
 import { useAllPullList } from './usePullLists';
@@ -19,6 +20,10 @@ function staysVisible(pull: CrossRepoPull, pathname: string, cursor: string | nu
   return updatedWithinLastWeek(pull) || pathname === route || cursor === route;
 }
 
+function scanNote(repoCount: number): string {
+  return repoCount === 0 ? 'Loading repositories…' : `Loading ${repoCount} repositories…`;
+}
+
 function widestRepoName(pulls: CrossRepoPull[]): number {
   return pulls.reduce((widest, pull) => Math.max(widest, pull.repo.length), 0);
 }
@@ -28,12 +33,13 @@ export function AllPullRequestList() {
   const pathname = usePathname();
   const { cursor } = useColumnNav('pulls');
   const [showingOlder, setShowingOlder] = useState(false);
+  const list = useCurrentRowInView(listed.length);
 
   if (!found) {
     if (error) return <p className={`${NOTE} text-error-ink`}>{error}</p>;
     return (
       <p className={`${NOTE} text-ink-dim`}>
-        {repoCount === 0 && !scanning ? 'No repositories yet.' : `Reading ${repoCount || ''} repositories…`}
+        {repoCount === 0 && !scanning ? 'No repositories yet.' : scanNote(repoCount)}
       </p>
     );
   }
@@ -44,10 +50,10 @@ export function AllPullRequestList() {
   const repoColumnCh = widestRepoName(visible);
 
   return (
-    <nav className="min-h-0 flex-1 overflow-auto py-[1px]">
+    <nav ref={list} className="min-h-0 flex-1 overflow-auto py-[1px]">
       {error && <p className={`${NOTE} text-error-ink`}>{error}</p>}
-      {scanning && !error && <p className={`${NOTE} text-ink-dim`}>Reading more repositories…</p>}
-      {listed.length === 0 && <p className={`${NOTE} text-ink-dim`}>{NO_PULLS}</p>}
+      {scanning && !error && <p className={`${NOTE} text-ink-dim`}>Loading more repositories…</p>}
+      {listed.length === 0 && <NoMatchingPulls />}
       {visible.map((pull) => (
         <PullRow
           key={`${pull.owner}/${pull.repo}#${pull.number}`}

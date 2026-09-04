@@ -1,14 +1,17 @@
 'use client';
 
 import { pullCommentsPath } from './pullPaths';
+import { AuthorPortrait, OpenOnGithub } from './CommentByline';
 import { renderMarkdown } from '@/features/markdown/renderMarkdown';
 import type { PullComment } from './pullRequests';
-import { timeAgo } from '@/features/surface-ui/timeAgo';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 import { HoverCardHtml } from '@/features/surface-ui/HoverCard';
+import { RelativeTime } from '@/features/surface-ui/RelativeTime';
 import { useCachedJson } from '@/features/sources/useCachedJson';
 import { useIsOwnAuthor } from '@/features/github-auth/useViewerLogin';
 import { usePollWhileVisible } from '@/features/sources/usePollWhileVisible';
+
+const READING_WIDTH = 'max-w-[720px]';
 
 export function PullDiscussion({
   owner,
@@ -36,7 +39,9 @@ export function PullDiscussion({
         owner={owner}
         repo={repo}
         author={author}
+        url={`https://github.com/${owner}/${repo}/pull/${number}`}
         body={body?.trim() ? body : 'No description.'}
+        bodyWidth={READING_WIDTH}
       />
       {comments === null ? (
         <p className={`px-1.5 py-1 text-[11px] leading-4 ${error ? 'text-error-ink' : 'text-ink-dim'}`}>
@@ -51,8 +56,10 @@ export function PullDiscussion({
             owner={owner}
             repo={repo}
             author={comment.author}
-            note={timeAgo(comment.createdAt)}
+            avatarUrl={comment.avatarUrl}
+            createdAt={comment.createdAt}
             path={comment.path}
+            url={comment.url}
             body={comment.body}
           />
         ))
@@ -65,27 +72,39 @@ function DiscussionEntry({
   owner,
   repo,
   author,
-  note,
+  avatarUrl = '',
+  createdAt,
   path,
+  url,
   body,
+  bodyWidth = '',
 }: {
   owner: string;
   repo: string;
   author: string;
-  note?: string;
+  avatarUrl?: string;
+  createdAt?: string;
   path?: string | null;
+  url: string;
   body: string;
+  bodyWidth?: string;
 }) {
   const isOwnAuthor = useIsOwnAuthor();
   return (
     <article className="border-b border-panel-edge px-1.5 py-1">
-      <header className="flex items-baseline gap-1.5 text-[9px] text-ink-dim">
-        {!isOwnAuthor(author) && <span className="shrink-0 text-ink">{author}</span>}
-        {note && <span className="shrink-0">{note}</span>}
+      <header className="flex items-center gap-1.5 text-[9px] leading-4 text-ink-dim">
+        {!isOwnAuthor(author) && (
+          <>
+            <AuthorPortrait avatarUrl={avatarUrl} />
+            <span className="shrink-0 text-ink">{author}</span>
+          </>
+        )}
+        {createdAt && <RelativeTime iso={createdAt} className="shrink-0" />}
         {path && <span className="min-w-0 flex-1 truncate font-serif text-[10px]">{path}</span>}
+        <OpenOnGithub url={url} className="ml-auto" />
       </header>
       <HoverCardHtml
-        className="markdown-body break-words text-ink"
+        className={`markdown-body break-words text-ink ${bodyWidth}`}
         html={renderMarkdown(body, { owner, repo })}
         tooltipStyle
       />

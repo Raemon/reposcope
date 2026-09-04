@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { placeThreads, type AnchoredThread } from './commentAnchors';
 import { isDraftThread } from './draftThread';
 import { clearDraftThread } from './draftThreadStore';
+import { rowLighting } from './litRow';
 import type { ReviewThread } from './reviewThreads';
 import { ThreadCard } from './ThreadCard';
 import { ModalShell } from '@/features/surface-ui/ModalShell';
@@ -27,7 +28,7 @@ export function ThreadMarkers({
   return (
     <div className="relative shrink-0 border-l border-panel-edge bg-shade" style={{ width: MARKER + MARKER_GAP * 2 }}>
       {markers.map((marker) => (
-        <MarkerButton key={marker.thread.rootId} top={marker.top} thread={marker.thread} onOpen={setPicked} />
+        <MarkerButton key={marker.thread.rootId} row={marker.row} top={marker.top} thread={marker.thread} onOpen={setPicked} />
       ))}
       {opened && (
         <ModalShell label={threadLabel(opened)} dismissable onDismiss={() => dismissThread(setPicked)}>
@@ -44,29 +45,38 @@ function dismissThread(setPicked: (thread: ReviewThread | null) => void) {
 }
 
 function MarkerButton({
+  row,
   top,
   thread,
   onOpen,
 }: {
+  row: number;
   top: number;
   thread: ReviewThread;
   onOpen: (thread: ReviewThread) => void;
 }) {
+  const count = thread.comments.length;
   return (
     <button
       type="button"
+      {...rowLighting(row)}
       onClick={() => onOpen(thread)}
-      aria-label={threadLabel(thread)}
+      aria-label={markerLabel(thread)}
       style={{ top, width: MARKER, height: MARKER }}
-      className="absolute left-[2px] flex items-center justify-center rounded border border-panel-edge bg-tip text-ink-dim"
+      className={`absolute left-[2px] flex items-center justify-center rounded border border-panel-edge bg-tip text-ink-dim hover:bg-btn-hover hover:text-ink ${thread.resolved ? 'opacity-70 hover:opacity-100' : ''}`}
     >
-      <CommentIcon />
+      {count > 1 ? <span className="text-[9px] leading-none">{count}</span> : <CommentIcon />}
     </button>
   );
 }
 
 function threadLabel(thread: ReviewThread): string {
   return thread.line === null ? 'Comment' : `Comment on line ${thread.line}`;
+}
+
+function markerLabel(thread: ReviewThread): string {
+  const count = thread.comments.length > 1 ? `, ${thread.comments.length} comments` : '';
+  return `${threadLabel(thread)}${thread.resolved ? ', resolved' : ''}${count}`;
 }
 
 function CommentIcon() {

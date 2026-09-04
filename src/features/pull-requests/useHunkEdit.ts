@@ -5,6 +5,7 @@ import { commitMessageFor, editableBlockAt, type BlockBounds, type EditableBlock
 import type { PullRequestSummary } from './pullRequests';
 import type { DiffRow } from './splitDiff';
 import { apiPostJson } from '@/features/sources/apiClient';
+import { errorMessage } from '@/features/sources/errorMessage';
 
 export interface HunkEdit {
   block: EditableBlock;
@@ -85,7 +86,7 @@ export function useHunkEdit({
       await postHunkCommit({ owner, repo, pull, headRef, filename, token, edit, message });
     } catch (issue: unknown) {
       setMessage(message);
-      setFailure(issue instanceof Error ? issue.message : String(issue));
+      setFailure(errorMessage(issue));
       setCommitting(false);
       return;
     }

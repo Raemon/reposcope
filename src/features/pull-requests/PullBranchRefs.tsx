@@ -7,9 +7,12 @@ import { branchOptionsPath, retargetPullPath } from './pullPaths';
 import { apiPost } from '@/features/sources/apiClient';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
-import { useCachedJson } from '@/features/sources/useCachedJson';
+import { errorMessage } from '@/features/sources/errorMessage';
+import { useCachedJson, type CachedJson } from '@/features/sources/useCachedJson';
 import { FilterField } from '@/features/surface-ui/FilterField';
+import { FailureNote } from '@/features/surface-ui/FailureNote';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
+import { PaneStatusLine } from '@/features/surface-ui/PaneStatusLine';
 import { PopoverMenu, type PopoverTrigger } from '@/features/surface-ui/PopoverMenu';
 import { RelativeTime } from '@/features/surface-ui/RelativeTime';
 
@@ -56,20 +59,16 @@ function BaseRefPicker({
     try {
       await apiPost(retargetPullPath(repo.owner, repo.name, number, base), token);
     } catch (issue: unknown) {
-      return setFailure(`retarget refused: ${describe(issue)}`);
+      return setFailure(`retarget refused: ${errorMessage(issue)}`);
     } finally {
       setRetargeting(false);
     }
-    await reloadCurrentPull().catch((issue: unknown) => setFailure(`base changed; reload failed: ${describe(issue)}`));
+    await reloadCurrentPull().catch((issue: unknown) => setFailure(`base changed; reload failed: ${errorMessage(issue)}`));
   }
 
   return (
     <>
-      {failure !== null && (
-        <HoverCardTrigger label={failure} className="max-w-56" focusable={false} tooltipStyle>
-          <span className="max-w-40 truncate text-[10px] text-error-ink">{failure}</span>
-        </HoverCardTrigger>
-      )}
+      {failure !== null && <FailureNote label={failure} />}
       <PopoverMenu
         align="right-0"
         panelClass="flex max-h-[70vh] w-72 flex-col overflow-hidden"
@@ -122,7 +121,7 @@ function BranchChoices({
 }) {
   const [filter, setFilter] = useState('');
   const branches = useBranchOptions(repo);
-  const shown = matchingBranches(branches, skip, filter);
+  const shown = matchingBranches(branches.data ?? [], skip, filter);
   return (
     <>
       <div className="border-b border-panel-edge px-2 py-2">
@@ -139,14 +138,26 @@ function BranchChoices({
         />
       </div>
       <nav className="min-h-0 flex-1 overflow-auto py-1">
-        {shown.length === 0 ? (
-          <p className="px-2 py-1 text-[11px] leading-4 text-ink-dim">No matching branches.</p>
-        ) : (
-          shown.map((branch) => <BranchChoice key={branch.name} branch={branch} onChoose={onChoose} />)
-        )}
+        <BranchList branches={branches} shown={shown} onChoose={onChoose} />
       </nav>
     </>
   );
+}
+
+function BranchList({
+  branches,
+  shown,
+  onChoose,
+}: {
+  branches: CachedJson<BranchOption[]>;
+  shown: BranchOption[];
+  onChoose: (base: string) => void;
+}) {
+  const { data, error, reload } = branches;
+  if (error !== null) return <PaneStatusLine tone="error" onRetry={reload}>{error}</PaneStatusLine>;
+  if (data === null) return <PaneStatusLine tone="dim">Loading branches…</PaneStatusLine>;
+  if (shown.length === 0) return <PaneStatusLine tone="dim">No matching branches.</PaneStatusLine>;
+  return <>{shown.map((branch) => <BranchChoice key={branch.name} branch={branch} onChoose={onChoose} />)}</>;
 }
 
 function BranchChoice({ branch, onChoose }: { branch: BranchOption; onChoose: (base: string) => void }) {
@@ -162,18 +173,13 @@ function BranchChoice({ branch, onChoose }: { branch: BranchOption; onChoose: (b
   );
 }
 
-function useBranchOptions(repo: RepoRef): BranchOption[] {
+function useBranchOptions(repo: RepoRef) {
   const ready = useStoreReady();
   const token = useGithubToken();
-  const { data } = useCachedJson<BranchOption[]>(branchOptionsPath(repo.owner, repo.name), token, ready);
-  return data ?? [];
+  return useCachedJson<BranchOption[]>(branchOptionsPath(repo.owner, repo.name), token, ready);
 }
 
 function matchingBranches(branches: BranchOption[], skip: string[], filter: string): BranchOption[] {
   const wanted = filter.trim().toLowerCase();
   return branches.filter((branch) => !skip.includes(branch.name) && branch.name.toLowerCase().includes(wanted));
-}
-
-function describe(issue: unknown): string {
-  return issue instanceof Error ? issue.message : String(issue);
 }
