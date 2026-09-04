@@ -23,7 +23,7 @@ export function RepoFilesBrowser({ owner, repo }: { owner: string; repo: string 
   useRegisterColumn(
     'files',
     {
-      ...useCollapsibleColumn(fileSize, setFileSize),
+      ...useCollapsibleColumn('files', fileSize, setFileSize),
       items: tree.navItems,
       selected: browsed,
       onSelect: tree.selectItem,

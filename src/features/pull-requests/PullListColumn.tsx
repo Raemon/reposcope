@@ -93,7 +93,7 @@ function PullsColumn({
   useRegisterColumn(
     'pulls',
     {
-      ...useCollapsibleColumn(size, onSize),
+      ...useCollapsibleColumn('pulls', size, onSize),
       items: targets.map((target) => target.route),
       selected,
       onActivate: openTarget,
