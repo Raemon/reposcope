@@ -1,17 +1,15 @@
 'use client';
 
 import { useCurrentPull } from './currentPullStore';
-import { PreviewMenu, StateDot, previewName } from './PreviewMenu';
+import { PreviewMenu, RefreshIcon, StateDot, previewName } from './PreviewMenu';
 import type { PreviewEntry } from './pullPreviews';
-import { usePullPreviews, type PreviewControls } from './usePullPreviews';
+import { buildProgress, commitsBehind, previewNeedsRebuild, usePullPreviews, type PreviewControls } from './usePullPreviews';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
-import { CHOICE_METRICS } from '@/features/surface-ui/buttonStyles';
 import { FailureNote } from '@/features/surface-ui/FailureNote';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
-import { StrokeIcon } from '@/features/surface-ui/StrokeIcon';
 
-const HALF = `flex items-center gap-1.5 uppercase tracking-[0.18em] ${CHOICE_METRICS}`;
-const DIVIDER = <span aria-hidden className="my-1 w-px shrink-0 bg-panel-edge" />;
+const SEGMENT = 'flex items-center py-1 text-[10px] uppercase tracking-[0.18em]';
+const LEFT_SEGMENT = `${SEGMENT} gap-1.5 rounded-l pl-2 pr-1`;
 
 export function PreviewLink({ repo, number }: { repo: RepoRef; number: number }) {
   const pull = useCurrentPull(repo.owner, repo.name, number);
@@ -21,22 +19,21 @@ export function PreviewLink({ repo, number }: { repo: RepoRef; number: number })
     <div className="flex shrink-0 items-center gap-2">
       {previews.failure !== null && <FailureNote label={previews.failure} />}
       <div className="flex shrink-0 items-stretch rounded bg-btn text-ink-dim">
-        <PreviewHalf previews={previews} number={number} />
-        {DIVIDER}
-        <PreviewMenu previews={previews} number={number} />
-        {DIVIDER}
-        <RefreshHalf previews={previews} number={number} />
+        <PreviewSegment previews={previews} number={number} />
+        <PreviewMenu previews={previews} number={number} baseRef={pull.baseRef} />
+        <span aria-hidden className="my-1 w-px shrink-0 bg-panel-edge" />
+        <RefreshSegment previews={previews} number={number} />
       </div>
     </div>
   );
 }
 
-function PreviewHalf({ previews, number }: { previews: PreviewControls; number: number }) {
+function PreviewSegment({ previews, number }: { previews: PreviewControls; number: number }) {
   const { best } = previews;
   if (best === null || best.url === null) {
     return (
       <HoverCardTrigger label={missingLabel(previews, number)} focusable={false} tooltipStyle>
-        <span className={`${HALF} rounded-l opacity-40`}>
+        <span className={`${LEFT_SEGMENT} opacity-40`}>
           <StateDot state={previews.headState} />
           Preview
         </span>
@@ -45,12 +42,23 @@ function PreviewHalf({ previews, number }: { previews: PreviewControls; number: 
   }
   return (
     <HoverCardTrigger label={openLabel(previews, best, number)} focusable={false} tooltipStyle>
-      <a href={best.url} target="_blank" rel="noreferrer" className={`${HALF} rounded-l hover:bg-btn-hover hover:text-ink ${previews.upToDate ? '' : 'text-warn-edge'}`}>
+      <a
+        href={best.url}
+        target="_blank"
+        rel="noreferrer"
+        className={`${LEFT_SEGMENT} hover:bg-btn-hover hover:text-ink ${previews.upToDate ? '' : 'text-warn-edge'}`}
+      >
         <StateDot state={previews.upToDate ? 'ready' : 'behind'} />
         Preview
+        {!previews.upToDate && <BehindNote previews={previews} />}
       </a>
     </HoverCardTrigger>
   );
+}
+
+function BehindNote({ previews }: { previews: PreviewControls }) {
+  const behind = commitsBehind(previews);
+  return <span className="text-[9px] normal-case tracking-normal">{behind === null ? 'behind' : `${behind} behind`}</span>;
 }
 
 function missingLabel(previews: PreviewControls, number: number): string {
@@ -72,40 +80,27 @@ function headWording(previews: PreviewControls): string {
   return 'does not exist';
 }
 
-function RefreshHalf({ previews, number }: { previews: PreviewControls; number: number }) {
-  const working = previews.creating || previews.awaiting !== null;
-  const urging = !working && headLacksPreview(previews);
+function RefreshSegment({ previews, number }: { previews: PreviewControls; number: number }) {
   return (
     <HoverCardTrigger label={refreshLabel(previews, number)} focusable={false} tooltipStyle>
       <button
         type="button"
         onClick={previews.refresh}
-        disabled={working}
+        disabled={previews.working}
         aria-label={`Build a fresh preview branch for #${number}`}
-        className={`${HALF} rounded-r hover:bg-accent/20 hover:text-accent disabled:opacity-40 disabled:hover:bg-transparent ${urging ? 'text-accent' : ''}`}
+        className={`${SEGMENT} rounded-r px-1.5 hover:bg-accent/20 hover:text-accent disabled:opacity-40 disabled:hover:bg-transparent ${
+          previewNeedsRebuild(previews) ? 'text-accent' : ''
+        }`}
       >
-        <RefreshIcon spinning={working} />
+        <RefreshIcon spinning={previews.working} />
       </button>
     </HoverCardTrigger>
   );
 }
 
-function headLacksPreview(previews: PreviewControls): boolean {
-  return previews.loaded && !previews.upToDate && previews.headState !== 'building';
-}
-
 function refreshLabel(previews: PreviewControls, number: number): string {
-  if (previews.creating) return 'Creating a fresh preview branch…';
-  if (previews.awaiting !== null) return 'Waiting for the fresh preview branch to deploy…';
+  const progress = buildProgress(previews);
+  if (progress !== null) return progress;
   const why = previews.upToDate ? 'for a preview that is up to date' : 'so the latest commit gets a preview';
   return `Branch #${number} afresh with the latest base branch merged in, ${why}`;
-}
-
-function RefreshIcon({ spinning }: { spinning: boolean }) {
-  return (
-    <StrokeIcon size={12} className={spinning ? 'animate-spin' : undefined}>
-      <path d="M20 12a8 8 0 1 1-2.34-5.66" />
-      <path d="M20 4v5h-5" />
-    </StrokeIcon>
-  );
 }

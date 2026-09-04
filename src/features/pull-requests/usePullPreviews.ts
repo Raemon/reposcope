@@ -23,6 +23,7 @@ export interface PreviewControls {
   headState: PreviewState;
   awaiting: string | null;
   creating: boolean;
+  working: boolean;
   failure: string | null;
   refresh: () => void;
 }
@@ -50,15 +51,38 @@ export function usePullPreviews(repo: RepoRef, number: number): PreviewControls 
       .finally(() => setCreating(false));
   };
 
+  const awaitingSha = view.awaitingBuild ? awaiting : null;
   return {
     ...view,
     loaded: held.data !== null,
     entries: held.data?.entries ?? [],
-    awaiting: view.awaitingBuild ? awaiting : null,
+    awaiting: awaitingSha,
     creating,
+    working: creating || awaitingSha !== null,
     failure: notice ?? deployFailure(view.awaited) ?? held.error,
     refresh,
   };
+}
+
+export function previewNeedsRebuild(previews: PreviewControls): boolean {
+  return previews.loaded && !previews.working && !previews.upToDate && previews.headState !== 'building';
+}
+
+export function buildProgress(previews: PreviewControls): string | null {
+  if (previews.creating) return 'Creating a fresh preview branch…';
+  if (previews.awaiting !== null) return 'Waiting for the fresh preview branch to deploy…';
+  return null;
+}
+
+export function isCommitEntry(entry: PreviewEntry): boolean {
+  return entry.branch === null;
+}
+
+export function commitsBehind(previews: PreviewControls): number | null {
+  if (previews.best === null) return null;
+  const shown = previews.best.forSha;
+  const behind = previews.entries.filter(isCommitEntry).findIndex((entry) => entry.sha === shown);
+  return behind > 0 ? behind : null;
 }
 
 function createFreshPreview(
@@ -127,7 +151,7 @@ function stateAmong(entries: PreviewEntry[]): PreviewState {
   return 'none';
 }
 
-// Repos without Vercel stay 'none' forever; wait only once an entry shows Vercel is here.
+// Repos without Vercel stay 'none' forever; only poll once some entry proves Vercel exists.
 function headPending(state: PreviewState, entries: PreviewEntry[]): boolean {
   if (state === 'building') return true;
   return state === 'none' && entries.some((entry) => entry.state !== 'none');
