@@ -1,9 +1,8 @@
-import type { CodeSegment, DimmedSegment } from './codeSegments';
+import { DIM_INK_STYLE, type CodeSegment, type DimmedSegment } from './codeSegments';
 import type { ThemedToken } from './diffHighlight';
 import { abbreviated } from './keywordAbbreviations';
 
-const KEYWORD_OPACITY = 0.45;
-const TAIL_OPACITY = 0.6;
+const DIM_OPACITY = 0.45;
 const LEADING_SCOPES = /^(keyword|storage|punctuation|comment|meta\.brace)/;
 
 interface NameSpan {
@@ -42,9 +41,14 @@ function innermostScope(token: ThemedToken): string {
 
 function dimSegment(segment: CodeSegment, start: number, name: NameSpan): DimmedSegment[] {
   return nameSlices(segment.content, start, name).flatMap(([from, to]) => {
-    const piece = { ...segment, content: segment.content.slice(from, to), opacity: opacityAt(start + from, name) };
+    const piece = dimmedPiece(segment, segment.content.slice(from, to), start + from, name);
     return start + from < name.start ? abbreviated(piece) : [piece];
   });
+}
+
+function dimmedPiece(segment: CodeSegment, content: string, position: number, name: NameSpan): DimmedSegment {
+  if (position >= name.start && position < name.end) return { ...segment, content };
+  return { ...segment, content, style: DIM_INK_STYLE, opacity: DIM_OPACITY };
 }
 
 // Slices the segment where the declared name starts and ends, so each piece dims as a whole.
@@ -54,7 +58,3 @@ function nameSlices(text: string, start: number, name: NameSpan): [number, numbe
   return bounds.slice(0, -1).map((from, index) => [from, bounds[index + 1] ?? text.length]);
 }
 
-function opacityAt(position: number, name: NameSpan): number | undefined {
-  if (position < name.start) return KEYWORD_OPACITY;
-  return position < name.end ? undefined : TAIL_OPACITY;
-}
