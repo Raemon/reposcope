@@ -9,23 +9,30 @@ import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 import { useCachedJson } from '@/features/sources/useCachedJson';
 import { RelativeTime } from '@/features/surface-ui/RelativeTime';
 
-export function useBranches(owner: string, repo: string, wanted: boolean): BranchSummary[] {
+export interface BranchListing {
+  branches: BranchSummary[];
+  loading: boolean;
+  error: string | null;
+}
+
+export function useBranches(owner: string, repo: string, wanted: boolean): BranchListing {
   const ready = useStoreReady();
   const token = useGithubToken();
-  const { data } = useCachedJson<BranchSummary[]>(wanted ? repoBranchesPath(owner, repo) : null, token, ready);
-  return data ?? [];
+  const path = wanted ? repoBranchesPath(owner, repo) : null;
+  const { data, fresh, error } = useCachedJson<BranchSummary[]>(path, token, ready);
+  return { branches: data ?? [], loading: wanted && data === null && !fresh, error };
 }
 
 export function BranchesSection({
   owner,
   repo,
-  branches,
+  listing,
   expanded,
   onExpanded,
 }: {
   owner: string;
   repo: string;
-  branches: BranchSummary[];
+  listing: BranchListing;
   expanded: boolean;
   onExpanded: (next: boolean) => void;
 }) {
@@ -41,22 +48,27 @@ export function BranchesSection({
         expanded={expanded}
         onActivate={() => onExpanded(!expanded)}
       />
-      {expanded && <BranchList owner={owner} repo={repo} branches={branches} />}
+      {expanded && <BranchList owner={owner} repo={repo} listing={listing} />}
     </section>
   );
 }
 
-function BranchList({ owner, repo, branches }: { owner: string; repo: string; branches: BranchSummary[] }) {
+function BranchList({ owner, repo, listing }: { owner: string; repo: string; listing: BranchListing }) {
   const pathname = usePathname();
-  if (branches.length === 0) return <p className="px-2 py-1 text-[11px] leading-4 text-ink-dim">No branches.</p>;
+  if (listing.branches.length === 0) return <BranchNote listing={listing} />;
   return (
     <nav className="min-h-0 flex-1 overflow-auto py-[1px]">
-      {branches.map((branch) => {
+      {listing.branches.map((branch) => {
         const href = branchRoute(owner, repo, branch.name);
         return <BranchRow key={branch.name} branch={branch} href={href} current={pathname === href} />;
       })}
     </nav>
   );
+}
+
+function BranchNote({ listing }: { listing: BranchListing }) {
+  const note = listing.error ?? (listing.loading ? 'Loading…' : 'No branches.');
+  return <p className={`px-2 py-1 text-[11px] leading-4 ${listing.error ? 'text-error-ink' : 'text-ink-dim'}`}>{note}</p>;
 }
 
 function BranchRow({ branch, href, current }: { branch: BranchSummary; href: string; current: boolean }) {

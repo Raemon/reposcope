@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { errorMessage } from '@/features/sources/errorMessage';
 
 export interface ThreadAction {
   busy: boolean;
@@ -16,7 +17,7 @@ export function useThreadAction(reload: () => Promise<unknown>): ThreadAction {
     setFailure(null);
     void work()
       .then(reload)
-      .catch((issue: unknown) => setFailure(issue instanceof Error ? issue.message : String(issue)))
+      .catch((issue: unknown) => setFailure(errorMessage(issue)))
       .finally(() => setBusy(false));
   };
   return { busy, failure, run };

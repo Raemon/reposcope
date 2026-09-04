@@ -2,12 +2,15 @@
 
 import { ChangeCounts } from './ChangeCounts';
 import { useDiffSort } from './diffSortStore';
+import { TrashIcon } from './diffToolbarIcons';
 import { FileTreeRow } from './FileTreeRow';
 import { FolderGroupedRows } from './FolderGroupedRows';
 import type { ChangedFile } from './pullRequests';
+import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 
-const DELETE_ICON =
-  'absolute right-0.5 top-1/2 -translate-y-1/2 rounded bg-btn px-1 text-[10px] leading-4 text-ink-dim opacity-0 transition-opacity hover:bg-btn-hover hover:text-error-ink focus-visible:opacity-100 group-hover:opacity-100';
+const DELETE_SLOT =
+  'absolute right-0.5 top-1/2 -translate-y-1/2 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100';
+const DELETE_BUTTON = 'flex items-center rounded bg-btn px-1 py-[1px] text-ink-dim hover:bg-btn-hover hover:text-error-ink';
 
 interface RowProps {
   selected: string | null;
@@ -46,14 +49,10 @@ function ChangedFileRow({ file, indented, selected, onSelect, onDelete }: RowPro
 function deleteIconFor(file: ChangedFile, onDelete: ((filename: string) => void) | null) {
   if (onDelete === null || file.status === 'removed') return null;
   return (
-    <button
-      type="button"
-      aria-label={`Delete ${file.filename}`}
-      title={`Delete ${file.filename}`}
-      onClick={() => onDelete(file.filename)}
-      className={DELETE_ICON}
-    >
-      🗑
-    </button>
+    <HoverCardTrigger label={`Delete ${file.filename}`} className={DELETE_SLOT} focusable={false} tooltipStyle>
+      <button type="button" aria-label={`Delete ${file.filename}`} onClick={() => onDelete(file.filename)} className={DELETE_BUTTON}>
+        <TrashIcon />
+      </button>
+    </HoverCardTrigger>
   );
 }

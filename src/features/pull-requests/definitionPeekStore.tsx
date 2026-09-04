@@ -8,6 +8,7 @@ import type { ChangedFileSet, FileText } from './pullRequests';
 import type { RepoFileSet } from './repoFiles';
 import { apiJson } from '@/features/sources/apiClient';
 import { useGithubToken } from '@/features/sources/sourceStore';
+import { errorMessage } from '@/features/sources/errorMessage';
 
 export interface PeekOrigin {
   path: string;
@@ -89,7 +90,7 @@ export function DefinitionPeekProvider({
         if (wanted !== generation.current) return;
         replaceTop({ word, site: refined, sites, view, note: view ? null : 'file unavailable', loading: false });
       } catch (issue: unknown) {
-        if (wanted === generation.current) replaceTop(emptyFrame(word, describe(issue)));
+        if (wanted === generation.current) replaceTop(emptyFrame(word, errorMessage(issue)));
       }
     },
     [files, replaceTop],
@@ -161,12 +162,8 @@ function emptyFrame(word: string, note: string | null): PeekFrame {
   return { word, site: null, sites: [], view: null, note: note ?? `no definition found for ${word}`, loading: false };
 }
 
-function describe(issue: unknown): string {
-  return issue instanceof Error ? issue.message : String(issue);
-}
-
 function failedResolution(issue: unknown): { sites: DefinitionSite[]; note: string } {
-  return { sites: [], note: describe(issue) };
+  return { sites: [], note: errorMessage(issue) };
 }
 
 function withPatchFallback(

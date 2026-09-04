@@ -1,8 +1,8 @@
-import type { CodeSegment } from './codeSegments';
+import { DIM_INK_STYLE, type CodeSegment, type DimmedSegment, type SegmentRole } from './codeSegments';
 import type { ThemedToken } from './diffHighlight';
+import { abbreviated, wordsToClip } from './keywordAbbreviations';
 
-const KEYWORD_OPACITY = 0.45;
-const TAIL_OPACITY = 0.6;
+const DIM_OPACITY = 0.45;
 const LEADING_SCOPES = /^(keyword|storage|punctuation|comment|meta\.brace)/;
 
 interface NameSpan {
@@ -10,12 +10,27 @@ interface NameSpan {
   end: number;
 }
 
-export function dimAroundName(segments: CodeSegment[], tokens: ThemedToken[] | null): CodeSegment[] {
+export interface FoldLayout {
+  indent: number;
+  name: NameSpan;
+  prefix: string;
+}
+
+export function foldLayout(tokens: ThemedToken[] | null): FoldLayout | null {
   const name = tokens && declaredName(tokens);
-  if (!name) return segments;
+  if (!name) return null;
+  const text = tokens.map((token) => token.content).join('');
+  const indent = text.length - text.trimStart().length;
+  return { indent, name, prefix: text.slice(indent, name.start) };
+}
+
+// The prefix is clipped only when its full words overflow the pane's prefix column.
+export function collapsedSegments(segments: CodeSegment[], layout: FoldLayout | null, column: number): DimmedSegment[] {
+  if (!layout) return segments;
+  const clip = wordsToClip(layout.prefix, column);
   let offset = 0;
   return segments.flatMap((segment) => {
-    const pieces = dimSegment(segment, offset, name);
+    const pieces = roleSlices(segment, offset, layout, clip);
     offset += segment.content.length;
     return pieces;
   });
@@ -39,20 +54,29 @@ function innermostScope(token: ThemedToken): string {
   return scopes[scopes.length - 1]?.scopeName ?? '';
 }
 
-function dimSegment(segment: CodeSegment, start: number, name: NameSpan): CodeSegment[] {
-  return sliceStarts(segment.content, start, name).map((from, index, starts) => ({
-    ...segment,
-    content: segment.content.slice(from, starts[index + 1]),
-    opacity: opacityAt(start + from, name),
-  }));
+function roleSlices(segment: CodeSegment, start: number, layout: FoldLayout, clip: ReadonlySet<string>): DimmedSegment[] {
+  const boundaries = [layout.indent, layout.name.start, layout.name.end];
+  return slicesAt(segment.content, start, boundaries).flatMap(([from, to]) => {
+    const piece = withRole(segment, segment.content.slice(from, to), roleAt(start + from, layout));
+    return piece.role === 'prefix' ? abbreviated(piece, clip) : [piece];
+  });
 }
 
-function sliceStarts(text: string, start: number, name: NameSpan): number[] {
-  const inside = [name.start, name.end].map((point) => point - start).filter((at) => at > 0 && at < text.length);
-  return [0, ...inside];
+function roleAt(position: number, { indent, name }: FoldLayout): SegmentRole | null {
+  if (position < indent) return null;
+  if (position < name.start) return 'prefix';
+  return position < name.end ? 'name' : 'tail';
 }
 
-function opacityAt(position: number, name: NameSpan): number | undefined {
-  if (position < name.start) return KEYWORD_OPACITY;
-  return position < name.end ? undefined : TAIL_OPACITY;
+function withRole(segment: CodeSegment, content: string, role: SegmentRole | null): DimmedSegment {
+  if (role === null) return { ...segment, content };
+  if (role === 'name') return { ...segment, content, role };
+  return { ...segment, content, role, style: DIM_INK_STYLE, opacity: DIM_OPACITY };
+}
+
+function slicesAt(text: string, start: number, points: number[]): [number, number][] {
+  const inside = points.map((point) => point - start).filter((at) => at > 0 && at < text.length);
+  const cuts = [...new Set(inside)].sort((a, b) => a - b);
+  const bounds = [0, ...cuts, text.length];
+  return cuts.concat(text.length).map((to, index) => [bounds[index] ?? 0, to]);
 }

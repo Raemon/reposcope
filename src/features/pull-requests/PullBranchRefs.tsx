@@ -7,8 +7,10 @@ import { branchOptionsPath, retargetPullPath } from './pullPaths';
 import { apiPost } from '@/features/sources/apiClient';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
+import { errorMessage } from '@/features/sources/errorMessage';
 import { useCachedJson, type CachedJson } from '@/features/sources/useCachedJson';
 import { FilterField } from '@/features/surface-ui/FilterField';
+import { FailureNote } from '@/features/surface-ui/FailureNote';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { PaneStatusLine } from '@/features/surface-ui/PaneStatusLine';
 import { PopoverMenu, type PopoverTrigger } from '@/features/surface-ui/PopoverMenu';
@@ -57,20 +59,16 @@ function BaseRefPicker({
     try {
       await apiPost(retargetPullPath(repo.owner, repo.name, number, base), token);
     } catch (issue: unknown) {
-      return setFailure(`retarget refused: ${describe(issue)}`);
+      return setFailure(`retarget refused: ${errorMessage(issue)}`);
     } finally {
       setRetargeting(false);
     }
-    await reloadCurrentPull().catch((issue: unknown) => setFailure(`base changed; reload failed: ${describe(issue)}`));
+    await reloadCurrentPull().catch((issue: unknown) => setFailure(`base changed; reload failed: ${errorMessage(issue)}`));
   }
 
   return (
     <>
-      {failure !== null && (
-        <HoverCardTrigger label={failure} className="max-w-56" focusable={false} tooltipStyle>
-          <span className="max-w-40 truncate text-[10px] text-error-ink">{failure}</span>
-        </HoverCardTrigger>
-      )}
+      {failure !== null && <FailureNote label={failure} />}
       <PopoverMenu
         align="right-0"
         panelClass="flex max-h-[70vh] w-72 flex-col overflow-hidden"
@@ -184,8 +182,4 @@ function useBranchOptions(repo: RepoRef) {
 function matchingBranches(branches: BranchOption[], skip: string[], filter: string): BranchOption[] {
   const wanted = filter.trim().toLowerCase();
   return branches.filter((branch) => !skip.includes(branch.name) && branch.name.toLowerCase().includes(wanted));
-}
-
-function describe(issue: unknown): string {
-  return issue instanceof Error ? issue.message : String(issue);
 }

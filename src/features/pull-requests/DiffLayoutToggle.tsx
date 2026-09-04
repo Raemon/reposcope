@@ -8,7 +8,8 @@ import { DiffSortMenu } from './DiffSortMenu';
 import { FoldModeButtons } from './FoldModeButtons';
 import { ChoiceButton } from '@/features/surface-ui/ChoiceButton';
 import type { IconButtonTone } from '@/features/surface-ui/buttonStyles';
-import { EditIcon, ResultViewIcon, SplitViewIcon, UnifiedViewIcon } from './diffToolbarIcons';
+import { EditIcon, ResultViewIcon, SplitViewIcon, UnifiedViewIcon, WrapLinesIcon } from './diffToolbarIcons';
+import { setDiffWrap, useDiffWrap } from './diffWrapStore';
 
 const CHOICES: { layout: DiffLayout; icon: ReactNode; label: string; tone?: IconButtonTone }[] = [
   { layout: 'split', icon: <SplitViewIcon />, label: 'Show diffs in a two-column view' },
@@ -28,15 +29,31 @@ export function DiffLayoutToggle({ sortable }: { sortable: boolean }) {
             label={label}
             active={current === layout}
             tone={tone}
+            placement="top-end"
             onSelect={() => setDiffLayout(layout)}
           >
             {icon}
           </ChoiceButton>
         ))}
+        <WrapToggle />
         <EditModeToggle />
         {sortable && <DiffSortMenu />}
       </span>
     </div>
+  );
+}
+
+function WrapToggle() {
+  const wrap = useDiffWrap();
+  return (
+    <ChoiceButton
+      label="Wrap long lines instead of scrolling them sideways"
+      active={wrap}
+      placement="top-end"
+      onSelect={() => setDiffWrap(!wrap)}
+    >
+      <WrapLinesIcon />
+    </ChoiceButton>
   );
 }
 
@@ -48,6 +65,7 @@ function EditModeToggle() {
     <ChoiceButton
       label="Edit mode — click any line to edit it; triple-click works either way"
       active={editMode}
+      placement="top-end"
       onSelect={() => setDiffEditMode(!editMode)}
     >
       <EditIcon />

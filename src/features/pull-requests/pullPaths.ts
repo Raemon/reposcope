@@ -87,6 +87,14 @@ export function closePullPath(owner: string, repo: string, number: number): stri
   return `/api/github/close?${repoParams(owner, repo)}&number=${number}`;
 }
 
+export function freshPreviewPath(owner: string, repo: string, number: number): string {
+  return `/api/github/preview-branch?${repoParams(owner, repo)}&number=${number}`;
+}
+
+export function previewForRefPath(owner: string, repo: string, ref: string): string {
+  return `/api/github/preview-branch?${repoParams(owner, repo)}&ref=${encodeURIComponent(ref)}`;
+}
+
 export function pullRoute(owner: string, repo: string, number: number): string {
   return `${repoRoute(owner, repo)}/pull/${number}`;
 }

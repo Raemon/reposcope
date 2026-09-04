@@ -1,13 +1,15 @@
 import type { DiffCell, DiffRow } from './splitDiff';
+import type { Truncation } from './truncateRows';
 
 export interface DiffLine {
-  kind: DiffRow['kind'];
+  kind: DiffRow['kind'] | 'truncated';
   label: string;
   side: 'left' | 'right';
   cell: DiffCell | null;
   row: number;
   touched: boolean;
   blank: boolean;
+  truncated: number;
 }
 
 interface PlacedRow {
@@ -32,9 +34,29 @@ function keptInResult(line: DiffLine, commented: Set<number>): boolean {
   return line.kind === 'hunk' || line.cell !== null || commented.has(line.row);
 }
 
-export function visibleLines(lines: DiffLine[], hidden: Set<number>): DiffLine[] {
-  if (hidden.size === 0) return lines;
-  return lines.filter((line) => line.kind === 'hunk' || !hidden.has(line.row));
+export function shownLines(lines: DiffLine[], hidden: Set<number>, truncation: Truncation): DiffLine[] {
+  if (hidden.size === 0 && truncation.runOf.size === 0) return lines;
+  const shown: DiffLine[] = [];
+  const stripped = new Set<number>();
+  for (const line of lines) keepLine(shown, stripped, line, hidden, truncation);
+  return shown;
+}
+
+function keepLine(shown: DiffLine[], stripped: Set<number>, line: DiffLine, hidden: Set<number>, truncation: Truncation) {
+  if (line.kind === 'hunk') return void shown.push(line);
+  const run = truncation.runOf.get(line.row);
+  if (run !== undefined) return addStripOnce(shown, stripped, run, truncation, line.side);
+  if (!hidden.has(line.row)) shown.push(line);
+}
+
+function addStripOnce(shown: DiffLine[], stripped: Set<number>, run: number, truncation: Truncation, side: 'left' | 'right') {
+  if (stripped.has(run)) return;
+  stripped.add(run);
+  shown.push(truncatedLine(run, side, truncation.sizeOf.get(run) ?? 0));
+}
+
+function truncatedLine(row: number, side: 'left' | 'right', truncated: number): DiffLine {
+  return { kind: 'truncated', label: '', side, cell: null, row, touched: false, blank: false, truncated };
 }
 
 function changeRuns(rows: DiffRow[]): PlacedRow[][] {
@@ -57,7 +79,7 @@ function sideLines(run: PlacedRow[], side: 'left' | 'right'): DiffLine[] {
 }
 
 function lineOf(row: DiffRow, index: number, side: 'left' | 'right'): DiffLine {
-  const flags = { touched: row.touched === true, blank: blankRow(row) };
+  const flags = { touched: row.touched === true, blank: blankRow(row), truncated: 0 };
   return { kind: row.kind, label: row.label, side, cell: row[side], row: index, ...flags };
 }
 

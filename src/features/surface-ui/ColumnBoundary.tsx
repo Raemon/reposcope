@@ -1,6 +1,7 @@
 'use client';
 
 import { Component, type ReactNode } from 'react';
+import { errorMessage } from '@/features/sources/errorMessage';
 import { PaneStatusLine } from './PaneStatusLine';
 
 // Without this, one render error in a column replaces the page with Next's error screen.
@@ -8,7 +9,7 @@ export class ColumnBoundary extends Component<{ children: ReactNode }, { failure
   state = { failure: null as string | null };
 
   static getDerivedStateFromError(error: unknown) {
-    return { failure: error instanceof Error ? error.message : String(error) };
+    return { failure: errorMessage(error) };
   }
 
   render() {

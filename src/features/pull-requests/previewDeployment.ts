@@ -16,15 +16,18 @@ const API = 'https://api.github.com';
 const PREVIEW_BOT = 'vercel[bot]';
 
 export async function previewDeploymentUrl(owner: string, name: string, sha: string): Promise<string | null> {
-  try {
-    const deployments = await githubJson<GithubDeployment[]>(
-      `${API}/repos/${owner}/${name}/deployments?sha=${sha}&per_page=20`,
-    );
-    const preview = deployments.find(isVercelPreview);
-    return preview ? await liveDeploymentUrl(owner, name, preview.id) : null;
-  } catch {
-    return null;
-  }
+  return newestPreviewUrl(owner, name, { sha }).catch(() => null);
+}
+
+export async function previewUrlForRef(owner: string, name: string, ref: string): Promise<string | null> {
+  return newestPreviewUrl(owner, name, { ref });
+}
+
+async function newestPreviewUrl(owner: string, name: string, pick: Record<string, string>): Promise<string | null> {
+  const query = new URLSearchParams({ ...pick, per_page: '20' });
+  const deployments = await githubJson<GithubDeployment[]>(`${API}/repos/${owner}/${name}/deployments?${query}`);
+  const preview = deployments.find(isVercelPreview);
+  return preview ? await liveDeploymentUrl(owner, name, preview.id) : null;
 }
 
 function isVercelPreview(deployment: GithubDeployment): boolean {
