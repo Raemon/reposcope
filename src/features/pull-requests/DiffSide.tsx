@@ -13,7 +13,7 @@ import type { ThemedToken } from './diffHighlight';
 import type { CharRange, IntralineRanges } from './intralineDiff';
 import type { DiffRow } from './splitDiff';
 import type { CollapseAnchor } from './useCodeCollapse';
-import type { CodePress } from './useDefinitionClick';
+import type { CodePointer } from './useDefinitionPointer';
 import type { SideTokens } from './useDiffSideHighlight';
 import { lineHeight, type RowHeights } from './diffMetrics';
 import { ROW_ATTR } from './litRow';
@@ -60,7 +60,7 @@ export interface SideProps {
   editor?: ReactNode;
   editedRows?: EditableBlock | null;
   spacer?: { afterRow: number; height: number } | null;
-  onCodePress?: CodePress;
+  pointer?: CodePointer;
   wrap: boolean;
   heights: RowHeights;
   onMeasured: (heights: RowHeights) => void;
@@ -148,7 +148,7 @@ function DiffLines({
   editable,
   onEditBlock,
   spacer,
-  onCodePress,
+  pointer,
   wrap,
   heights,
   onUntruncate,
@@ -181,7 +181,7 @@ function DiffLines({
                 height={heights ? lineHeight(line, heights) : null}
                 editable={editable}
                 onEdit={editStarter(rows, line.row, onEditBlock)}
-                onCodePress={onCodePress}
+                pointer={pointer}
                 onUntruncate={onUntruncate}
               />
               {spacerLine === index && <div style={{ height: spacer?.height }} />}
@@ -238,7 +238,7 @@ function DiffLineView({
   height,
   editable,
   onEdit,
-  onCodePress,
+  pointer,
   onUntruncate,
 }: {
   line: DiffLine;
@@ -255,7 +255,7 @@ function DiffLineView({
   height: number | null;
   editable?: boolean;
   onEdit?: () => void;
-  onCodePress?: CodePress;
+  pointer?: CodePointer;
   onUntruncate?: (run: number) => void;
 }) {
   const { cell, side } = line;
@@ -290,7 +290,9 @@ function DiffLineView({
           {...{ [WRAPPED_CELL]: `${side}:${line.row}` }}
           className={codeClass(collapsed, wrapping)}
           style={wrapping && !collapsed ? hangingIndentStyle(cell.text) : undefined}
-          onClick={onCodePress ? (event) => onCodePress(line, event) : undefined}
+          onClick={pointer ? (event) => pointer.press(line, event) : undefined}
+          onMouseMove={pointer ? (event) => pointer.move(line, event) : undefined}
+          onMouseLeave={pointer?.leave}
         >
           <CodeText segments={segments} side={side} fold={fold} />
         </span>

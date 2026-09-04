@@ -23,7 +23,7 @@ import { useFileThreads } from './reviewThreadStore';
 import { splitDiff, type DiffRow } from './splitDiff';
 import { truncateFarRows, NO_TRUNCATION, type Truncation } from './truncateRows';
 import { useCodeCollapse } from './useCodeCollapse';
-import { useDefinitionClick } from './useDefinitionClick';
+import { useDefinitionPointer } from './useDefinitionPointer';
 import { useDiffTokens, useIntralineEmphasis } from './useDiffSideHighlight';
 import { useHeightTransition } from './useHeightTransition';
 import { useHunkEdit, type HunkEdit, type HunkEditControls } from './useHunkEdit';
@@ -88,8 +88,8 @@ export function FileDiff({
   const leftLines = useShownLines(rows, singleColumn ? null : 'left', drawn);
   const growing = useHeightTransition(rows, undrawn, rowHeights);
   const expand = expandControl(wholeFile, showingWholeFile, hunkEdit, setWantWholeFile);
-  const onCodePress = useDefinitionClick(file, baseRef, headRef);
-  const shared = { rows, tokens, emphasis, expand, anchors: collapse.anchors, onCodePress, wrap, heights: rowHeights, onUntruncate: untruncate };
+  const pointer = useDefinitionPointer(file, baseRef, headRef);
+  const shared = { rows, tokens, emphasis, expand, anchors: collapse.anchors, pointer, wrap, heights: rowHeights, onUntruncate: untruncate };
   const bounds = { hidden: undrawn, stopAtBlankLines: showingWholeFile };
   const editing = {
     editable: pull !== null,
