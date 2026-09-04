@@ -1,20 +1,18 @@
 'use client';
 
-import { useCallback, useEffect } from 'react';
-import { BLANK_SESSION, readSession, updateSession, useChatSession, type ChatSession } from './aiChatStore';
-import { CURSOR_AGENT_PATH, CURSOR_RUN_PATH } from './aiChatPaths';
-import { appendEntry, entryId } from './chatEntries';
+import { useCallback, useEffect, useState } from 'react';
+import { readActiveThread, setActiveThread, useActiveThread, useChatSession, type ChatSession } from './aiChatStore';
+import { cursorAgentsPath } from './aiChatPaths';
+import { adoptCursorAgents, latestThreadFor, useSubjectThreads, type ChatThread, type ThreadPurpose, type ThreadTarget } from './chatThreads';
 import { followOnce } from './followRun';
 import { cursorHeaders, useCursorKey } from './cursorKeyStore';
-import { runFinished, WARMUP_PROMPT, type CursorLaunch, type CursorRun } from './cursorTypes';
+import { runFinished, type CursorAgent } from './cursorTypes';
+import { dispatchQueued, queuePrompt, restoreThread, startThread } from './startThread';
 import { useCursorAccount, type CursorAccount } from './useCursorModels';
-import { apiKeyedPost } from '@/features/sources/apiClient';
-import { errorMessage } from '@/features/sources/errorMessage';
+import { pullUrl } from '@/features/pull-requests/pullPaths';
+import { apiKeyedJson } from '@/features/sources/apiClient';
 
-export interface AiChatTarget {
-  subject: string;
-  owner: string;
-  repo: string;
+export interface AiChatTarget extends Omit<ThreadTarget, 'headRef'> {
   headRef: string | null;
   active: boolean;
 }
@@ -24,113 +22,92 @@ export interface AiChat {
   account: CursorAccount;
   model: string | null;
   busy: boolean;
+  threads: ChatThread[];
+  thread: string | null;
   send: (text: string) => void;
   restart: (model: string | null) => void;
+  select: (thread: string) => void;
 }
 
-export function useAiChat({ subject, owner, repo, headRef, active }: AiChatTarget): AiChat {
+type Launch = (purpose: ThreadPurpose, prompt: string | null, model: string | null) => void;
+
+export function useAiChat(target: AiChatTarget): AiChat {
+  const { subject, active } = target;
   const key = useCursorKey();
-  const session = useChatSession(subject);
+  const { threads, thread, current } = useCurrentThread(subject);
+  const session = useChatSession(thread);
   const account = useCursorAccount(key);
   const model = session.model ?? account.defaultModel;
+  const launch = useLaunch(target, key);
+  const adopted = useAdoptCursorThreads(target, key);
 
-  useWarmUpOnOpen({ subject, owner, repo, headRef, key, model, active });
-  useFollowActiveRun(subject, key, session);
-  useQueuedPrompt(subject, key, session);
+  useWarmUpOnOpen(subject, active && adopted && thread === null && model !== null, launch, model);
+  useRestoreThread(current);
+  useFollowActiveRun(thread, key, session);
+  useDispatchQueued(thread, session);
 
-  const send = useCallback((text: string) => queuePrompt(subject, text), [subject]);
-  const restart = useCallback((next: string | null) => updateSession(subject, { ...BLANK_SESSION, model: next }), [subject]);
+  const unlaunched = session.agentId === null && !session.launching;
+  const send = useCallback(
+    (text: string) => (thread === null || unlaunched ? launch('chat', text, model) : queuePrompt(thread, text)),
+    [thread, unlaunched, launch, model],
+  );
+  const restart = useCallback((next: string | null) => launch('chat', null, next), [launch]);
+  const select = useCallback((next: string) => setActiveThread(subject, next), [subject]);
 
-  return { session, account, model, busy: !runFinished(session.status) || session.launching, send, restart };
+  return { session, account, model, busy: !runFinished(session.status) || session.launching, threads, thread, send, restart, select };
 }
 
-interface WarmUp {
-  subject: string;
-  owner: string;
-  repo: string;
-  headRef: string | null;
-  key: string | null;
-  model: string | null;
-  active: boolean;
+function useCurrentThread(subject: string): { threads: ChatThread[]; thread: string | null; current: ChatThread | null } {
+  const threads = useSubjectThreads(subject);
+  const chosen = useActiveThread(subject);
+  const thread = chosen ?? threads[threads.length - 1]?.key ?? null;
+  return { threads, thread, current: threads.find((held) => held.key === thread) ?? null };
 }
 
-function useWarmUpOnOpen({ subject, owner, repo, headRef, key, model, active }: WarmUp): void {
+function useLaunch({ subject, owner, repo, number, headRef, headSha }: AiChatTarget, key: string | null): Launch {
+  return useCallback(
+    (purpose, prompt, model) => {
+      if (key === null || headRef === null) return;
+      startThread({ subject, owner, repo, number, headRef, headSha, cursorKey: key, model, purpose, prompt });
+    },
+    [key, subject, owner, repo, number, headRef, headSha],
+  );
+}
+
+function useWarmUpOnOpen(subject: string, wanted: boolean, launch: Launch, model: string | null): void {
   useEffect(() => {
-    if (!active || key === null || headRef === null || model === null) return;
-    void warmUp({ subject, owner, repo, ref: headRef, key, model });
-  }, [active, key, headRef, model, subject, owner, repo]);
+    if (wanted && readActiveThread(subject) === null && latestThreadFor(subject) === null) launch('chat', null, model);
+  }, [subject, wanted, launch, model]);
 }
 
-function useFollowActiveRun(subject: string, key: string | null, { agentId, runId }: ChatSession): void {
+// Adoption settles before warm-up, so an agent Cursor already has for this PR is reused.
+function useAdoptCursorThreads({ subject, owner, repo, number, headRef, active }: AiChatTarget, key: string | null): boolean {
+  const [settled, setSettled] = useState(false);
   useEffect(() => {
-    if (key !== null && agentId !== null && runId !== null) followOnce(subject, key, agentId, runId);
-  }, [key, subject, agentId, runId]);
+    if (!active || key === null || number === null || headRef === null) return setSettled(number === null);
+    setSettled(false);
+    apiKeyedJson<{ items: CursorAgent[] }>(cursorAgentsPath(pullUrl(owner, repo, number)), cursorHeaders(key))
+      .then(({ items }) => adoptCursorAgents(items, { subject, owner, repo, number, headRef, headSha: null }))
+      .catch(() => undefined)
+      .finally(() => setSettled(true));
+  }, [active, key, subject, owner, repo, number, headRef]);
+  return settled;
 }
 
-function useQueuedPrompt(subject: string, key: string | null, session: ChatSession): void {
-  const { agentId, queued, status, launching } = session;
+function useRestoreThread(thread: ChatThread | null): void {
   useEffect(() => {
-    if (key === null || agentId === null || queued === null || launching || !runFinished(status)) return;
-    void sendQueued(subject, key, agentId, queued);
-  }, [key, subject, agentId, queued, status, launching]);
+    if (thread !== null) restoreThread(thread);
+  }, [thread]);
 }
 
-function queuePrompt(subject: string, text: string): void {
-  updateSession(subject, (held) => ({
-    error: null,
-    queued: held.queued === null ? text : `${held.queued}\n\n${text}`,
-    entries: appendEntry(held.entries, { id: entryId(), kind: 'user', text }),
-  }));
+function useFollowActiveRun(thread: string | null, key: string | null, { agentId, runId }: ChatSession): void {
+  useEffect(() => {
+    if (thread !== null && key !== null && agentId !== null && runId !== null) followOnce(thread, key, agentId, runId);
+  }, [key, thread, agentId, runId]);
 }
 
-interface Launch {
-  subject: string;
-  owner: string;
-  repo: string;
-  ref: string;
-  key: string;
-  model: string;
-}
-
-async function warmUp(launch: Launch): Promise<void> {
-  const { subject, key, ref, model } = launch;
-  const held = readSession(subject);
-  if (held.agentId !== null || held.launching) return;
-  updateSession(subject, {
-    launching: true,
-    model,
-    error: null,
-    entries: appendEntry(held.entries, { id: entryId(), kind: 'notice', text: `Starting a cloud agent on ${ref}…` }),
-  });
-  try {
-    updateSession(subject, launched(await requestAgent(launch, key)));
-  } catch (error) {
-    updateSession(subject, { launching: false, error: errorMessage(error) });
-  }
-}
-
-function requestAgent({ subject, owner, repo, ref, model }: Launch, key: string): Promise<CursorLaunch> {
-  return apiKeyedPost<CursorLaunch>(CURSOR_AGENT_PATH, cursorHeaders(key), {
-    owner,
-    repo,
-    ref,
-    model,
-    prompt: WARMUP_PROMPT,
-    name: `Shoggoth Reviews · ${subject}`,
-  });
-}
-
-function launched({ agent, run }: CursorLaunch): Partial<ChatSession> {
-  return { launching: false, agentId: agent.id, agentUrl: agent.url ?? null, runId: run.id, status: run.status };
-}
-
-async function sendQueued(subject: string, key: string, agentId: string, prompt: string): Promise<void> {
-  if (readSession(subject).queued !== prompt) return;
-  updateSession(subject, { queued: null, error: null, status: 'CREATING' });
-  try {
-    const run = await apiKeyedPost<CursorRun>(CURSOR_RUN_PATH, cursorHeaders(key), { agent: agentId, prompt });
-    updateSession(subject, { runId: run.id, status: run.status });
-  } catch (error) {
-    updateSession(subject, { status: 'ERROR', error: errorMessage(error) });
-  }
+function useDispatchQueued(thread: string | null, { agentId, queued, status, launching }: ChatSession): void {
+  useEffect(() => {
+    if (thread !== null) void dispatchQueued(thread);
+  }, [thread, agentId, queued, status, launching]);
 }

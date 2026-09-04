@@ -25,6 +25,10 @@ export function setStickyColumn(name: string, next: SetStateAction<ColumnSize>, 
   columnsPref.set({ ...held, [name]: typeof next === 'function' ? next(base) : next });
 }
 
+export function openStickyColumn(name: string): void {
+  setStickyColumn(name, (size) => ({ ...size, open: true }));
+}
+
 export function useStickyColumn(name: string, defaultOpen?: boolean): [ColumnSize, Dispatch<SetStateAction<ColumnSize>>] {
   const size = usePref(columnsPref)[name] ?? defaultSize(name, defaultOpen);
   const remember = useCallback<Dispatch<SetStateAction<ColumnSize>>>((next) => setStickyColumn(name, next, defaultOpen), [name, defaultOpen]);

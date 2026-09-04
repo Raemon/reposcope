@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { folderedPath, folderFilePaths, treePath } from './fileTreeNodes';
+import { folderedPath, folderReadingOrder, treePath } from './fileTreeNodes';
 import { RepoFileReader } from './RepoFileReader';
 import { RepoFolderReader } from './RepoFolderReader';
 import type { RepoFileSet } from './repoFiles';
@@ -24,12 +24,12 @@ export function RepoBrowseReader({
 }) {
   const settled = useSettled(item, SETTLE_MS);
   const folder = settled === null ? null : folderedPath(settled);
-  const paths = useMemo(() => (folder === null ? [] : folderFilePaths(tree.listed, folder)), [tree, folder]);
+  const items = useMemo(() => (folder === null ? [] : folderReadingOrder(tree.nodes, folder)), [tree.nodes, folder]);
   if (settled === null) return null;
   if (folder !== null)
-    return <RepoFolderReader key={`${fileSet.ref}:${folder}`} owner={owner} repo={repo} refName={fileSet.ref} paths={paths} />;
+    return <RepoFolderReader key={`${fileSet.sha}:${folder}`} owner={owner} repo={repo} refName={fileSet.sha} items={items} />;
   const path = treePath(settled);
-  return path === null ? null : <RepoFileReader owner={owner} repo={repo} refName={fileSet.ref} path={path} />;
+  return path === null ? null : <RepoFileReader owner={owner} repo={repo} refName={fileSet.sha} path={path} />;
 }
 
 function useSettled<T>(value: T, delayMs: number): T | null {

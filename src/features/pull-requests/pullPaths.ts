@@ -66,6 +66,10 @@ export function repoFilesAtRefPath(owner: string, repo: string, ref: string): st
   return `${repoFilesPath(owner, repo)}&ref=${encodeURIComponent(ref)}`;
 }
 
+export function repoLinesPath(owner: string, repo: string, ref: string): string {
+  return `/api/github/repo-lines?${repoParams(owner, repo)}&ref=${encodeURIComponent(ref)}`;
+}
+
 export function fileTextPath(owner: string, repo: string, ref: string, path: string): string {
   return `/api/github/file?${repoParams(owner, repo)}&ref=${encodeURIComponent(ref)}&path=${encodeURIComponent(path)}`;
 }
@@ -93,6 +97,18 @@ export function freshPreviewPath(owner: string, repo: string, number: number): s
 
 export function pullPreviewsPath(owner: string, repo: string, number: number): string {
   return `/api/github/pull-previews?${repoParams(owner, repo)}&number=${number}`;
+}
+
+export function pullSubject(owner: string, repo: string, number: number): string {
+  return `${owner}/${repo}#${number}`;
+}
+
+export function branchSubject(owner: string, repo: string, branch: string): string {
+  return `${owner}/${repo}@${branch}`;
+}
+
+export function pullUrl(owner: string, repo: string, number: number): string {
+  return `https://github.com/${owner}/${repo}/pull/${number}`;
 }
 
 export function pullRoute(owner: string, repo: string, number: number): string {

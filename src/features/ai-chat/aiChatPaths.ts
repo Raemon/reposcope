@@ -1,6 +1,11 @@
 export const CURSOR_SESSION_PATH = '/api/cursor/session';
 export const CURSOR_AGENT_PATH = '/api/cursor/agent';
 export const CURSOR_RUN_PATH = '/api/cursor/run';
+export const CURSOR_AGENTS_PATH = '/api/cursor/agents';
+
+export function cursorAgentsPath(prUrl: string): string {
+  return `${CURSOR_AGENTS_PATH}?prUrl=${encodeURIComponent(prUrl)}`;
+}
 
 export function cursorRunPath(agentId: string, runId: string): string {
   return `${CURSOR_RUN_PATH}?${runParams(agentId, runId)}`;

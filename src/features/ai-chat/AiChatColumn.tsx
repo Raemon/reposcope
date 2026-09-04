@@ -4,9 +4,10 @@ import { ChatComposer } from './ChatComposer';
 import { ChatTranscript } from './ChatTranscript';
 import { CursorKeyForm } from './CursorKeyForm';
 import { statusBusy, statusLabel } from './chatStatus';
-import { useAiChat } from './useAiChat';
+import { useAiChat, type AiChat } from './useAiChat';
 import { useCursorKey, writeCursorKey } from './cursorKeyStore';
 import type { ChatSession } from './aiChatStore';
+import { threadLabel, type ChatThread } from './chatThreads';
 import { ColumnPreview, type PreviewToken } from '@/features/pull-requests/ColumnPreview';
 import { useRegisterColumn } from '@/features/pull-requests/columnNav';
 import { usePaneMode } from '@/features/pull-requests/centralLayout';
@@ -16,12 +17,27 @@ import { SmallChoiceButton, SmallChoiceLink } from '@/features/surface-ui/SmallC
 
 const ICON = '✳';
 const HEADER_BTN = 'mr-1 shrink-0';
+const PICKER = 'mr-1 max-w-32 shrink-0 truncate rounded bg-btn px-1 py-[1px] font-mono text-[9px] text-ink-dim hover:text-ink';
 
-export function AiChatColumn({ owner, repo, subject, headRef }: { owner: string; repo: string; subject: string; headRef: string | null }) {
+export function AiChatColumn({
+  owner,
+  repo,
+  number,
+  subject,
+  headRef,
+  headSha,
+}: {
+  owner: string;
+  repo: string;
+  number: number | null;
+  subject: string;
+  headRef: string | null;
+  headSha: string | null;
+}) {
   const [size, setSize] = useStickyColumn('ai-chat');
   const pane = usePaneMode('ai-chat');
   const key = useCursorKey();
-  const chat = useAiChat({ subject, owner, repo, headRef, active: pane === 'pane' || size.open });
+  const chat = useAiChat({ subject, owner, repo, number, headRef, headSha, active: pane === 'pane' || size.open });
   const { session, account } = chat;
   useRegisterColumn('ai-chat', { ...useCollapsibleColumn('ai-chat', size, setSize), items: [], selected: null }, pane !== 'hidden');
   return (
@@ -34,7 +50,7 @@ export function AiChatColumn({ owner, repo, subject, headRef }: { owner: string;
       preview={<ColumnPreview column="ai-chat" tokens={previewTokens(session, key)} />}
       size={size}
       onSize={setSize}
-      action={key === null ? undefined : <HeaderActions session={session} onRestart={() => chat.restart(chat.model)} />}
+      action={key === null ? undefined : <HeaderActions chat={chat} />}
       footer={
         key === null ? null : (
           <ChatComposer
@@ -60,21 +76,41 @@ export function AiChatColumn({ owner, repo, subject, headRef }: { owner: string;
   );
 }
 
-function HeaderActions({ session, onRestart }: { session: ChatSession; onRestart: () => void }) {
+function HeaderActions({ chat }: { chat: AiChat }) {
+  const { session } = chat;
   return (
     <>
+      <ThreadPicker threads={chat.threads} thread={chat.thread} onSelect={chat.select} />
       {session.agentUrl !== null && (
         <SmallChoiceLink href={session.agentUrl} target="_blank" rel="noopener noreferrer" className={`${HEADER_BTN} inline-block`}>
           cursor ↗
         </SmallChoiceLink>
       )}
-      <SmallChoiceButton onClick={onRestart} className={HEADER_BTN}>
+      <SmallChoiceButton onClick={() => chat.restart(chat.model)} className={HEADER_BTN}>
         new
       </SmallChoiceButton>
       <SmallChoiceButton onClick={() => writeCursorKey(null)} className={HEADER_BTN}>
         key
       </SmallChoiceButton>
     </>
+  );
+}
+
+function ThreadPicker({ threads, thread, onSelect }: { threads: ChatThread[]; thread: string | null; onSelect: (key: string) => void }) {
+  if (threads.length < 2) return null;
+  return (
+    <select
+      aria-label="Thread"
+      value={thread ?? ''}
+      onChange={(event) => onSelect(event.target.value)}
+      className={PICKER}
+    >
+      {threads.map((held, index) => (
+        <option key={held.key} value={held.key}>
+          {threadLabel(held, index)}
+        </option>
+      ))}
+    </select>
   );
 }
 

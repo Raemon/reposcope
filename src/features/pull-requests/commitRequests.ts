@@ -1,8 +1,8 @@
 import { GithubRequestError } from '@/features/codebases/githubRequest';
 import type { FileDeletion, FileEdit } from './pullRequests';
+import { COMMIT_SHA_PATTERN } from '@/features/sources/sourceTypes';
 
 export const COMMIT_NUMBER_PATTERN = /^[1-9][0-9]{0,8}$/;
-const SHA_PATTERN = /^[0-9a-f]{40}$/;
 const PATH_PATTERN = /^(?!\/)(?!.*(?:^|\/)\.\.(?:\/|$))[^\0]{1,1024}$/;
 const MAX_EDIT_BYTES = 200_000;
 const MAX_MESSAGE_CHARS = 2_000;
@@ -28,7 +28,7 @@ export function fileDeletion(body: unknown): FileDeletion {
   const message = text(asked?.message, 'message');
   if (message.length > MAX_MESSAGE_CHARS) throw new GithubRequestError(413, 'Commit message is too long');
   const headRef = text(asked?.headRef, 'headRef');
-  if (!SHA_PATTERN.test(headRef)) throw new GithubRequestError(400, 'Invalid headRef');
+  if (!COMMIT_SHA_PATTERN.test(headRef)) throw new GithubRequestError(400, 'Invalid headRef');
   return { path, headRef, message };
 }
 

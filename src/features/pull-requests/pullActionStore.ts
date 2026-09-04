@@ -1,6 +1,7 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
+import { pullSubject } from './pullPaths';
 import { errorMessage } from '@/features/sources/errorMessage';
 
 export type PullActionKind = 'merge' | 'close';
@@ -23,10 +24,23 @@ const NONE: PullAction[] = [];
 let snapshot: PullAction[] = NONE;
 
 export function notePullAction(action: PullAction): void {
-  const slug = `${action.owner}/${action.repo}#${action.number}`;
+  const slug = pullSubject(action.owner, action.repo, action.number);
   // Delete before set so the newest activity sits last, for latestPullFailure.
   actions.delete(slug);
   actions.set(slug, action);
+  publish();
+}
+
+export function dismissPullAction(action: PullAction): void {
+  actions.delete(pullSubject(action.owner, action.repo, action.number));
+  publish();
+}
+
+export function sameTarget(a: PullTarget, b: PullTarget): boolean {
+  return a.owner === b.owner && a.repo === b.repo && a.number === b.number;
+}
+
+function publish(): void {
   snapshot = [...actions.values()];
   listeners.forEach((notify) => notify());
 }
@@ -47,7 +61,7 @@ export function usePullActions(): PullAction[] {
 }
 
 export function pullActionFor(held: PullAction[], owner: string, repo: string, number: number): PullAction | null {
-  return held.find((acted) => acted.owner === owner && acted.repo === repo && acted.number === number) ?? null;
+  return held.find((acted) => sameTarget(acted, { owner, repo, number })) ?? null;
 }
 
 export function latestPullFailure(held: PullAction[]): PullAction | null {

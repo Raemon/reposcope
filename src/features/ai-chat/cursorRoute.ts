@@ -21,6 +21,10 @@ export function cursorFailure(error: unknown): Response {
   return Response.json({ error: errorMessage(error) }, { status });
 }
 
+export function queryOf(request: Request): Record<string, unknown> {
+  return Object.fromEntries(new URL(request.url).searchParams);
+}
+
 export function requireText(body: Record<string, unknown>, name: string): string {
   const value = body[name];
   if (typeof value !== 'string' || value.trim() === '') throw new CursorError(400, `Missing ${name}`);

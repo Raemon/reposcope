@@ -1,7 +1,8 @@
 import { githubJson } from '@/features/codebases/githubRequest';
+import { COMMIT_SHA_PATTERN } from '@/features/sources/sourceTypes';
 
 export interface RepoFileSet {
-  ref: string;
+  sha: string;
   files: string[];
   truncated: boolean;
 }
@@ -15,14 +16,18 @@ const API = 'https://api.github.com';
 
 export async function listRepoFiles(owner: string, name: string, fresh = false, at?: string): Promise<RepoFileSet> {
   const ref = at ?? (await githubJson<{ default_branch: string }>(`${API}/repos/${owner}/${name}`, fresh)).default_branch;
-  const tree = await githubJson<GithubTree>(
-    `${API}/repos/${owner}/${name}/git/trees/${encodePath(ref)}?recursive=1`,
-    fresh,
-  );
-  return { ref, truncated: tree.truncated, files: blobPaths(tree) };
+  const sha = await resolveCommit(owner, name, ref, fresh);
+  const tree = await githubJson<GithubTree>(`${API}/repos/${owner}/${name}/git/trees/${sha}?recursive=1`);
+  return { sha, truncated: tree.truncated, files: blobPaths(tree) };
 }
 
-function encodePath(ref: string): string {
+export async function resolveCommit(owner: string, name: string, ref: string, fresh = false): Promise<string> {
+  if (COMMIT_SHA_PATTERN.test(ref)) return ref;
+  const commit = await githubJson<{ sha: string }>(`${API}/repos/${owner}/${name}/commits/${encodePath(ref)}`, fresh);
+  return commit.sha;
+}
+
+export function encodePath(ref: string): string {
   return ref.split('/').map(encodeURIComponent).join('/');
 }
 

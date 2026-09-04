@@ -7,7 +7,7 @@ import { ReviewLoadNotice } from './ReviewLoadNotice';
 import { ReviewWorkspace } from './ReviewWorkspace';
 import { setCurrentPull } from './currentPullStore';
 import { prefetchPull } from './prefetchPull';
-import { pullFilesPath, pullPath } from './pullPaths';
+import { pullFilesPath, pullPath, pullSubject } from './pullPaths';
 import type { PullRequestCommits, PullRequestSummary } from './pullRequests';
 import { useStickyColumn } from './stickyColumns';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
@@ -53,7 +53,7 @@ export function PullRequestView({
       owner={owner}
       repo={repo}
       number={number}
-      subjectKey={`${owner}/${repo}#${number}`}
+      subjectKey={pullSubject(owner, repo, number)}
       change={pull}
       baseRef={pull.baseRef}
       headRef={pull.headRef}

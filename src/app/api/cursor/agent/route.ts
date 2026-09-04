@@ -8,6 +8,7 @@ export async function POST(request: Request) {
       owner: requireText(body, 'owner'),
       repo: requireText(body, 'repo'),
       ref: optionalText(body, 'ref'),
+      prUrl: optionalText(body, 'prUrl'),
       prompt: requireText(body, 'prompt'),
       model: optionalText(body, 'model'),
       name: optionalText(body, 'name') ?? 'Shoggoth Reviews',

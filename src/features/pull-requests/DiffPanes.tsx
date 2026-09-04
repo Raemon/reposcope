@@ -1,11 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useImperativeHandle, useRef, useState, type Ref, type RefObject } from 'react';
+import { Fragment, useCallback, useEffect, useImperativeHandle, useRef, useState, type Ref, type RefObject } from 'react';
 import { NearViewportProvider } from './nearViewportStore';
 import { DefinitionPeek } from './DefinitionPeek';
 import { DefinitionPeekProvider } from './definitionPeekStore';
 import { DiffFileSection } from './DiffFileSection';
 import { DiffLayoutToggle } from './DiffLayoutToggle';
+import type { FolderHeading } from './fileTreeNodes';
+import { FolderHeadingBar } from './FolderHeading';
 import { EditTarget } from './editTarget';
 import { ImageThumbnailStrip } from './ImageThumbnailStrip';
 import { imageFilesOf, isImagePath } from './imageFiles';
@@ -30,6 +32,7 @@ export function DiffPanes({
   selected,
   editablePull = null,
   sortable = true,
+  headings,
   onCommitted,
   ref,
 }: {
@@ -40,6 +43,7 @@ export function DiffPanes({
   selected: string | null;
   editablePull?: PullRequestSummary | null;
   sortable?: boolean;
+  headings?: ReadonlyMap<string, FolderHeading[]>;
   onCommitted?: () => void | Promise<void>;
   ref?: Ref<DiffPanesHandle>;
 }) {
@@ -81,18 +85,20 @@ export function DiffPanes({
             />
             <NearViewportProvider root={scroller}>
               {files.map((file) => (
-                <DiffFileSection
-                  key={file.filename}
-                  owner={owner}
-                  repo={repo}
-                  file={file}
-                  baseRef={fileSet.baseRef}
-                  headRef={fileSet.headRef}
-                  selected={file.filename === selected}
-                  open={openFile(toggled, file.filename)}
-                  onToggle={() => toggleFile(file.filename)}
-                  sectionRef={holdSection(file.filename)}
-                />
+                <Fragment key={file.filename}>
+                  {headings?.get(file.filename)?.map((heading) => <FolderHeadingBar key={heading.path} {...heading} />)}
+                  <DiffFileSection
+                    owner={owner}
+                    repo={repo}
+                    file={file}
+                    baseRef={fileSet.baseRef}
+                    headRef={fileSet.headRef}
+                    selected={file.filename === selected}
+                    open={openFile(toggled, file.filename)}
+                    onToggle={() => toggleFile(file.filename)}
+                    sectionRef={holdSection(file.filename)}
+                  />
+                </Fragment>
               ))}
             </NearViewportProvider>
           </div>

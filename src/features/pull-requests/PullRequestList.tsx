@@ -25,16 +25,17 @@ export function PullRequestList({ repo }: { repo: RepoRef }) {
       {listed.length === 0 && <NoMatchingPulls />}
       {listed.map((pull) => {
         const href = pullRoute(repo.owner, repo.name, pull.number);
+        const target = { owner: repo.owner, repo: repo.name, number: pull.number };
         return (
           <PullListRow
             key={pull.number}
-            target={{ owner: repo.owner, repo: repo.name, number: pull.number }}
+            target={target}
             href={href}
             current={pathname === href}
             closable={pull.state === 'open'}
             column="pulls"
           >
-            <PullRowFields pull={pull} />
+            <PullRowFields pull={pull} target={target} />
           </PullListRow>
         );
       })}
