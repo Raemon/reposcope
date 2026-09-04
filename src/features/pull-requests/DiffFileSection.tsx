@@ -58,18 +58,18 @@ export function DiffFileSection({
       <div
         data-nav-cursor={row.props.cursor || undefined}
         onPointerEnter={row.props.onPointerEnter}
-        className={`group sticky top-0 z-20 flex items-baseline gap-2 border-b border-panel-edge pr-2 text-[11px] leading-4 ${sectionTone(row.state)}`}
+        className={`group sticky top-0 z-20 flex items-baseline gap-2 border-b border-panel-edge pr-2 text-[11px] leading-5 ${sectionTone(row.state)}`}
       >
         <SelectableRow
           {...row.props}
           onActivate={onToggle}
           expanded={open}
-          className="flex min-w-0 flex-1 items-baseline gap-2 py-[2px] pl-2 text-left"
+          className="flex min-w-0 flex-1 items-baseline gap-2 py-1.5 pl-2 text-left"
         >
           <span aria-hidden className="w-3 shrink-0 text-[11px] text-ink-dim">
             {open ? '▾' : '▸'}
           </span>
-          <span className="min-w-0 flex-1 truncate filename-text">
+          <span className="min-w-0 flex-1 truncate font-serif text-[14px]">
             {file.previousFilename && <span className="text-ink-dim">{file.previousFilename} → </span>}
             {file.filename}
           </span>
