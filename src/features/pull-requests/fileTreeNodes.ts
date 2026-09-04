@@ -49,8 +49,43 @@ function filedPath(item: string): string | null {
   return item.startsWith(FILE_PREFIX) ? item.slice(FILE_PREFIX.length) : null;
 }
 
-export function folderFilePaths(paths: string[], folder: string): string[] {
-  return paths.filter((path) => folderOf(path) === folder);
+export type ReadingItem = { kind: 'folder'; path: string; depth: number } | { kind: 'file'; path: string };
+
+export function folderReadingOrder(nodes: TreeNode[], folder: string): ReadingItem[] {
+  const found = findFolder(nodes, folder);
+  return found ? readingOrder(found, 0) : [];
+}
+
+function findFolder(nodes: TreeNode[], path: string): TreeFolder | null {
+  for (const node of nodes) {
+    if (node.kind !== 'folder') continue;
+    if (node.path === path) return node;
+    if (path.startsWith(`${node.path}/`)) return findFolder(node.children, path);
+  }
+  return null;
+}
+
+function readingOrder(folder: TreeFolder, depth: number): ReadingItem[] {
+  const files = folder.children.filter((child) => child.kind === 'file').map((child) => ({ kind: 'file' as const, path: child.path }));
+  const nested = folder.children.filter((child) => child.kind === 'folder').flatMap((child) => readingOrder(child, depth + 1));
+  return [{ kind: 'folder', path: folder.path, depth }, ...files, ...nested];
+}
+
+export function lineTotals(nodes: TreeNode[], counts: Record<string, number>): ReadonlyMap<string, number> {
+  const totals = new Map<string, number>();
+  for (const node of nodes) totalLines(node, counts, totals);
+  return totals;
+}
+
+function totalLines(node: TreeNode, counts: Record<string, number>, totals: Map<string, number>): number | undefined {
+  const total = node.kind === 'file' ? counts[node.path] : countedSum(node.children, counts, totals);
+  if (total !== undefined) totals.set(node.path, total);
+  return total;
+}
+
+function countedSum(nodes: TreeNode[], counts: Record<string, number>, totals: Map<string, number>): number | undefined {
+  const counted = nodes.map((node) => totalLines(node, counts, totals)).filter((lines) => lines !== undefined);
+  return counted.length === 0 ? undefined : counted.reduce((sum, lines) => sum + lines, 0);
 }
 
 export function rowKey(row: TreeRow): string {

@@ -1,5 +1,6 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useColumnNav } from './columnNav';
 import { folderKey } from './fileTreeNodes';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
@@ -15,6 +16,7 @@ export function FolderTreeRow({
   open,
   selected,
   onActivate,
+  children,
 }: {
   path: string;
   name: string;
@@ -22,6 +24,7 @@ export function FolderTreeRow({
   open: boolean;
   selected: boolean;
   onActivate: () => void;
+  children?: ReactNode;
 }) {
   const row = useColumnNav('files').row(folderKey(path), selected);
   return (
@@ -37,6 +40,7 @@ export function FolderTreeRow({
       <HoverCardTrigger label={path} className="min-w-0 flex-1" focusable={false} tooltipStyle>
         <span className="min-w-0 flex-1 truncate text-ink-dim">{name}/</span>
       </HoverCardTrigger>
+      {children}
     </SelectableRow>
   );
 }

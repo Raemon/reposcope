@@ -17,12 +17,20 @@ const STALE_ON_STATUS = [403, 408, 429, 500, 502, 503, 504];
 
 const inFlight = new Map<string, Promise<CachedResponse>>();
 
+type Derive<T> = (body: Buffer) => T;
+
 export async function githubJson<T>(url: string, fresh = false): Promise<T> {
   return JSON.parse(decodeBody(await cachedResponse(url, ACCEPT, fresh)).toString('utf8')) as T;
 }
 
 export async function githubBytes(url: string, accept: string): Promise<Uint8Array> {
   return new Uint8Array(decodeBody(await cachedResponse(url, accept)));
+}
+
+// Caches only what `derive` makes of the body, so a tarball never sits in the cache.
+export async function githubDerived<T>(url: string, accept: string, derive: Derive<T>): Promise<T> {
+  const entry = await cachedResponse(url, accept, false, (body) => JSON.stringify(derive(body)));
+  return JSON.parse(decodeBody(entry).toString('utf8')) as T;
 }
 
 export async function githubSend<T>(url: string, method: string, body: unknown): Promise<T> {
@@ -65,12 +73,19 @@ export async function githubGraphql<T>(query: string, variables: Record<string, 
   return payload.data as T;
 }
 
-async function cachedResponse(url: string, accept: string, fresh = false): Promise<CachedResponse> {
+async function cachedResponse(
+  url: string,
+  accept: string,
+  fresh = false,
+  derive: Derive<string> | null = null,
+): Promise<CachedResponse> {
   const scope = scopeOf(url);
-  const key = cacheKey([githubTokenIdentity(), url, accept]);
+  const key = cacheKey(derive ? [githubTokenIdentity(), url, accept, 'derived'] : [githubTokenIdentity(), url, accept]);
   const held = await readCachedResponse(scope, key);
   if (held && !fresh && Date.now() - held.storedAt < freshnessOf(url)) return held;
-  return shareInFlight(scope + key + (fresh ? ':fresh' : ''), () => revalidate(url, accept, scope, key, held, fresh));
+  return shareInFlight(scope + key + (fresh ? ':fresh' : ''), () =>
+    revalidate(url, accept, scope, key, held, fresh, derive),
+  );
 }
 
 function shareInFlight(key: string, work: () => Promise<CachedResponse>): Promise<CachedResponse> {
@@ -88,6 +103,7 @@ async function revalidate(
   key: string,
   held: CachedResponse | null,
   fresh: boolean,
+  derive: Derive<string> | null,
 ): Promise<CachedResponse> {
   const tokenUsed = githubToken();
   const fallback = fresh ? null : held;
@@ -96,7 +112,7 @@ async function revalidate(
   if (response.status === 304 && held) return store(scope, key, { ...held, storedAt: Date.now() });
   if (response.status === 401 && tokenUsed) return readAfterRejectedToken(url, accept, tokenUsed, response);
   if (!response.ok) return staleOrThrow(response, url, fallback);
-  return store(scope, key, await capture(response));
+  return store(scope, key, await capture(response, derive));
 }
 
 function unreachable(url: string, held: CachedResponse | null): CachedResponse {
@@ -135,16 +151,16 @@ function remapUnauthorizedFallback(error: unknown, unauthorized: Response, url: 
   return error;
 }
 
-async function capture(response: Response): Promise<CachedResponse> {
+async function capture(response: Response, derive: Derive<string> | null): Promise<CachedResponse> {
   const body = Buffer.from(await response.arrayBuffer());
-  const textual = /json|text|javascript/.test(response.headers.get('content-type') ?? '');
+  const textual = derive !== null || /json|text|javascript/.test(response.headers.get('content-type') ?? '');
   return {
     status: response.status,
     etag: response.headers.get('etag'),
     lastModified: response.headers.get('last-modified'),
     storedAt: Date.now(),
     encoding: textual ? 'utf8' : 'base64',
-    body: textual ? body.toString('utf8') : body.toString('base64'),
+    body: derive ? derive(body) : textual ? body.toString('utf8') : body.toString('base64'),
   };
 }
 

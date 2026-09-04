@@ -5,18 +5,21 @@ import {
   ancestorFolders,
   buildFileTree,
   folderedPath,
+  lineTotals,
   listedPaths,
   rowKey,
   treePath,
   visibleRows,
+  type TreeNode,
   type TreeRow,
 } from './fileTreeNodes';
 import type { RepoFiles } from './repoFileStore';
 
 export interface RepoFileTree {
   rows: TreeRow[];
+  nodes: TreeNode[];
+  lines: ReadonlyMap<string, number>;
   navItems: string[];
-  listed: string[];
   shown: number;
   total: number;
   isOpen: (path: string) => boolean;
@@ -42,6 +45,8 @@ export function useRepoFileTree({
   const filtering = query.trim() !== '';
   const isOpen = useCallback((path: string) => filtering || opened.has(path), [filtering, opened]);
   const rows = useMemo(() => visibleRows(nodes, isOpen), [nodes, isOpen]);
+  const counts = repoFiles.lineCounts;
+  const lines = useMemo(() => (counts ? lineTotals(nodes, counts) : new Map<string, number>()), [nodes, counts]);
   const toggle = useCallback((path: string) => setOpened((held) => withToggled(held, path)), []);
 
   useEffect(() => {
@@ -60,8 +65,9 @@ export function useRepoFileTree({
 
   return {
     rows,
+    nodes,
+    lines,
     navItems: useMemo(() => rows.map(rowKey), [rows]),
-    listed: listed.shown,
     shown: listed.shown.length,
     total: listed.total,
     isOpen,
