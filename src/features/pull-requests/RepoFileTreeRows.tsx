@@ -3,6 +3,7 @@
 import { FileTreeRow } from './FileTreeRow';
 import { browseKey, folderKey } from './fileTreeNodes';
 import { FolderTreeRow } from './FolderTreeRow';
+import { LineCount } from './LineCount';
 import type { RepoFileTree } from './useRepoFileTree';
 
 const STEP = 10;
@@ -27,7 +28,9 @@ export function RepoFileTreeRows({
         open={tree.isOpen(node.path)}
         selected={folderKey(node.path) === selected}
         onActivate={() => tree.activateItem(folderKey(node.path))}
-      />
+      >
+        <LineCount lines={tree.lines.get(node.path)} />
+      </FolderTreeRow>
     ) : (
       <FileTreeRow
         key={node.path}
@@ -36,7 +39,9 @@ export function RepoFileTreeRows({
         selected={browseKey(node.path) === selected}
         onSelect={() => onSelect(browseKey(node.path))}
         indent={indentOf(depth) + STEP}
-      />
+      >
+        <LineCount lines={tree.lines.get(node.path)} />
+      </FileTreeRow>
     ),
   );
 }

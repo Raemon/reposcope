@@ -49,8 +49,59 @@ function filedPath(item: string): string | null {
   return item.startsWith(FILE_PREFIX) ? item.slice(FILE_PREFIX.length) : null;
 }
 
-export function folderFilePaths(paths: string[], folder: string): string[] {
-  return paths.filter((path) => folderOf(path) === folder);
+export type FolderHeading = { kind: 'folder'; path: string; depth: number };
+export type ReadingItem = FolderHeading | { kind: 'file'; path: string };
+
+export function folderReadingOrder(nodes: TreeNode[], folder: string): ReadingItem[] {
+  const found = findFolder(nodes, folder);
+  return found ? readingOrder(found, 0) : [];
+}
+
+function findFolder(nodes: TreeNode[], path: string): TreeFolder | null {
+  for (const node of nodes) {
+    if (node.kind !== 'folder') continue;
+    if (node.path === path) return node;
+    if (path.startsWith(`${node.path}/`)) return findFolder(node.children, path);
+  }
+  return null;
+}
+
+function readingOrder(folder: TreeFolder, depth: number): ReadingItem[] {
+  const files = folder.children.filter(isFileNode).map((child): ReadingItem => ({ kind: 'file', path: child.path }));
+  const nested = folder.children.filter(isFolderNode).flatMap((child) => readingOrder(child, depth + 1));
+  return [{ kind: 'folder', path: folder.path, depth }, ...files, ...nested];
+}
+
+function isFileNode(node: TreeNode): node is TreeFile {
+  return node.kind === 'file';
+}
+
+function isFolderNode(node: TreeNode): node is TreeFolder {
+  return node.kind === 'folder';
+}
+
+export function isFileItem(item: ReadingItem): item is { kind: 'file'; path: string } {
+  return item.kind === 'file';
+}
+
+export function headingsBefore(items: ReadingItem[], shown: ReadonlySet<string>): ReadonlyMap<string, FolderHeading[]> {
+  const populated = new Set([...shown].flatMap(ancestorFolders));
+  const before = new Map<string, FolderHeading[]>();
+  let pending: FolderHeading[] = [];
+  for (const item of items) {
+    if (!isFileItem(item)) pending = populated.has(item.path) ? [...pending, item] : pending;
+    else if (shown.has(item.path)) [before.set(item.path, pending), (pending = [])];
+  }
+  return before;
+}
+
+export function lineTotals(counts: Record<string, number>): ReadonlyMap<string, number> {
+  const totals = new Map<string, number>();
+  for (const [path, lines] of Object.entries(counts)) {
+    totals.set(path, lines);
+    for (const folder of ancestorFolders(path)) totals.set(folder, (totals.get(folder) ?? 0) + lines);
+  }
+  return totals;
 }
 
 export function rowKey(row: TreeRow): string {
