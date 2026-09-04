@@ -6,6 +6,7 @@ import { DEFAULT_COMMENT_WIDTH, setCommentColumnWidth, useCommentColumnStyle } f
 import { linesHeight, ROW_HEIGHT, type RowHeights } from './diffMetrics';
 import type { DiffLine } from './diffLines';
 import { DragHandle, useDragWidth } from './ResizableColumn';
+import { rowLighting } from './litRow';
 import { useElementWidth } from './useElementWidth';
 import { ThreadCard } from './ThreadCard';
 
@@ -43,6 +44,7 @@ export function ThreadColumn({
       {cards.map((card) => (
         <PlacedCard
           key={card.thread.rootId}
+          row={card.row}
           top={card.top}
           clampTo={clampFor(card, heights)}
           expanded={expanded[card.thread.rootId] ?? false}
@@ -80,6 +82,7 @@ function overflowBelow(
 }
 
 function PlacedCard({
+  row,
   top,
   clampTo,
   expanded,
@@ -87,6 +90,7 @@ function PlacedCard({
   onHeight,
   children,
 }: {
+  row: number;
   top: number;
   clampTo: number | null;
   expanded: boolean;
@@ -109,7 +113,7 @@ function PlacedCard({
   const clipped = clampTo !== null && !expanded;
   const overlaid = clampTo !== null && expanded;
   return (
-    <div style={{ top }} className={`absolute inset-x-0 px-1 transition-[top] duration-150 ${overlaid ? 'z-10' : ''}`}>
+    <div {...rowLighting(row)} style={{ top }} className={`absolute inset-x-0 px-1 transition-[top] duration-150 ${overlaid ? 'z-10' : ''}`}>
       <div className={clipped ? 'overflow-hidden' : undefined} style={clipped ? { maxHeight: clampTo - EXPAND_BAR } : undefined}>
         <div ref={node}>{children}</div>
       </div>

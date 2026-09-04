@@ -1,6 +1,6 @@
-import { DIM_INK_STYLE, type CodeSegment, type DimmedSegment } from './codeSegments';
+import { DIM_INK_STYLE, type CodeSegment, type DimmedSegment, type SegmentRole } from './codeSegments';
 import type { ThemedToken } from './diffHighlight';
-import { abbreviated } from './keywordAbbreviations';
+import { abbreviated, wordsToClip } from './keywordAbbreviations';
 
 const DIM_OPACITY = 0.45;
 const LEADING_SCOPES = /^(keyword|storage|punctuation|comment|meta\.brace)/;
@@ -10,12 +10,27 @@ interface NameSpan {
   end: number;
 }
 
-export function collapsedSegments(segments: CodeSegment[], tokens: ThemedToken[] | null): DimmedSegment[] {
+export interface FoldLayout {
+  indent: number;
+  name: NameSpan;
+  prefix: string;
+}
+
+export function foldLayout(tokens: ThemedToken[] | null): FoldLayout | null {
   const name = tokens && declaredName(tokens);
-  if (!name) return segments;
+  if (!name) return null;
+  const text = tokens.map((token) => token.content).join('');
+  const indent = text.length - text.trimStart().length;
+  return { indent, name, prefix: text.slice(indent, name.start) };
+}
+
+// The prefix is clipped only when its full words overflow the pane's prefix column.
+export function collapsedSegments(segments: CodeSegment[], layout: FoldLayout | null, column: number): DimmedSegment[] {
+  if (!layout) return segments;
+  const clip = wordsToClip(layout.prefix, column);
   let offset = 0;
   return segments.flatMap((segment) => {
-    const pieces = dimSegment(segment, offset, name);
+    const pieces = roleSlices(segment, offset, layout, clip);
     offset += segment.content.length;
     return pieces;
   });
@@ -39,22 +54,29 @@ function innermostScope(token: ThemedToken): string {
   return scopes[scopes.length - 1]?.scopeName ?? '';
 }
 
-function dimSegment(segment: CodeSegment, start: number, name: NameSpan): DimmedSegment[] {
-  return nameSlices(segment.content, start, name).flatMap(([from, to]) => {
-    const piece = dimmedPiece(segment, segment.content.slice(from, to), start + from, name);
-    return start + from < name.start ? abbreviated(piece) : [piece];
+function roleSlices(segment: CodeSegment, start: number, layout: FoldLayout, clip: ReadonlySet<string>): DimmedSegment[] {
+  const boundaries = [layout.indent, layout.name.start, layout.name.end];
+  return slicesAt(segment.content, start, boundaries).flatMap(([from, to]) => {
+    const piece = withRole(segment, segment.content.slice(from, to), roleAt(start + from, layout));
+    return piece.role === 'prefix' ? abbreviated(piece, clip) : [piece];
   });
 }
 
-function dimmedPiece(segment: CodeSegment, content: string, position: number, name: NameSpan): DimmedSegment {
-  if (position >= name.start && position < name.end) return { ...segment, content };
-  return { ...segment, content, style: DIM_INK_STYLE, opacity: DIM_OPACITY };
+function roleAt(position: number, { indent, name }: FoldLayout): SegmentRole | null {
+  if (position < indent) return null;
+  if (position < name.start) return 'prefix';
+  return position < name.end ? 'name' : 'tail';
 }
 
-// Slices the segment where the declared name starts and ends, so each piece dims as a whole.
-function nameSlices(text: string, start: number, name: NameSpan): [number, number][] {
-  const cuts = [name.start, name.end].map((point) => point - start).filter((at) => at > 0 && at < text.length);
+function withRole(segment: CodeSegment, content: string, role: SegmentRole | null): DimmedSegment {
+  if (role === null) return { ...segment, content };
+  if (role === 'name') return { ...segment, content, role };
+  return { ...segment, content, role, style: DIM_INK_STYLE, opacity: DIM_OPACITY };
+}
+
+function slicesAt(text: string, start: number, points: number[]): [number, number][] {
+  const inside = points.map((point) => point - start).filter((at) => at > 0 && at < text.length);
+  const cuts = [...new Set(inside)].sort((a, b) => a - b);
   const bounds = [0, ...cuts, text.length];
-  return bounds.slice(0, -1).map((from, index) => [from, bounds[index + 1] ?? text.length]);
+  return cuts.concat(text.length).map((to, index) => [bounds[index] ?? 0, to]);
 }
-

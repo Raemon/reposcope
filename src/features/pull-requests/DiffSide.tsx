@@ -1,9 +1,10 @@
 'use client';
 
-import { Fragment, useLayoutEffect, useRef, type ReactNode } from 'react';
+import { Fragment, useLayoutEffect, useMemo, useRef, type CSSProperties, type ReactNode } from 'react';
 import { hunkHasEditableLines, type EditableBlock } from './editableBlocks';
-import { codeSegments, type DimmedSegment } from './codeSegments';
-import { collapsedSegments } from './foldDimming';
+import { codeSegments, type DimmedSegment, type SegmentRole } from './codeSegments';
+import { collapsedSegments, foldLayout, type FoldLayout } from './foldDimming';
+import { abbreviatedLength } from './keywordAbbreviations';
 import { collapsedPreview } from './collapsedPreview';
 import { diffEditModeOn } from './editModeStore';
 import { foldsCollapsed, useFoldCommand } from './foldModeStore';
@@ -15,6 +16,7 @@ import type { CollapseAnchor } from './useCodeCollapse';
 import type { CodePress } from './useDefinitionClick';
 import type { SideTokens } from './useDiffSideHighlight';
 import { lineHeight, type RowHeights } from './diffMetrics';
+import { ROW_ATTR } from './litRow';
 import { hangingIndent, measureRowHeights, sameRowHeights, WRAPPED_CELL } from './rowHeights';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { SelectableRow } from '@/features/surface-ui/SelectableRow';
@@ -27,15 +29,16 @@ const GUTTER = 'flex w-[46px] shrink-0 select-none items-center text-[9px] text-
 const TOUCHED_MARK = 'bg-add-bg/60 shadow-[inset_2px_0_0_var(--add-emph)]';
 const STICKY_CHIP = 'sticky right-0 shrink-0 rounded bg-procgen px-1 hover:bg-btn-hover hover:text-ink';
 const EDIT_BTN = `${STICKY_CHIP} uppercase tracking-[0.14em]`;
-const FOLD_BADGE = `${STICKY_CHIP} ml-1 text-[9px] italic text-ink-dim`;
-const FOLD_PREVIEW = 'diff-code max-w-[90ch] shrink-[999] overflow-hidden text-ellipsis whitespace-pre pl-2 text-[11px] text-ink-dim/70';
+const FOLD_BADGE = `${STICKY_CHIP} ml-auto text-[9px] italic text-ink-dim`;
+const FOLD_PREVIEW = 'diff-code hidden max-w-[90ch] shrink-[999] overflow-hidden text-ellipsis whitespace-pre pl-2 text-[11px] text-ink-dim/70 group-hover:block';
 const CODE = 'diff-code whitespace-pre pr-2 text-[11px]';
 // break-word, so only a word too long for a whole line is ever split.
 const WRAPPED_CODE = 'diff-code min-w-0 flex-1 whitespace-pre-wrap [overflow-wrap:break-word] [tab-size:8] pr-2 text-[11px]';
-// 150px keeps the fold badge clear of the ellipsis; 100cqw is the visible column width.
-const FOLDED_TEXT = 'flex min-w-0 max-w-[calc(100cqw-150px)] overflow-hidden';
+// 100px keeps the fold badge clear of the ellipsis; 100cqw is the visible column width.
+const FOLDED_TEXT = 'flex min-w-0 max-w-[calc(100cqw-100px)] overflow-hidden';
 const STRIP = `${ROW} bg-procgen px-1 text-left text-[9px] text-ink-dim`;
 const TRUNCATED_STRIP = `${STRIP} w-full italic hover:bg-btn-hover hover:text-ink`;
+const PREFIX_FONT = 9;
 
 export interface HunkControl {
   expanded: boolean;
@@ -74,16 +77,35 @@ export function DiffSide(props: SideProps) {
 }
 
 function PaneLines(props: SideProps) {
-  const { lines, editedRows, editor } = props;
-  if (!editedRows) return <DiffLines {...props} from={0} to={lines.length} />;
+  const { lines, tokens, anchors, editedRows, editor } = props;
+  const dim = foldsCollapsed(useFoldCommand().mode);
+  const longestPrefix = useMemo(() => (dim ? longestFoldedPrefix(lines, tokens, anchors) : 0), [dim, lines, tokens, anchors]);
+  const folding = { dim, longestPrefix };
+  if (!editedRows) return <DiffLines {...props} {...folding} from={0} to={lines.length} />;
   const edited = editedLineRange(lines, editedRows);
   return (
     <>
-      <DiffLines {...props} from={0} to={edited.first} />
+      <DiffLines {...props} {...folding} from={0} to={edited.first} />
       {editor}
-      <DiffLines {...props} from={edited.last + 1} to={lines.length} />
+      <DiffLines {...props} {...folding} from={edited.last + 1} to={lines.length} />
     </>
   );
+}
+
+function longestFoldedPrefix(lines: DiffLine[], tokens: SideTokens | null, anchors: Map<number, CollapseAnchor>): number {
+  let longest = 0;
+  for (const line of lines) {
+    const layout = foldLayout(line.cell ? (tokens?.[line.side][line.row] ?? null) : null);
+    const collapsed = anchors.get(line.row)?.collapsed ?? false;
+    if (layout && foldsTail(line, collapsed, layout)) longest = Math.max(longest, abbreviatedLength(layout.prefix));
+  }
+  return longest;
+}
+
+// Only top-level, unchanged lines fold: a changed line's change is usually in its tail.
+function foldsTail(line: DiffLine, collapsed: boolean, layout: FoldLayout): boolean {
+  if (layout.prefix.length === 0) return false;
+  return collapsed || (line.kind !== 'change' && layout.indent === 0);
 }
 
 /** No dep array: every render can rewrap, and a resize does so without one. */
@@ -129,8 +151,9 @@ function DiffLines({
   wrap,
   heights,
   onUntruncate,
-}: SideProps & { from: number; to: number }) {
-  const dim = foldsCollapsed(useFoldCommand().mode);
+  dim,
+  longestPrefix,
+}: SideProps & { from: number; to: number; dim: boolean; longestPrefix: number }) {
   if (from >= to) return null;
   const spacerLine = spacer ? lastLineOfRow(lines, spacer.afterRow) : -1;
   const rowsWithRightLine = rowsShownOnRight(lines);
@@ -152,6 +175,7 @@ function DiffLines({
                 anchor={anchor}
                 collapsed={anchors.get(line.row)?.collapsed ?? false}
                 dim={dim}
+                longestPrefix={longestPrefix}
                 wrap={wrap}
                 height={heights ? lineHeight(line, heights) : null}
                 editable={editable}
@@ -208,6 +232,7 @@ function DiffLineView({
   collapsed,
   preview,
   dim,
+  longestPrefix,
   wrap,
   height,
   editable,
@@ -224,6 +249,7 @@ function DiffLineView({
   anchor: CollapseAnchor | null;
   collapsed: boolean;
   dim: boolean;
+  longestPrefix: number;
   wrap: boolean;
   height: number | null;
   editable?: boolean;
@@ -245,14 +271,19 @@ function DiffLineView({
   const changed = line.kind === 'change';
   const openable = Boolean(editable && side === 'right');
   const raw = codeSegments(cell.text, lineTokens, changed ? ranges : null);
-  const segments: DimmedSegment[] = dim ? collapsedSegments(raw, lineTokens) : raw;
+  const layout = dim ? foldLayout(lineTokens) : null;
+  const folded = layout !== null && foldsTail(line, collapsed, layout);
+  const segments = collapsedSegments(raw, layout, folded ? longestPrefix : Infinity);
+  const fold = folded ? prefixStyle(longestPrefix) : null;
+  const tones = rowTones(line, collapsed);
   return (
     <div
-      className={`group ${row} ${lineTone(side, changed, line.touched)} ${openable ? 'cursor-text' : ''}`}
+      {...{ [ROW_ATTR]: line.row }}
+      className={`group ${row} ${tones.row} hover:row-shade ${openable ? 'cursor-text' : ''}`}
       style={sized}
       onClick={openable && onEdit ? (event) => opensEditor(event.detail) && onEdit() : undefined}
     >
-      <GutterCell line={line.blank ? null : cell.line} anchor={anchor} />
+      <GutterCell line={line.blank ? null : cell.line} anchor={anchor} tone={tones.gutter} />
       <span className={collapsed ? FOLDED_TEXT : 'contents'}>
         <span
           {...{ [WRAPPED_CELL]: `${side}:${line.row}` }}
@@ -260,7 +291,7 @@ function DiffLineView({
           style={wrapping && !collapsed ? hangingIndentStyle(cell.text) : undefined}
           onClick={onCodePress ? (event) => onCodePress(line, event) : undefined}
         >
-          <CodeText segments={segments} side={side} />
+          <CodeText segments={segments} side={side} fold={fold} />
         </span>
         {preview && <span className={FOLD_PREVIEW}>{preview}</span>}
       </span>
@@ -269,18 +300,62 @@ function DiffLineView({
   );
 }
 
-// Elided keyword tails stay in the DOM unrendered so click offsets still match the source line.
-function CodeText({ segments, side }: { segments: DimmedSegment[]; side: 'left' | 'right' }) {
-  return segments.map((segment, index) => (
-    <span
-      key={index}
-      hidden={segment.elided}
-      className={segment.emphasized ? emphasisTone(side) : undefined}
-      style={{ ...segment.style, opacity: segment.opacity }}
-    >
+// One column for every abbreviated prefix in the pane, as wide as the longest.
+function prefixStyle(longest: number): CSSProperties {
+  return { fontSize: PREFIX_FONT, minWidth: `${longest}ch` };
+}
+
+// A collapsed row fades its change colour so the text reads; the gutter keeps it at full strength.
+function rowTones(line: DiffLine, collapsed: boolean): { row: string; gutter: string } {
+  if (line.blank) return { row: '', gutter: '' };
+  const changed = line.kind === 'change';
+  const ink = lineInk(line.side, changed);
+  if (!collapsed || !changed) return { row: `${lineBackground(line.side, changed, line.touched)} ${ink}`, gutter: '' };
+  return { row: `${faintBackground(line.side)} ${ink}`, gutter: lineBackground(line.side, changed, false) };
+}
+
+function faintBackground(side: 'left' | 'right'): string {
+  return side === 'left' ? 'bg-del-bg/40' : 'bg-add-bg/40';
+}
+
+interface RoleGroup {
+  role: SegmentRole | undefined;
+  segments: DimmedSegment[];
+}
+
+function groupedByRole(segments: DimmedSegment[]): RoleGroup[] {
+  const groups: RoleGroup[] = [];
+  for (const segment of segments) {
+    const open = groups[groups.length - 1];
+    if (open && open.role === segment.role) open.segments.push(segment);
+    else groups.push({ role: segment.role, segments: [segment] });
+  }
+  return groups;
+}
+
+function CodeText({ segments, side, fold }: { segments: DimmedSegment[]; side: 'left' | 'right'; fold: CSSProperties | null }) {
+  const pieces = (group: DimmedSegment[]) => group.map((segment, at) => <SegmentSpan key={at} segment={segment} side={side} />);
+  if (!fold) return pieces(segments);
+  return groupedByRole(segments).map((group, index) => (
+    <RoleSpan key={index} role={group.role} prefix={fold}>
+      {pieces(group.segments)}
+    </RoleSpan>
+  ));
+}
+
+function SegmentSpan({ segment, side }: { segment: DimmedSegment; side: 'left' | 'right' }) {
+  return (
+    <span hidden={segment.elided} className={segment.emphasized ? emphasisTone(side) : undefined} style={{ ...segment.style, opacity: segment.opacity }}>
       {segment.content}
     </span>
-  ));
+  );
+}
+
+// The tail stays in the DOM while hidden so click offsets still match the source line.
+function RoleSpan({ role, prefix, children }: { role: SegmentRole | undefined; prefix: CSSProperties; children: ReactNode }) {
+  if (role === 'prefix') return <span className="inline-block indent-0" style={prefix}>{children}</span>;
+  if (role === 'tail') return <span className="hidden group-hover:inline">{children}</span>;
+  return children;
 }
 
 // A collapsed row shows one ellipsised line, so it neither wraps nor hangs.
@@ -309,28 +384,24 @@ function TruncatedStrip({ count, onExpand }: { count: number; onExpand: () => vo
 }
 
 function FoldBadge({ anchor }: { anchor: CollapseAnchor }) {
-  const { addedLines, deletedLines, kind } = anchor.region;
+  const { addedLines, deletedLines, kind, start, end } = anchor.region;
   return (
     <button type="button" onClick={anchor.toggle} title={kind.replace(/_/g, ' ')} className={FOLD_BADGE}>
-      {foldLabel(anchor)}
-      {addedLines > 0 && <span className="not-italic text-add-ink"> +{addedLines}</span>}
+      <span className="not-italic text-ink">{end - start}</span>
       {deletedLines > 0 && <span className="not-italic text-del-ink"> −{deletedLines}</span>}
+      {addedLines > 0 && <span className="not-italic text-add-ink"> +{addedLines}</span>}
+      {anchor.hiddenThreads > 0 && <span> · {plural(anchor.hiddenThreads, 'thread')}</span>}
     </button>
   );
-}
-
-function foldLabel(anchor: CollapseAnchor): string {
-  const folded = `⋯ ${plural(anchor.region.end - anchor.region.start, 'line')}`;
-  return anchor.hiddenThreads === 0 ? folded : `${folded} · ${plural(anchor.hiddenThreads, 'thread')}`;
 }
 
 function plural(count: number, word: string): string {
   return `${count} ${word}${count === 1 ? '' : 's'}`;
 }
 
-function GutterCell({ line, anchor }: { line: number | null; anchor: CollapseAnchor | null }) {
+function GutterCell({ line, anchor, tone }: { line: number | null; anchor: CollapseAnchor | null; tone: string }) {
   return (
-    <span className={GUTTER}>
+    <span className={`${GUTTER} ${tone ? `self-stretch ${tone}` : ''}`}>
       <span className="min-w-0 flex-1 text-right">{line}</span>
       {/* flex, not inline: an inline-block button leaves a baseline gap that unsettles a wrapped row. */}
       <span className="flex w-3 shrink-0 justify-center">{anchor && <CollapseChevron anchor={anchor} />}</span>
@@ -354,8 +425,17 @@ function CollapseChevron({ anchor }: { anchor: CollapseAnchor }) {
 }
 
 export function lineTone(side: 'left' | 'right', changed: boolean, touched: boolean): string {
-  if (changed) return side === 'left' ? 'bg-del-bg text-del-ink' : 'bg-add-bg text-add-ink';
+  return `${lineBackground(side, changed, touched)} ${lineInk(side, changed)}`;
+}
+
+function lineBackground(side: 'left' | 'right', changed: boolean, touched: boolean): string {
+  if (changed) return side === 'left' ? 'bg-del-bg' : 'bg-add-bg';
   return touched ? TOUCHED_MARK : '';
+}
+
+function lineInk(side: 'left' | 'right', changed: boolean): string {
+  if (!changed) return '';
+  return side === 'left' ? 'text-del-ink' : 'text-add-ink';
 }
 
 function emphasisTone(side: 'left' | 'right'): string {

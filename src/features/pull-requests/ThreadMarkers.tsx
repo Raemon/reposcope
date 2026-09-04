@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { placeThreads, type AnchoredThread } from './commentAnchors';
+import { rowLighting } from './litRow';
 import type { ReviewThread } from './reviewThreads';
 import { ThreadCard } from './ThreadCard';
 import { ModalShell } from '@/features/surface-ui/ModalShell';
@@ -24,7 +25,7 @@ export function ThreadMarkers({
   return (
     <div className="relative shrink-0 border-l border-panel-edge bg-shade" style={{ width: MARKER + MARKER_GAP * 2 }}>
       {markers.map((marker) => (
-        <MarkerButton key={marker.thread.rootId} top={marker.top} thread={marker.thread} onOpen={setOpened} />
+        <MarkerButton key={marker.thread.rootId} row={marker.row} top={marker.top} thread={marker.thread} onOpen={setOpened} />
       ))}
       {opened && (
         <ModalShell label={threadLabel(opened)} dismissable onDismiss={() => setOpened(null)}>
@@ -36,10 +37,12 @@ export function ThreadMarkers({
 }
 
 function MarkerButton({
+  row,
   top,
   thread,
   onOpen,
 }: {
+  row: number;
   top: number;
   thread: ReviewThread;
   onOpen: (thread: ReviewThread) => void;
@@ -48,6 +51,7 @@ function MarkerButton({
   return (
     <button
       type="button"
+      {...rowLighting(row)}
       onClick={() => onOpen(thread)}
       aria-label={markerLabel(thread)}
       style={{ top, width: MARKER, height: MARKER }}
