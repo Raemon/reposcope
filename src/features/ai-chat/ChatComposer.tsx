@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import type { CursorModel } from './cursorTypes';
-import { BUTTON } from '@/features/surface-ui/buttonStyles';
+import { SmallChoiceButton } from '@/features/surface-ui/SmallChoiceButton';
+import { FIELD_FOCUS, TEXT_FIELD } from '@/features/surface-ui/fieldStyles';
 
 export function ChatComposer({
   busy,
@@ -34,14 +35,14 @@ export function ChatComposer({
         placeholder={busy ? 'Queue the next instruction…' : 'Ask the cloud agent to change this branch…'}
         onChange={(event) => setDraft(event.target.value)}
         onKeyDown={(event) => event.key === 'Enter' && (event.metaKey || event.ctrlKey) && send()}
-        className="w-full resize-y rounded bg-field px-1.5 py-1 font-serif text-[13px] leading-[1.5] text-ink placeholder:text-ink-dim focus:outline-none focus:ring-1 focus:ring-accent"
+        className={`${TEXT_FIELD} resize-y px-1.5 py-1 font-serif text-[13px] leading-[1.5]`}
       />
       <div className="mt-0.5 flex items-center gap-1">
         <ModelSelect models={models} model={model} onModel={onModel} />
         <span className="ml-auto shrink-0 text-[9px] tracking-[0.14em] text-ink-dim">⌘↩</span>
-        <button type="button" onClick={send} disabled={disabled || !draft.trim()} className={`${BUTTON} px-1.5 py-[2px] text-[9px]`}>
+        <SmallChoiceButton onClick={send} disabled={disabled || !draft.trim()}>
           send
-        </button>
+        </SmallChoiceButton>
       </div>
     </div>
   );
@@ -54,7 +55,7 @@ function ModelSelect({ models, model, onModel }: { models: CursorModel[]; model:
       aria-label="Model"
       value={model ?? ''}
       onChange={(event) => onModel(event.target.value)}
-      className="min-w-0 max-w-[60%] truncate rounded bg-btn px-1 py-[2px] font-mono text-[9px] text-ink-dim hover:text-ink focus:outline-none"
+      className={`${FIELD_FOCUS} min-w-0 max-w-[60%] truncate rounded bg-btn px-1 py-[2px] font-mono text-[9px] text-ink-dim hover:text-ink`}
     >
       {models.map((entry) => (
         <option key={entry.id} value={entry.id}>

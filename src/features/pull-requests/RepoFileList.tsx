@@ -3,10 +3,9 @@
 import { RepoFileTreeRows } from './RepoFileTreeRows';
 import type { RepoFiles } from './repoFileStore';
 import type { RepoFileTree } from './useRepoFileTree';
+import { FilterField } from '@/features/surface-ui/FilterField';
 
 const NOTE = 'px-1.5 py-[1px] text-[11px] leading-4';
-const FILTER =
-  'w-full border-b border-panel-edge bg-panel px-1.5 py-[2px] text-[11px] leading-4 text-ink outline-none placeholder:text-ink-dim';
 
 export function RepoFileList({
   repoFiles,
@@ -25,13 +24,15 @@ export function RepoFileList({
 }) {
   return (
     <>
-      <input
-        value={query}
-        onChange={(event) => onQuery(event.target.value)}
-        placeholder="filter files…"
-        aria-label="Filter files"
-        className={FILTER}
-      />
+      <div className="border-b border-panel-edge px-1.5 py-[2px]">
+        <FilterField
+          value={query}
+          onChange={onQuery}
+          placeholder="filter files"
+          aria-label="Filter files"
+          className="w-full"
+        />
+      </div>
       <FileRows repoFiles={repoFiles} tree={tree} selected={selected} onSelect={onSelect} />
     </>
   );

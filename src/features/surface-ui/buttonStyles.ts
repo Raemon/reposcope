@@ -1,9 +1,22 @@
-export const BUTTON =
-  'rounded bg-btn uppercase tracking-[0.18em] text-ink-dim hover:bg-btn-hover hover:text-ink disabled:opacity-40 disabled:hover:bg-btn disabled:hover:text-ink-dim';
+const BUTTON_SHAPE =
+  'rounded bg-btn uppercase tracking-[0.18em] hover:bg-btn-hover disabled:opacity-40 disabled:hover:bg-btn';
 
-export const CHOICE_METRICS = 'px-2 py-1 text-[10px]';
+const CHOICE_SIZE = 'px-2 py-1 text-[10px]';
 
-export const CHOICE = `${BUTTON} ${CHOICE_METRICS}`;
+const SMALL_CHOICE_SIZE = 'px-1.5 py-[2px] text-[9px]';
+
+export const BUTTON = `${BUTTON_SHAPE} text-ink-dim hover:text-ink disabled:hover:text-ink-dim`;
+
+export const CHOICE = `${BUTTON} ${CHOICE_SIZE}`;
+
+export const smallChoiceClass = (className?: string) => {
+  const base = `${BUTTON} ${SMALL_CHOICE_SIZE}`;
+  return className ? `${base} ${className}` : base;
+};
+
+export const ACCENT_CHOICE = `${BUTTON_SHAPE} ${CHOICE_SIZE} text-accent hover:text-ink disabled:hover:text-accent`;
+
+export const TEXT_ACTION = 'rounded text-ink-dim hover:bg-btn-hover hover:text-ink';
 
 const ICON_BUTTON = 'flex items-center justify-center rounded';
 

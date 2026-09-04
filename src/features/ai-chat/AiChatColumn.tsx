@@ -13,10 +13,10 @@ import { useRegisterColumn } from '@/features/pull-requests/columnNav';
 import { usePaneMode } from '@/features/pull-requests/centralLayout';
 import { useCollapsibleColumn, ResizableColumn } from '@/features/pull-requests/ResizableColumn';
 import { useStickyColumn } from '@/features/pull-requests/stickyColumns';
-import { BUTTON } from '@/features/surface-ui/buttonStyles';
+import { SmallChoiceButton, SmallChoiceLink } from '@/features/surface-ui/SmallChoiceButton';
 
 const ICON = '✳';
-const ACTION = `${BUTTON} mr-1 shrink-0 px-1 py-[1px] text-[9px]`;
+const HEADER_BTN = 'mr-1 shrink-0';
 const PICKER = 'mr-1 max-w-32 shrink-0 truncate rounded bg-btn px-1 py-[1px] font-mono text-[9px] text-ink-dim hover:text-ink';
 
 export function AiChatColumn({
@@ -82,16 +82,16 @@ function HeaderActions({ chat }: { chat: AiChat }) {
     <>
       <ThreadPicker threads={chat.threads} thread={chat.thread} onSelect={chat.select} />
       {session.agentUrl !== null && (
-        <a href={session.agentUrl} target="_blank" rel="noopener noreferrer" className={`${ACTION} inline-block`}>
+        <SmallChoiceLink href={session.agentUrl} target="_blank" rel="noopener noreferrer" className={`${HEADER_BTN} inline-block`}>
           cursor ↗
-        </a>
+        </SmallChoiceLink>
       )}
-      <button type="button" onClick={() => chat.restart(chat.model)} className={ACTION}>
+      <SmallChoiceButton onClick={() => chat.restart(chat.model)} className={HEADER_BTN}>
         new
-      </button>
-      <button type="button" onClick={() => writeCursorKey(null)} className={ACTION}>
+      </SmallChoiceButton>
+      <SmallChoiceButton onClick={() => writeCursorKey(null)} className={HEADER_BTN}>
         key
-      </button>
+      </SmallChoiceButton>
     </>
   );
 }

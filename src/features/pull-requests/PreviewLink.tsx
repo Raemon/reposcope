@@ -43,7 +43,7 @@ function PreviewSegment({ previews, number }: { previews: PreviewControls; numbe
       <a
         href={best.url}
         target="_blank"
-        rel="noreferrer"
+        rel="noopener noreferrer"
         className={`${LEFT_SEGMENT} hover:bg-btn-hover hover:text-ink ${previews.upToDate ? '' : 'text-warn-edge'}`}
       >
         <StateDot state={previews.upToDate ? 'ready' : 'behind'} />

@@ -6,11 +6,11 @@ import { parseOwnerInput, parseRepoLink } from './parseRepoLink';
 import { repoRoute } from '@/features/codebases/repoPaths';
 import { addSource } from './sourceStore';
 import type { GithubAccess } from '@/features/github-auth/githubAccess';
+import { CHOICE } from '@/features/surface-ui/buttonStyles';
+import { MONO_FIELD } from '@/features/surface-ui/fieldStyles';
 
-const FIELD =
-  'min-w-0 flex-1 rounded bg-field px-2 py-1 text-[11px] text-ink outline-none placeholder:text-ink-dim focus:ring-1 focus:ring-accent';
-const BUTTON =
-  'shrink-0 rounded bg-btn px-2.5 py-1 text-[11px] text-ink hover:bg-btn-hover active:bg-btn-active';
+const FIELD = `${MONO_FIELD} min-w-0 flex-1`;
+const ADD = `${CHOICE} shrink-0 active:bg-btn-active`;
 
 export function SourceControls({ compact = false, oauthConfigured }: { compact?: boolean; oauthConfigured: boolean }) {
   const router = useRouter();
@@ -47,7 +47,7 @@ export function SourceControls({ compact = false, oauthConfigured }: { compact?:
       <SourceCard compact={compact} title="A single repository" error={repoError}>
         <form onSubmit={submitRepo} className="flex gap-2">
           <input name="repo" placeholder="https://github.com/owner/repo" aria-label="Repository link" className={FIELD} />
-          <button type="submit" className={BUTTON}>
+          <button type="submit" className={ADD}>
             Add
           </button>
         </form>
@@ -60,7 +60,7 @@ export function SourceControls({ compact = false, oauthConfigured }: { compact?:
       >
         <form onSubmit={submitOwner} className="flex gap-2">
           <input name="owner" placeholder="LessWrong2" aria-label="GitHub login" className={FIELD} />
-          <button type="submit" className={BUTTON}>
+          <button type="submit" className={ADD}>
             Add
           </button>
         </form>
@@ -102,13 +102,13 @@ function ConnectButton({
 }) {
   if (!oauthConfigured) {
     return (
-      <button type="button" disabled className={`${BUTTON} cursor-not-allowed opacity-50`}>
+      <button type="button" disabled className={`${ADD} cursor-not-allowed`}>
         {label}
       </button>
     );
   }
   return (
-    <a href={`/api/github/connect?access=${access}`} className={`inline-block ${BUTTON}`}>
+    <a href={`/api/github/connect?access=${access}`} className={`${ADD} inline-block`}>
       {label}
     </a>
   );

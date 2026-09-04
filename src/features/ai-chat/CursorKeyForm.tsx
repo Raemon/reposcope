@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { writeCursorKey } from './cursorKeyStore';
-import { BUTTON } from '@/features/surface-ui/buttonStyles';
+import { SmallChoiceButton } from '@/features/surface-ui/SmallChoiceButton';
+import { MONO_FIELD } from '@/features/surface-ui/fieldStyles';
 
 export function CursorKeyForm({ error }: { error: string | null }) {
   const [draft, setDraft] = useState('');
@@ -23,7 +24,7 @@ export function CursorKeyForm({ error }: { error: string | null }) {
         autoComplete="off"
         placeholder="key_…"
         onChange={(event) => setDraft(event.target.value)}
-        className="w-full rounded bg-field px-1.5 py-1 font-mono text-[11px] text-ink placeholder:text-ink-dim focus:outline-none focus:ring-1 focus:ring-accent"
+        className={MONO_FIELD}
       />
       {error !== null && <p className="text-[10px] leading-4 text-error-ink">{error}</p>}
       <div className="flex items-center gap-1">
@@ -35,9 +36,9 @@ export function CursorKeyForm({ error }: { error: string | null }) {
         >
           create a key
         </a>
-        <button type="submit" disabled={!draft.trim()} className={`${BUTTON} ml-auto px-1.5 py-[2px] text-[9px]`}>
+        <SmallChoiceButton type="submit" disabled={!draft.trim()} className="ml-auto">
           save key
-        </button>
+        </SmallChoiceButton>
       </div>
     </form>
   );

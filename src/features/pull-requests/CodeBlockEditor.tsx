@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { CodeTokens, useTokenized } from './diffHighlight';
 import { ROW_HEIGHT } from './diffMetrics';
-import { BUTTON } from '@/features/surface-ui/buttonStyles';
+import { SmallChoiceButton } from '@/features/surface-ui/SmallChoiceButton';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 
 const CODE = 'diff-code whitespace-pre pl-[42px] pr-24 text-[11px] leading-[15px]';
@@ -66,14 +66,9 @@ export function CodeBlockEditor({
       </div>
       <div className="sticky bottom-0 z-10 mt-auto flex h-7 items-center justify-end px-1">
         <HoverCardTrigger label="Save and commit (⌘⏎)" focusable={false} tooltipStyle>
-          <button
-            type="button"
-            onClick={onSave}
-            disabled={saving}
-            className={`${BUTTON} px-2 py-[2px] text-[9px] shadow-card`}
-          >
+          <SmallChoiceButton onClick={onSave} disabled={saving} className="shadow-card">
             {saving ? 'Saving…' : 'Save'}
-          </button>
+          </SmallChoiceButton>
         </HoverCardTrigger>
       </div>
     </div>

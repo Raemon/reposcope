@@ -1,9 +1,10 @@
 'use client';
 
 import type { ComponentProps } from 'react';
+import { FIELD_FOCUS } from './fieldStyles';
 
 const VARIANTS = {
-  field: 'bg-field py-1 pl-6 text-[11px] focus:ring-1 focus:ring-accent',
+  field: 'bg-field py-1 pl-6 text-[11px]',
   plain: 'bg-transparent py-1.5 pl-7 text-[14px]',
 };
 
@@ -23,7 +24,7 @@ export function FilterField({
       <input
         type="search"
         onChange={(event) => onChange(event.target.value)}
-        className={`w-full rounded pr-2 font-mono text-ink placeholder:text-ink-dim focus:outline-none ${VARIANTS[variant]}`}
+        className={`w-full rounded pr-2 font-mono text-ink placeholder:text-ink-dim ${FIELD_FOCUS} ${VARIANTS[variant]}`}
         {...rest}
       />
     </span>
