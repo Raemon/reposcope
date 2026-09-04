@@ -6,6 +6,7 @@ import { rowOf } from './commentAnchors';
 import type { EditableBlock } from './editableBlocks';
 import { foldsCollapsed, useFoldCommand, type FoldMode } from './foldModeStore';
 import { allLinesDeleted, innerRows } from './foldSpan';
+import { commentRowIndexes } from './regionRoles';
 import type { ReviewThread } from './reviewThreads';
 import type { DiffRow } from './splitDiff';
 import { treeCollapseRegions } from './treeSitterFolds';
@@ -38,12 +39,13 @@ export function useCodeCollapse(
   const parsed = useTreeRegions(rows, contiguous, filename);
   const regions = parsed ?? heuristic;
   const threadRows = useMemo(() => threadRowIndexes(threads, rows), [threads, rows]);
+  const commentRows = useMemo(() => commentRowIndexes(rows, filename, regions), [rows, filename, regions]);
   const command = useFoldCommand();
   const [overrides, setOverride] = useFoldOverrides(command.epoch);
   const allDeleted = allLinesDeleted(rows);
   return useMemo(
-    () => buildCollapse(regions, threadRows, edit, command.mode, overrides, setOverride, allDeleted),
-    [regions, threadRows, edit, command.mode, overrides, setOverride, allDeleted],
+    () => buildCollapse({ regions, threadRows, commentRows, edit, mode: command.mode, overrides, setOverride, allDeleted }),
+    [regions, threadRows, commentRows, edit, command.mode, overrides, setOverride, allDeleted],
   );
 }
 
@@ -98,26 +100,43 @@ function threadRowIndexes(threads: ReviewThread[], rows: DiffRow[]): Set<number>
   return found;
 }
 
-function buildCollapse(
-  regions: CollapseRegion[],
-  threadRows: Set<number>,
-  edit: EditableBlock | null,
-  mode: FoldMode,
-  overrides: Overrides,
-  setOverride: SetOverride,
-  allDeleted: boolean,
-): CodeCollapse {
+interface FoldInputs {
+  regions: CollapseRegion[];
+  threadRows: Set<number>;
+  commentRows: Set<number>;
+  edit: EditableBlock | null;
+  mode: FoldMode;
+  overrides: Overrides;
+  setOverride: SetOverride;
+  allDeleted: boolean;
+}
+
+function buildCollapse(inputs: FoldInputs): CodeCollapse {
+  const { regions, threadRows, edit, mode, overrides, setOverride, allDeleted } = inputs;
   const anchors = new Map<number, CollapseAnchor>();
   const hidden = new Set<number>();
   const foldable = regions.filter((region) => !regionOverlapsEdit(region, edit));
   for (const region of foldable) {
     const hiddenThreads = innerRows(region).filter((row) => threadRows.has(row)).length;
-    const collapsed = overrides[region.key] ?? modeCollapsed(region, hiddenThreads, mode, allDeleted);
+    const collapsed = overrides[region.key] ?? modeCollapsed(region, foldable, hiddenThreads, mode, allDeleted);
     const toggle = () => setOverride(collapsed ? expansionFrom(foldable, region) : { [region.key]: true });
     anchors.set(region.start, { region, collapsed, hiddenThreads, toggle });
     if (collapsed) for (const row of innerRows(region)) hidden.add(row);
   }
+  if (mode === 'collapseHidingComments') hideCommentsAboveFolds(anchors, inputs, hidden);
   return { anchors, hidden };
+}
+
+function hideCommentsAboveFolds(anchors: Map<number, CollapseAnchor>, inputs: FoldInputs, hidden: Set<number>) {
+  for (const anchor of anchors.values()) {
+    if (!anchor.collapsed) continue;
+    for (let row = anchor.region.start - 1; hideableComment(row, anchors, inputs); row -= 1) hidden.add(row);
+  }
+}
+
+function hideableComment(row: number, anchors: Map<number, CollapseAnchor>, { commentRows, threadRows }: FoldInputs): boolean {
+  if (!commentRows.has(row) || threadRows.has(row)) return false;
+  return anchors.get(row)?.collapsed !== false;
 }
 
 function expansionFrom(foldable: CollapseRegion[], region: CollapseRegion): Overrides {
@@ -130,10 +149,16 @@ function regionOverlapsEdit(region: CollapseRegion, edit: EditableBlock | null):
   return edit !== null && region.start < edit.lastRow && region.end >= edit.firstRow;
 }
 
-function modeCollapsed(region: CollapseRegion, hiddenThreads: number, mode: FoldMode, allDeleted: boolean): boolean {
+function modeCollapsed(region: CollapseRegion, foldable: CollapseRegion[], hiddenThreads: number, mode: FoldMode, allDeleted: boolean): boolean {
   if (!foldsCollapsed(mode)) return false;
-  if (mode === 'collapseAll') return true;
+  if (mode === 'collapseExceptTypes') return !region.typeLike && !withinTypeRegion(foldable, region);
+  if (mode === 'collapseExceptComments') return !region.comment;
+  if (mode === 'collapseHidingComments') return true;
   return hiddenThreads === 0 && (allDeleted || region.imports || unchangedRegion(region));
+}
+
+function withinTypeRegion(foldable: CollapseRegion[], region: CollapseRegion): boolean {
+  return foldable.some((other) => other !== region && other.typeLike && other.start <= region.start && other.end >= region.end);
 }
 
 function unchangedRegion(region: CollapseRegion): boolean {

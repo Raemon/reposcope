@@ -1,6 +1,7 @@
 import { extensionOf, foldDialect, type FoldDialect } from './foldDialects';
 import { indentSpans, lineRuleSpans, markdownSpans } from './foldLineSpans';
 import { addRowRange, allLinesDeleted, pushSpan, scanRows, scanRowsFlushing, scanSide, textOf, type Side, type Span } from './foldSpan';
+import { commentSpan, typeLikeSpan } from './regionRoles';
 import type { DiffRow } from './splitDiff';
 
 export interface CollapseRegion {
@@ -10,6 +11,8 @@ export interface CollapseRegion {
   kind: string;
   depth: number;
   imports: boolean;
+  comment: boolean;
+  typeLike: boolean;
   addedLines: number;
   deletedLines: number;
   anchorChanged: boolean;
@@ -508,6 +511,8 @@ function regionOf(rows: DiffRow[], span: Span, depth: number): CollapseRegion {
     ...span,
     depth,
     key: `${anchor?.left?.line ?? 'x'}:${anchor?.right?.line ?? 'x'}`,
+    comment: commentSpan(span.kind),
+    typeLike: typeLikeSpan(span.kind, anchor?.right?.text ?? anchor?.left?.text ?? ''),
     addedLines: changedLineCount(hidden, 'right'),
     deletedLines: changedLineCount(hidden, 'left'),
     anchorChanged: anchor?.kind === 'change',
