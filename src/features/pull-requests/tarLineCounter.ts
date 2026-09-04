@@ -17,9 +17,9 @@ interface OpenEntry {
   flag: string;
   size: number;
   contentLeft: number;
-  left: number;
-  text: Buffer[] | null;
-  probed: number;
+  blockLeft: number;
+  textChunks: Buffer[] | null;
+  probedBytes: number;
   binary: boolean;
   newlines: number;
   lastByte: number;
@@ -28,9 +28,12 @@ interface OpenEntry {
 export async function countTarballLines(body: ReadableStream<Uint8Array> | null): Promise<Record<string, number>> {
   const counter = new TarLineCounter();
   if (body === null) return counter.lines;
-  const unpacked = Readable.fromWeb(body as NodeReadableStream<Uint8Array>).pipe(createGunzip());
-  for await (const chunk of unpacked) counter.push(chunk as Buffer);
+  for await (const chunk of gunzipped(body)) counter.push(chunk as Buffer);
   return counter.lines;
+}
+
+function gunzipped(body: ReadableStream<Uint8Array>): Readable {
+  return Readable.fromWeb(body as NodeReadableStream<Uint8Array>).pipe(createGunzip());
 }
 
 class TarLineCounter {
@@ -42,81 +45,83 @@ class TarLineCounter {
   private ended = false;
 
   push(chunk: Buffer): void {
+    this.guardSize(chunk);
+    for (let at = 0; at < chunk.length && !this.ended; ) at = this.feedFrom(chunk, at);
+  }
+
+  private guardSize(chunk: Buffer): void {
     this.unpacked += chunk.length;
     if (this.unpacked > MAX_UNPACKED_BYTES) throw new GithubRequestError(413, 'Repository too large to count lines');
-    let at = 0;
-    while (at < chunk.length && !this.ended) at = this.entry ? this.feedEntry(chunk, at) : this.feedHeader(chunk, at);
+  }
+
+  private feedFrom(chunk: Buffer, at: number): number {
+    return this.entry ? this.feedEntry(this.entry, chunk, at) : this.feedHeader(chunk, at);
   }
 
   private feedHeader(chunk: Buffer, at: number): number {
     const take = Math.min(BLOCK - this.header.length, chunk.length - at);
     this.header = Buffer.concat([this.header, chunk.subarray(at, at + take)]);
-    if (this.header.length === BLOCK) this.openEntry(this.header);
+    if (this.header.length === BLOCK) this.beginEntry(this.header);
     return at + take;
   }
 
-  private openEntry(header: Buffer): void {
+  private beginEntry(header: Buffer): void {
     this.header = Buffer.alloc(0);
     if (header[0] === 0 || ((header[124] ?? 0) & BASE_256_SIZE_BIT) !== 0) this.ended = true;
-    else this.entry = openEntry(header);
+    else this.entry = entryFromHeader(header);
   }
 
-  private feedEntry(chunk: Buffer, at: number): number {
-    const entry = this.entry!;
-    const take = Math.min(entry.left, chunk.length - at);
-    const content = Math.min(take, entry.contentLeft);
-    if (content > 0) consume(entry, chunk.subarray(at, at + content));
-    entry.contentLeft -= content;
-    entry.left -= take;
-    if (entry.left === 0) this.closeEntry(entry);
+  private feedEntry(entry: OpenEntry, chunk: Buffer, at: number): number {
+    const take = Math.min(entry.blockLeft, chunk.length - at);
+    takeContent(entry, chunk.subarray(at, at + Math.min(take, entry.contentLeft)));
+    entry.blockLeft -= take;
+    if (entry.blockLeft === 0) this.closeEntry(entry);
     return at + take;
   }
 
   private closeEntry(entry: OpenEntry): void {
     this.entry = null;
     const nameAhead = longNameIn(entry);
-    if (nameAhead === null && REGULAR_FILE_FLAGS.includes(entry.flag) && !entry.binary) {
-      this.lines[withoutRoot(this.longName ?? entry.name)] = lineCount(entry);
-    }
+    if (countable(entry, nameAhead)) this.lines[withoutRoot(this.longName ?? entry.name)] = lineCount(entry);
     this.longName = nameAhead;
   }
 }
 
-function openEntry(header: Buffer): OpenEntry {
-  const flag = String.fromCharCode(header[156] ?? 0);
-  const size = parseInt(field(header, 124, 12), 8) || 0;
-  const prefix = field(header, 345, 155);
-  const name = field(header, 0, 100);
-  const holdsText = flag === PAX_HEADER_FLAG || flag === GNU_LONG_NAME_FLAG;
-  return {
-    name: prefix ? `${prefix}/${name}` : name,
-    flag,
-    size,
-    contentLeft: size,
-    left: Math.ceil(size / BLOCK) * BLOCK,
-    text: holdsText ? [] : null,
-    probed: 0,
-    binary: false,
-    newlines: 0,
-    lastByte: 0,
-  };
+function entryFromHeader(header: Buffer): OpenEntry {
+  const head = headerFields(header);
+  return { ...head, contentLeft: head.size, blockLeft: Math.ceil(head.size / BLOCK) * BLOCK, ...blankCounts(head.flag) };
 }
 
-function consume(entry: OpenEntry, bytes: Buffer): void {
-  if (entry.text) {
-    entry.text.push(Buffer.from(bytes));
-    return;
-  }
+function headerFields(header: Buffer): { name: string; flag: string; size: number } {
+  const prefix = field(header, 345, 155);
+  const name = field(header, 0, 100);
+  const flag = String.fromCharCode(header[156] ?? 0);
+  return { name: prefix ? `${prefix}/${name}` : name, flag, size: parseInt(field(header, 124, 12), 8) || 0 };
+}
+
+function blankCounts(flag: string) {
+  const holdsText = flag === PAX_HEADER_FLAG || flag === GNU_LONG_NAME_FLAG;
+  return { textChunks: holdsText ? [] : null, probedBytes: 0, binary: false, newlines: 0, lastByte: 0 };
+}
+
+function takeContent(entry: OpenEntry, bytes: Buffer): void {
+  if (bytes.length === 0) return;
+  entry.contentLeft -= bytes.length;
+  if (entry.textChunks) entry.textChunks.push(Buffer.from(bytes));
+  else countContent(entry, bytes);
+}
+
+function countContent(entry: OpenEntry, bytes: Buffer): void {
   probeBinary(entry, bytes);
   entry.newlines += countNewlines(bytes);
   entry.lastByte = bytes[bytes.length - 1] ?? 0;
 }
 
 function probeBinary(entry: OpenEntry, bytes: Buffer): void {
-  if (entry.binary || entry.probed >= BINARY_PROBE_BYTES) return;
-  const probe = bytes.subarray(0, BINARY_PROBE_BYTES - entry.probed);
+  if (entry.binary || entry.probedBytes >= BINARY_PROBE_BYTES) return;
+  const probe = bytes.subarray(0, BINARY_PROBE_BYTES - entry.probedBytes);
   entry.binary = probe.includes(0);
-  entry.probed += probe.length;
+  entry.probedBytes += probe.length;
 }
 
 function countNewlines(bytes: Buffer): number {
@@ -125,14 +130,18 @@ function countNewlines(bytes: Buffer): number {
   return count;
 }
 
+function countable(entry: OpenEntry, nameAhead: string | null): boolean {
+  return nameAhead === null && REGULAR_FILE_FLAGS.includes(entry.flag) && !entry.binary;
+}
+
 function lineCount(entry: OpenEntry): number {
   if (entry.size === 0) return 0;
   return entry.lastByte === NEWLINE ? entry.newlines : entry.newlines + 1;
 }
 
 function longNameIn(entry: OpenEntry): string | null {
-  if (entry.text === null) return null;
-  const text = Buffer.concat(entry.text);
+  if (entry.textChunks === null) return null;
+  const text = Buffer.concat(entry.textChunks);
   if (entry.flag === PAX_HEADER_FLAG) return text.toString('utf8').match(/^\d+ path=(.*)$/m)?.[1] ?? null;
   return field(text, 0, text.length);
 }
