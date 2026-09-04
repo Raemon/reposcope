@@ -1,8 +1,8 @@
 import { streamRun } from '@/features/ai-chat/cursorApi';
-import { cursorFailure, cursorKeyOf, requireText } from '@/features/ai-chat/cursorRoute';
+import { cursorFailure, cursorKeyOf, queryOf, requireText } from '@/features/ai-chat/cursorRoute';
 
 export async function GET(request: Request) {
-  const asked = Object.fromEntries(new URL(request.url).searchParams) as Record<string, unknown>;
+  const asked = queryOf(request);
   try {
     const upstream = await streamRun(cursorKeyOf(request), requireText(asked, 'agent'), requireText(asked, 'run'));
     return new Response(upstream.body, {

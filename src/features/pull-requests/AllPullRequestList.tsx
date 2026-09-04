@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useColumnNav } from './columnNav';
 import { useCurrentRowInView } from './NavListRow';
 import { LIST_NOTE as NOTE, NoMatchingPulls, PullListRow, PullRowFields } from './PullListRow';
-import { allPullsRoute, pullRoute } from './pullPaths';
+import { allPullsRoute, pullRoute, pullSubject } from './pullPaths';
 import type { CrossRepoPull } from './pullRequests';
 import { useAllPullList } from './usePullLists';
 
@@ -56,7 +56,7 @@ export function AllPullRequestList() {
       {listed.length === 0 && <NoMatchingPulls />}
       {visible.map((pull) => (
         <PullRow
-          key={`${pull.owner}/${pull.repo}#${pull.number}`}
+          key={pullSubject(pull.owner, pull.repo, pull.number)}
           pull={pull}
           pathname={pathname}
           repoColumnCh={repoColumnCh}
@@ -89,15 +89,16 @@ function PullRow({
   pathname: string;
   repoColumnCh: number;
 }) {
+  const target = { owner: pull.owner, repo: pull.repo, number: pull.number };
   return (
     <PullListRow
-      target={{ owner: pull.owner, repo: pull.repo, number: pull.number }}
+      target={target}
       href={allPullsRoute(pull.owner, pull.repo, pull.number)}
       current={pathname === pullRoute(pull.owner, pull.repo, pull.number)}
       closable={pull.state === 'open'}
       column="all-pulls"
     >
-      <PullRowFields pull={pull} repo={pull.repo} repoColumnCh={repoColumnCh} />
+      <PullRowFields pull={pull} target={target} repo={pull.repo} repoColumnCh={repoColumnCh} />
     </PullListRow>
   );
 }

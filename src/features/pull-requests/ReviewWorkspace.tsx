@@ -18,6 +18,7 @@ import { commentCountsOf, sortChangedFiles } from './diffSort';
 import { useDiffSort } from './diffSortStore';
 import { DeleteFileModal } from './DeleteFileModal';
 import { commitFilesPath } from './pullPaths';
+import { headCommit } from './headCommit';
 import type { ChangedFile, ChangedFileSet, ChangeSummary, PullRequestSummary } from './pullRequests';
 import { ReviewThreadProvider, useReviewTarget } from './reviewThreadStore';
 import { useStickyColumn, useStickyOpen } from './stickyColumns';
@@ -297,7 +298,7 @@ function Workspace({
           </div>
         )}
         <ColumnBoundary>
-          <AiChatColumn owner={owner} repo={repo} subject={subjectKey} headRef={headRef} />
+          <AiChatColumn owner={owner} repo={repo} number={number} subject={subjectKey} headRef={headRef} headSha={headCommit(change)?.sha ?? null} />
         </ColumnBoundary>
       </div>
       {deletion.asking !== null && (

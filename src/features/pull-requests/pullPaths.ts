@@ -99,6 +99,18 @@ export function pullPreviewsPath(owner: string, repo: string, number: number): s
   return `/api/github/pull-previews?${repoParams(owner, repo)}&number=${number}`;
 }
 
+export function pullSubject(owner: string, repo: string, number: number): string {
+  return `${owner}/${repo}#${number}`;
+}
+
+export function branchSubject(owner: string, repo: string, branch: string): string {
+  return `${owner}/${repo}@${branch}`;
+}
+
+export function pullUrl(owner: string, repo: string, number: number): string {
+  return `https://github.com/${owner}/${repo}/pull/${number}`;
+}
+
 export function pullRoute(owner: string, repo: string, number: number): string {
   return `${repoRoute(owner, repo)}/pull/${number}`;
 }

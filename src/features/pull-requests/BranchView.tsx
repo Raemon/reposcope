@@ -5,8 +5,9 @@ import { RepoPullsColumn } from './PullListColumn';
 import { ReviewLoadNotice } from './ReviewLoadNotice';
 import { ReviewWorkspace } from './ReviewWorkspace';
 import { setCurrentBranch } from './currentPullStore';
-import type { ChangeSummary, CommitSummary } from './pullRequests';
-import { branchFilesPath, branchPath } from './pullPaths';
+import { headCommit } from './headCommit';
+import type { ChangeSummary } from './pullRequests';
+import { branchFilesPath, branchPath, branchSubject } from './pullPaths';
 import { useStickyColumn } from './stickyColumns';
 import { useGithubToken, useStoreReady } from '@/features/sources/sourceStore';
 import { useCachedJson } from '@/features/sources/useCachedJson';
@@ -33,7 +34,7 @@ export function BranchView({ owner, repo, branch }: { owner: string; repo: strin
       owner={owner}
       repo={repo}
       number={null}
-      subjectKey={`${owner}/${repo}@${branch}`}
+      subjectKey={branchSubject(owner, repo, branch)}
       change={change}
       baseRef={null}
       headRef={branch}
@@ -44,8 +45,4 @@ export function BranchView({ owner, repo, branch }: { owner: string; repo: strin
       editableWhole={null}
     />
   );
-}
-
-function headCommit(change: ChangeSummary): CommitSummary | null {
-  return change.commits[change.commits.length - 1] ?? null;
 }

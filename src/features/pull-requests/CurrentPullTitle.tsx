@@ -2,6 +2,7 @@
 
 import { RowTag } from './PullListRow';
 import { useCurrentBranchHead, useCurrentPull } from './currentPullStore';
+import { pullUrl } from './pullPaths';
 import type { PullRequestSummary } from './pullRequests';
 import { useIsOwnAuthor } from '@/features/github-auth/useViewerLogin';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
@@ -23,7 +24,7 @@ export function CurrentPullTitle({ repo, number }: { repo: RepoRef; number: numb
           <TruncatedName text={pull.pull.title} serif className="font-serif text-[17px] leading-6 tracking-[0.005em] text-ink" />
           <StateTags pull={pull.pull} />
           <AuthorAndTime author={pull.pull.author} iso={pull.pull.updatedAt} />
-          <OpenOnGithubLink href={`https://github.com/${repo.owner}/${repo.name}/pull/${number}`} label="pull request" className={GITHUB_LINK} />
+          <OpenOnGithubLink href={pullUrl(repo.owner, repo.name, number)} label="pull request" className={GITHUB_LINK} />
         </>
       )}
     </div>

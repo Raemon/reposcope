@@ -9,6 +9,10 @@ export function cursorHeaders(key: string): Record<string, string> {
   return { [CURSOR_KEY_HEADER]: key };
 }
 
+export function readCursorKey(): string | null {
+  return keyPref.read();
+}
+
 export function writeCursorKey(key: string | null): void {
   keyPref.set(key);
 }
