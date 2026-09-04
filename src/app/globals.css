@@ -42,6 +42,20 @@
   --color-add-bg: var(--add-bg);
   --color-add-emph: var(--add-emph);
   --color-add-ink: var(--add-ink);
+
+  --animate-sparkle: sparkle 1.4s ease-in-out infinite;
+
+  @keyframes sparkle {
+    0%,
+    100% {
+      transform: scale(0.7);
+      opacity: 0.5;
+    }
+    50% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
 }
 
 @utility shadow-card {
