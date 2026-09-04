@@ -10,35 +10,42 @@ interface PullRefs {
 
 export interface FreshPreviewBranch {
   branch: string;
+  sha: string;
 }
 
 export async function createFreshPreviewBranch(owner: string, name: string, number: number): Promise<FreshPreviewBranch> {
   requireGithubUser('creating a preview branch');
   const pull = await githubJson<PullRefs>(`${API}/repos/${owner}/${name}/pulls/${number}`, true);
   const branch = previewBranchName(number);
-  await githubSend(`${API}/repos/${owner}/${name}/git/refs`, 'POST', {
-    ref: `refs/heads/${branch}`,
-    sha: pull.head.sha,
-  });
-  await mergeOrDropBranch(owner, name, branch, pull.base.ref);
-  return { branch };
+  await createBranchAt(owner, name, branch, pull.head.sha);
+  const merged = await mergeOrDropBranch(owner, name, branch, pull.base.ref);
+  return { branch, sha: merged ?? pull.head.sha };
+}
+
+export function previewBranchPrefix(number: number): string {
+  return `preview/pr-${number}-`;
 }
 
 function previewBranchName(number: number): string {
-  return `preview/pr-${number}-${stamp()}`;
+  return `${previewBranchPrefix(number)}${stamp()}`;
 }
 
 function stamp(): string {
-  return new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
+  return new Date().toISOString().replace(/[-:T.Z]/g, '');
 }
 
-async function mergeOrDropBranch(owner: string, name: string, branch: string, baseRef: string): Promise<void> {
+async function createBranchAt(owner: string, name: string, branch: string, sha: string): Promise<void> {
+  await githubSend(`${API}/repos/${owner}/${name}/git/refs`, 'POST', { ref: `refs/heads/${branch}`, sha });
+}
+
+async function mergeOrDropBranch(owner: string, name: string, branch: string, baseRef: string): Promise<string | null> {
   try {
-    await githubSend(`${API}/repos/${owner}/${name}/merges`, 'POST', {
+    const merge = await githubSend<{ sha: string } | undefined>(`${API}/repos/${owner}/${name}/merges`, 'POST', {
       base: branch,
       head: baseRef,
       commit_message: `Refresh preview for ${branch} with latest ${baseRef}`,
     });
+    return merge?.sha ?? null;
   } catch (issue: unknown) {
     await deleteBranch(owner, name, branch);
     throw mergeFailure(issue, baseRef);

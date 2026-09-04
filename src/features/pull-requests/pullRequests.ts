@@ -9,7 +9,6 @@ import {
 import { requireGithubUser } from '@/features/github-auth/requireGithubUser';
 import { imageTypeOf } from './imageFiles';
 import type { PullState } from './pullPaths';
-import { previewDeploymentUrl } from './previewDeployment';
 import { mapWithWorkers } from './workerPool';
 import type { RepoRef } from '@/features/sources/parseRepoLink';
 import { errorMessage } from '@/features/sources/errorMessage';
@@ -81,7 +80,6 @@ export interface PullRequestCommits extends ChangeSummary {
   baseRef: string;
   headRef: string;
   conflicted: boolean;
-  previewUrl: string | null;
 }
 
 export interface FileEdit {
@@ -228,10 +226,7 @@ export async function describePullRequest(
     githubJson<GithubPull>(`${API}/repos/${owner}/${name}/pulls/${number}`, fresh),
     githubJson<GithubCommit[]>(`${API}/repos/${owner}/${name}/pulls/${number}/commits?per_page=100`),
   ]);
-  const [preview, summaries] = await Promise.all([
-    previewDeploymentUrl(owner, name, pull.head.sha),
-    summarizeCommits(owner, name, commits),
-  ]);
+  const summaries = await summarizeCommits(owner, name, commits);
   return {
     pull: summarizePull(pull),
     body: pull.body ?? null,
@@ -240,7 +235,6 @@ export async function describePullRequest(
     additions: pull.additions ?? 0,
     deletions: pull.deletions ?? 0,
     conflicted: hasConflicts(pull),
-    previewUrl: preview,
     commits: summaries,
   };
 }
@@ -506,12 +500,20 @@ function summarizePull(pull: GithubPull): PullRequestSummary {
   };
 }
 
+export function commitTitle(commit: GithubCommit): string {
+  return commit.commit.message.split('\n')[0] ?? '';
+}
+
+export function commitDate(commit: GithubCommit): string {
+  return commit.commit.author?.date ?? '';
+}
+
 function summarizeCommit(commit: GithubCommit): CommitSummary {
   return {
     sha: commit.sha,
-    message: commit.commit.message.split('\n')[0] ?? '',
+    message: commitTitle(commit),
     author: commit.author?.login ?? commit.commit.author?.name ?? '',
-    date: commit.commit.author?.date ?? '',
+    date: commitDate(commit),
     additions: commit.stats?.additions ?? 0,
     deletions: commit.stats?.deletions ?? 0,
     fileCount: commit.files?.length ?? 0,
