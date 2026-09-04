@@ -6,7 +6,7 @@ export type SourceResult =
   | { state: 'error'; message: string }
   | { state: 'ready'; repos: RepoSummary[]; login: string | null };
 
-interface SidebarRepo extends RepoSummary {
+export interface SidebarRepo extends RepoSummary {
   source: CodebaseSource | null;
 }
 
@@ -80,4 +80,12 @@ function mergeGroup(groups: Map<string, SidebarGroup>, group: SidebarGroup): voi
 
 function placeholder(owner: string, name: string): RepoSummary {
   return { owner, name, description: '', language: '', updatedAt: '', private: false };
+}
+
+export function sidebarRepos(groups: SidebarGroup[]): SidebarRepo[] {
+  return groups.flatMap((group) => group.repos).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
+export function sidebarNotices(groups: SidebarGroup[]): SidebarGroup[] {
+  return groups.filter((group) => group.loading || group.error !== null || group.source !== null);
 }

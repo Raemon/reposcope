@@ -1,14 +1,15 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { repoRoute } from './repoPaths';
-import type { SidebarGroup } from './sidebarGroups';
+import { sidebarNotices, sidebarRepos, type SidebarGroup, type SidebarRepo } from './sidebarGroups';
 import { removeSource } from '@/features/sources/sourceStore';
 import type { CodebaseSource } from '@/features/sources/sourceTypes';
 import { FilterField } from '@/features/surface-ui/FilterField';
 import { HoverCardTrigger } from '@/features/surface-ui/HoverCard';
 import { SelectableLink } from '@/features/surface-ui/SelectableLink';
+import { StrokeIcon } from '@/features/surface-ui/StrokeIcon';
 
 export function CodebaseList({
   groups,
@@ -21,7 +22,8 @@ export function CodebaseList({
 }) {
   const [filter, setFilter] = useState('');
   const pathname = usePathname();
-  const shown = useMemo(() => filterGroups(groups, filter), [groups, filter]);
+  const repos = useMemo(() => filterRepos(sidebarRepos(groups), filter), [groups, filter]);
+  const notices = useMemo(() => sidebarNotices(groups), [groups]);
   const active = useRef<HTMLAnchorElement>(null);
 
   useEffect(() => {
@@ -43,52 +45,72 @@ export function CodebaseList({
       </div>
       {children}
       <nav className="min-h-0 flex-1 overflow-auto py-1">
-        {shown.map((group) => (
-          <section key={group.owner}>
-            <h2 className="sticky top-0 z-10 flex items-baseline gap-1.5 bg-panel px-3 pb-1 pt-2 text-[9px] uppercase tracking-[0.18em] text-ink-dim">
-              <span className="truncate">
-                {group.owner} · {group.loading ? '…' : group.repos.length}
-              </span>
-              {group.you && <span className="rounded bg-btn px-1 normal-case tracking-normal">you</span>}
-              {group.source && <RemoveControl source={group.source} label={`Remove ${group.owner}`} />}
-            </h2>
-            {group.error && (
-              <p className="mx-3 mb-1 rounded bg-error-bg px-2 py-1 text-[10px] leading-4 text-error-ink">
-                {group.error}
-              </p>
-            )}
-            {group.repos.map((repo) => {
-              const href = repoRoute(repo.owner, repo.name);
-              const activeLink = pathname === href;
-              return (
-                <div
-                  key={href}
-                  className={`flex items-baseline gap-1.5 pr-2 ${activeLink ? 'bg-btn-active' : 'hover:bg-btn-hover'}`}
-                >
-                  <HoverCardTrigger label={repo.description} className="min-w-0 flex-1" focusable={false} tooltipStyle>
-                    <SelectableLink
-                      ref={activeLink ? active : undefined}
-                      href={href}
-                      current={activeLink}
-                      className={`flex min-w-0 flex-1 items-baseline justify-between gap-2 py-[3px] pl-3 text-[11px] leading-4 ${
-                        activeLink ? 'text-accent' : 'text-ink'
-                      }`}
-                    >
-                      <span className="truncate">{repo.name}</span>
-                      <span className="shrink-0 text-[9px] text-ink-dim">
-                        {repo.private && <span className="mr-1 rounded bg-btn px-1">private</span>}
-                        {repo.language}
-                      </span>
-                    </SelectableLink>
-                  </HoverCardTrigger>
-                  {repo.source && <RemoveControl source={repo.source} label={`Remove ${repo.owner}/${repo.name}`} />}
-                </div>
-              );
-            })}
-          </section>
+        {notices.map((group) => (
+          <SourceNotice key={group.owner} group={group} />
+        ))}
+        {repos.map((repo) => (
+          <RepoRow key={`${repo.owner}/${repo.name}`} repo={repo} activeRef={active} />
         ))}
       </nav>
     </div>
+  );
+}
+
+function SourceNotice({ group }: { group: SidebarGroup }) {
+  return (
+    <div className="flex items-baseline gap-1.5 px-3 pb-1 pt-2 text-[9px] uppercase tracking-[0.18em] text-ink-dim">
+      <span className="truncate">
+        {group.owner}
+        {group.loading && ' …'}
+      </span>
+      {group.source && <RemoveControl source={group.source} label={`Remove ${group.owner}`} />}
+      {group.error && (
+        <span className="ml-auto rounded bg-error-bg px-1 normal-case tracking-normal text-error-ink">
+          {group.error}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function RepoRow({ repo, activeRef }: { repo: SidebarRepo; activeRef: RefObject<HTMLAnchorElement | null> }) {
+  const pathname = usePathname();
+  const href = repoRoute(repo.owner, repo.name);
+  const activeLink = pathname === href;
+  return (
+    <div className={`flex items-baseline gap-1.5 pr-2 ${activeLink ? 'bg-btn-active' : 'hover:bg-btn-hover'}`}>
+      <HoverCardTrigger label={repo.description} className="min-w-0 flex-1" focusable={false} tooltipStyle>
+        <SelectableLink
+          ref={activeLink ? activeRef : undefined}
+          href={href}
+          current={activeLink}
+          className={`flex min-w-0 flex-1 items-baseline justify-between gap-2 py-[3px] pl-3 text-[11px] leading-4 ${
+            activeLink ? 'text-accent' : 'text-ink'
+          }`}
+        >
+          <span className="truncate">
+            <span className="text-ink-dim">{repo.owner}/</span>
+            {repo.name}
+          </span>
+          <span className="flex shrink-0 items-center gap-1 text-[9px] text-ink-dim">
+            {repo.private && <LockIcon />}
+            {repo.language}
+          </span>
+        </SelectableLink>
+      </HoverCardTrigger>
+      {repo.source && <RemoveControl source={repo.source} label={`Remove ${repo.owner}/${repo.name}`} />}
+    </div>
+  );
+}
+
+function LockIcon() {
+  return (
+    <span role="img" aria-label="private" className="self-center opacity-50">
+      <StrokeIcon size={9}>
+        <rect x="5" y="11" width="14" height="10" rx="2" />
+        <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+      </StrokeIcon>
+    </span>
   );
 }
 
@@ -107,15 +129,8 @@ function RemoveControl({ source, label }: { source: CodebaseSource; label: strin
   );
 }
 
-function filterGroups(groups: SidebarGroup[], filter: string): SidebarGroup[] {
+function filterRepos(repos: SidebarRepo[], filter: string): SidebarRepo[] {
   const needle = filter.trim().toLowerCase();
-  if (needle === '') return groups;
-  return groups
-    .map((group) => ({
-      ...group,
-      repos: group.repos.filter((repo) =>
-        `${repo.owner}/${repo.name} ${repo.description}`.toLowerCase().includes(needle),
-      ),
-    }))
-    .filter((group) => group.repos.length > 0 || group.error !== null || group.loading);
+  if (needle === '') return repos;
+  return repos.filter((repo) => `${repo.owner}/${repo.name} ${repo.description}`.toLowerCase().includes(needle));
 }
