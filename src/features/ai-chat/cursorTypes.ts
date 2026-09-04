@@ -33,6 +33,7 @@ export interface CursorAgent {
   status: string;
   url?: string | null;
   latestRunId?: string | null;
+  createdAt?: string | null;
 }
 
 export interface CursorLaunch {
@@ -44,6 +45,7 @@ export interface LaunchRequest {
   owner: string;
   repo: string;
   ref: string | null;
+  prUrl: string | null;
   prompt: string;
   model: string | null;
   name: string;

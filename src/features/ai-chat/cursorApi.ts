@@ -1,4 +1,4 @@
-import type { CursorLaunch, CursorModel, CursorRun, CursorSessionInfo, FollowupRequest, LaunchRequest } from './cursorTypes';
+import type { CursorAgent, CursorLaunch, CursorModel, CursorRun, CursorSessionInfo, FollowupRequest, LaunchRequest } from './cursorTypes';
 
 const CURSOR_API = process.env.CURSOR_API_URL ?? 'https://api.cursor.com';
 
@@ -82,12 +82,20 @@ function runPath(agentId: string, runId: string): string {
   return `/v1/agents/${encodeURIComponent(agentId)}/runs/${encodeURIComponent(runId)}`;
 }
 
+export async function listAgents(key: string, prUrl: string): Promise<{ items: CursorAgent[] }> {
+  const params = new URLSearchParams({ prUrl, limit: '100', includeArchived: 'false' });
+  const listed = await cursorJson<{ items?: CursorAgent[] }>(key, `/v1/agents?${params}`);
+  return { items: listed.items ?? [] };
+}
+
 // Commits go to the PR's head branch, so agent work lands in the diff under review.
-function launchBody({ owner, repo, ref, prompt, model, name }: LaunchRequest) {
+// prUrl is what lets `GET /v1/agents?prUrl=` find this PR's agents again later.
+function launchBody({ owner, repo, ref, prUrl, prompt, model, name }: LaunchRequest) {
+  const source = { url: `https://github.com/${owner}/${repo}`, ...(ref === null ? {} : { startingRef: ref }), ...(prUrl === null ? {} : { prUrl }) };
   return {
     prompt: { text: prompt },
     ...(model === null ? {} : { model: { id: model } }),
-    repos: [{ url: `https://github.com/${owner}/${repo}`, ...(ref === null ? {} : { startingRef: ref }) }],
+    repos: [source],
     name,
     autoCreatePR: false,
     workOnCurrentBranch: ref !== null,

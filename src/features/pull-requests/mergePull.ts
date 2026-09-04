@@ -6,7 +6,7 @@ import { prefetchPull } from './prefetchPull';
 import { trackPullAction, type PullTarget } from './pullActionStore';
 import { mergePullPath } from './pullPaths';
 import type { MergeResult } from './pullRequests';
-import { setStickyColumn } from './stickyColumns';
+import { openStickyColumn } from './stickyColumns';
 import { apiPost } from '@/features/sources/apiClient';
 
 export function mergePull(target: PullTarget, token: string | null, navigate: (href: string) => void): void {
@@ -15,7 +15,7 @@ export function mergePull(target: PullTarget, token: string | null, navigate: (h
   const next = nextPullAfter(target, token, acrossRepos);
   trackPullAction(target, 'merge', requestMerge(target, token));
   if (!next) {
-    setStickyColumn(list, (size) => ({ ...size, open: true }));
+    openStickyColumn(list);
     return navigate(pullListRoute(target, acrossRepos));
   }
   collapsePullList(list);

@@ -1,9 +1,8 @@
 import { readRun, startFollowup } from '@/features/ai-chat/cursorApi';
-import { cursorRoute, requireText } from '@/features/ai-chat/cursorRoute';
+import { cursorRoute, queryOf, requireText } from '@/features/ai-chat/cursorRoute';
 
 export async function GET(request: Request) {
-  const params = new URL(request.url).searchParams;
-  const asked = Object.fromEntries(params) as Record<string, unknown>;
+  const asked = queryOf(request);
   return cursorRoute(request, (key) => readRun(key, requireText(asked, 'agent'), requireText(asked, 'run')));
 }
 

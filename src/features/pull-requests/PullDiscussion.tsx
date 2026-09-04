@@ -1,6 +1,6 @@
 'use client';
 
-import { pullCommentsPath } from './pullPaths';
+import { pullCommentsPath, pullUrl } from './pullPaths';
 import { AuthorPortrait, OpenOnGithub } from './CommentByline';
 import { renderMarkdown } from '@/features/markdown/renderMarkdown';
 import type { PullComment } from './pullRequests';
@@ -39,7 +39,7 @@ export function PullDiscussion({
         owner={owner}
         repo={repo}
         author={author}
-        url={`https://github.com/${owner}/${repo}/pull/${number}`}
+        url={pullUrl(owner, repo, number)}
         body={body?.trim() ? body : 'No description.'}
         bodyWidth={READING_WIDTH}
       />
