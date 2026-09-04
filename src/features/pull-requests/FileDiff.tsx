@@ -15,6 +15,7 @@ import { type EditableBlock } from './editableBlocks';
 import { expandDiff } from './expandDiff';
 import { foldsCollapsed, useFoldCommand, wholeFileFor, wholeFileWanted, type FoldMode } from './foldModeStore';
 import { InlineThreads } from './InlineThreads';
+import { FILE_DIFF_ATTR } from './litRow';
 import { setDiffPaneWidth, useDiffPaneWidth } from './diffPaneWidth';
 import { DragHandle, useDragWidth } from './ResizableColumn';
 import { rowOf } from './commentAnchors';
@@ -97,7 +98,7 @@ export function FileDiff({
     editor: hunkEditor(file.filename, hunkEdit, mainLines, rowHeights),
   };
   return (
-    <div ref={growing} className="flex" style={{ paddingBottom: threadOverflow }}>
+    <div ref={growing} {...{ [FILE_DIFF_ATTR]: '' }} className="flex" style={{ paddingBottom: threadOverflow }}>
       <div className="min-w-0 flex-1" style={{ flexBasis: singleColumn ? 0 : removedSize.width * 2 }}>
         {singleColumn ? (
           <DiffSide {...shared} lines={mainLines} labels onMeasured={measured.onRight} {...editing} />

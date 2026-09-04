@@ -5,28 +5,28 @@ import type { DiffRow } from './splitDiff';
 
 export interface AnchoredThread {
   thread: ReviewThread;
+  row: number;
   anchorTop: number;
 }
 
-export interface PlacedThread {
-  thread: ReviewThread;
+export interface PlacedThread extends Omit<AnchoredThread, 'anchorTop'> {
   top: number;
   slot: number;
 }
 
 export function anchorThreads(threads: ReviewThread[], rows: DiffRow[], lines: DiffLine[], heights: RowHeights): AnchoredThread[] {
   return threads
-    .map((thread) => ({ thread, anchorTop: anchorTopOf(thread, rows, lines, heights) }))
-    .filter((anchored): anchored is AnchoredThread => anchored.anchorTop !== null)
+    .map((thread) => anchoredThread(thread, rows, lines, heights))
+    .filter((anchored): anchored is AnchoredThread => anchored !== null)
     .sort((a, b) => a.anchorTop - b.anchorTop);
 }
 
 export function placeThreads(anchors: AnchoredThread[], heights: Record<number, number>, gap: number, minSlot: number): PlacedThread[] {
   const tops = stackedTops(anchors, heights, gap, minSlot);
-  return anchors.map(({ thread }, index) => {
+  return anchors.map(({ thread, row }, index) => {
     const top = tops[index] ?? 0;
     const nextTop = tops[index + 1] ?? Infinity;
-    return { thread, top, slot: nextTop - gap - top };
+    return { thread, row, top, slot: nextTop - gap - top };
   });
 }
 
@@ -39,11 +39,11 @@ function stackedTops(anchors: AnchoredThread[], heights: Record<number, number>,
   });
 }
 
-function anchorTopOf(thread: ReviewThread, rows: DiffRow[], lines: DiffLine[], heights: RowHeights): number | null {
+function anchoredThread(thread: ReviewThread, rows: DiffRow[], lines: DiffLine[], heights: RowHeights): AnchoredThread | null {
   const row = rowOf(thread, rows);
   if (row < 0) return null;
   const index = displayIndexOf(row, thread.side, lines);
-  return index < 0 ? null : linesHeight(lines.slice(0, index), heights);
+  return index < 0 ? null : { thread, row, anchorTop: linesHeight(lines.slice(0, index), heights) };
 }
 
 export function rowOf(thread: ReviewThread, rows: DiffRow[]): number {

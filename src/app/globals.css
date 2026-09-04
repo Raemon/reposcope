@@ -161,6 +161,14 @@
   color: var(--shiki-light, inherit);
 }
 
+@utility row-shade {
+  background-image: linear-gradient(rgb(0 0 0 / 0.2), rgb(0 0 0 / 0.2));
+}
+
+.diff-line-lit {
+  @apply row-shade;
+}
+
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) .diff-code span {
     color: var(--shiki-dark, inherit);

@@ -8,9 +8,11 @@ export interface CodeSegment {
   emphasized: boolean;
 }
 
+export type SegmentRole = 'prefix' | 'name' | 'tail';
+
 export interface DimmedSegment extends CodeSegment {
   opacity?: number;
-  elided?: boolean;
+  role?: SegmentRole;
 }
 
 export function codeSegments(
