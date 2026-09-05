@@ -1,3 +1,5 @@
+import { keyboardBusy } from '@/features/hotkeys/keyboardBusy';
+
 export type NavAction =
   | { kind: 'column'; delta: number }
   | { kind: 'cursor'; delta: number }
@@ -15,11 +17,6 @@ const KEY_ACTIONS: Record<string, NavAction> = {
 
 export function navActionFor(event: KeyboardEvent): NavAction | null {
   if (event.metaKey || event.ctrlKey || event.altKey) return null;
-  if (isTyping(event.target)) return null;
+  if (keyboardBusy(event)) return null;
   return KEY_ACTIONS[event.key] ?? null;
-}
-
-function isTyping(target: EventTarget | null): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  return target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
 }

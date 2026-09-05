@@ -190,7 +190,12 @@ const PANE_FRAME: Record<PaneFrame, { section: string; body: string }> = {
 function PaneColumn({ navId, title, icon, note, action, footer, frame, children }: ColumnProps & { frame: PaneFrame }) {
   const nav = useColumnNav(navId);
   return (
-    <section onPointerDown={nav.focus} onPointerLeave={nav.clearHover} className={`flex min-w-0 flex-col bg-panel ${PANE_FRAME[frame].section}`}>
+    <section
+      data-nav-column={navId}
+      onPointerDown={nav.focus}
+      onPointerLeave={nav.clearHover}
+      className={`flex min-w-0 flex-col bg-panel ${PANE_FRAME[frame].section}`}
+    >
       <div className={`${PANE_WIDTH} shrink-0`}>
         <ColumnHeader navId={navId} title={title} icon={icon} note={note} action={action} onCollapse={null} />
       </div>
@@ -209,6 +214,7 @@ function StripColumn({ navId, title, icon, preview, size, onSize, side = 'left' 
   return (
     // The whole strip expands on click; the button adds the label and keyboard access.
     <div
+      data-nav-column={navId}
       onClick={() => onSize({ ...size, open: true })}
       onPointerDown={nav.focus}
       onPointerLeave={nav.clearHover}
@@ -240,6 +246,7 @@ function OpenColumn({
   const startDrag = useDragWidth(size, onSize);
   return (
     <section
+      data-nav-column={navId}
       onPointerDown={nav.focus}
       onPointerLeave={nav.clearHover}
       className={`relative flex w-full shrink-0 flex-col border-b md:w-[var(--col-w)] md:min-h-0 md:border-b-0 ${OUTER_EDGE[side]} ${columnEdge(nav.focused, tone)}`}

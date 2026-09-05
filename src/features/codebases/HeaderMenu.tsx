@@ -1,30 +1,34 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { useCommand, type CommandSpec } from '@/features/hotkeys/commandStore';
 import { PopoverMenu, type PopoverTrigger } from '@/features/surface-ui/PopoverMenu';
 import { SELECTABLE_TEXT, useSelectableClick } from '@/features/surface-ui/selectableClick';
 
 export function HeaderMenu({
   label,
   width,
+  command,
   children,
 }: {
   label: ReactNode;
   width: string;
+  command?: CommandSpec;
   children: (close: () => void) => ReactNode;
 }) {
   return (
     <PopoverMenu
       align="left-0"
       panelClass={`flex max-h-[70vh] flex-col overflow-hidden ${width}`}
-      trigger={(state) => <LabelButton label={label} {...state} />}
+      trigger={(state) => <LabelButton label={label} command={command} {...state} />}
     >
       {children}
     </PopoverMenu>
   );
 }
 
-function LabelButton({ label, open, toggle }: PopoverTrigger & { label: ReactNode }) {
+function LabelButton({ label, command, open, toggle }: PopoverTrigger & { label: ReactNode; command?: CommandSpec }) {
+  useCommand(command ?? null, toggle);
   const labelClick = useSelectableClick<HTMLButtonElement>(toggle);
   return (
     <button

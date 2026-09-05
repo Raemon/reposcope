@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { navActionFor, type NavAction } from './columnKeys';
 import { COLUMN_HEADER, nextCursor, stepColumn, type ColumnId, type NavColumn } from './navColumn';
 import { rowState, type RowState } from '@/features/surface-ui/rowState';
@@ -20,6 +20,7 @@ interface NavValue {
   hover: Hover | null;
   setHover: (hover: Hover | null) => void;
   focus: (column: ColumnId) => void;
+  toggle: (column: ColumnId) => void;
   activate: (column: ColumnId, item: string) => void;
   register: (id: ColumnId, column: NavColumn | null) => void;
   registerBody: (id: ColumnId, node: HTMLElement | null) => void;
@@ -31,6 +32,7 @@ const INERT: NavValue = {
   hover: null,
   setHover: () => {},
   focus: () => {},
+  toggle: () => {},
   activate: () => {},
   register: () => {},
   registerBody: () => {},
@@ -43,6 +45,8 @@ export function ColumnNavProvider({ children }: { children: ReactNode }) {
   const [focused, setFocused] = useState<ColumnId>('files');
   const [cursors, setCursors] = useState<Cursors>({});
   const [hover, setHover] = useState<Hover | null>(null);
+  const [pendingToggle, setPendingToggle] = useState<ColumnId | null>(null);
+  const [pendingReveal, setPendingReveal] = useState<ColumnId | null>(null);
 
   const setCursor = useCallback((id: ColumnId, item: string | null) => {
     setCursors((held) => ({ ...held, [id]: item ?? undefined }));
@@ -79,8 +83,23 @@ export function ColumnNavProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.querySelector('[data-nav-cursor]')?.scrollIntoView({ block: 'nearest' });
   }, [focused, cursors]);
+  // Deferred to an effect: a central tab switch must render and register the column first.
+  useEffect(() => {
+    if (pendingToggle === null) return;
+    setPendingToggle(null);
+    const column = columns.current.get(pendingToggle);
+    if (!column) return;
+    toggleColumn(column, focused === pendingToggle);
+    setFocused(pendingToggle);
+    setPendingReveal(pendingToggle);
+  }, [pendingToggle, focused]);
+  useEffect(() => {
+    if (pendingReveal === null) return;
+    setPendingReveal(null);
+    scrollColumnIntoView(pendingReveal);
+  }, [pendingReveal]);
 
-  const value = { focused, cursors, hover, setHover, focus: setFocused, activate, register, registerBody };
+  const value = { focused, cursors, hover, setHover, focus: setFocused, toggle: setPendingToggle, activate, register, registerBody };
   return <ColumnNavContext.Provider value={value}>{children}</ColumnNavContext.Provider>;
 }
 
@@ -124,13 +143,9 @@ export function useColumnNav(id: ColumnId) {
   };
 }
 
-export function useRegisterColumn(id: ColumnId, column: NavColumn, active = true) {
-  const nav = useContext(ColumnNavContext);
-  useLayoutEffect(() => {
-    if (!active) return;
-    nav.register(id, column);
-    return () => nav.register(id, null);
-  });
+export function useNavRegistry(): Pick<NavValue, 'register' | 'toggle'> {
+  const { register, toggle } = useContext(ColumnNavContext);
+  return { register, toggle };
 }
 
 function stepToLiveColumn(columns: Map<ColumnId, NavColumn>, from: ColumnId, delta: number): ColumnId {
@@ -141,10 +156,19 @@ function stepToLiveColumn(columns: Map<ColumnId, NavColumn>, from: ColumnId, del
   return from;
 }
 
+function toggleColumn(column: NavColumn, focused: boolean) {
+  if (!column.open) column.setOpen?.(true);
+  else if (focused && column.collapsible) column.setOpen?.(false);
+}
+
 function activateColumn(column: NavColumn, cursor: string | null) {
   if (!column.open) return column.setOpen?.(true);
   if (cursor === COLUMN_HEADER) return column.setOpen?.(false);
   if (cursor !== null) column.onActivate?.(cursor);
+}
+
+function scrollColumnIntoView(id: ColumnId) {
+  document.querySelector(`[data-nav-column="${id}"]`)?.scrollIntoView({ block: 'start', inline: 'nearest' });
 }
 
 function scrollBody(node: HTMLElement | undefined, delta: number) {

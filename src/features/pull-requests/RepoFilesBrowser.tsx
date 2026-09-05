@@ -1,9 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useShowsColumn } from './centralLayout';
 import { ColumnPreview, type PreviewToken } from './ColumnPreview';
-import { useRegisterColumn } from './columnNav';
+import { useRegisterColumn } from './registerColumn';
 import { rowKey } from './fileTreeNodes';
 import { RepoBrowseReader } from './RepoBrowseReader';
 import { RepoFileList } from './RepoFileList';
@@ -20,17 +19,13 @@ export function RepoFilesBrowser({ owner, repo }: { owner: string; repo: string 
   const [query, setQuery] = useState('');
   const repoFiles = useRepoFiles(owner, repo, true);
   const tree = useRepoFileTree({ repoFiles, query, selected: browsed, onSelect: setBrowsed });
-  useRegisterColumn(
-    'files',
-    {
-      ...useCollapsibleColumn('files', fileSize, setFileSize),
-      items: tree.navItems,
-      selected: browsed,
-      onSelect: tree.selectItem,
-      onActivate: tree.activateItem,
-    },
-    useShowsColumn('files'),
-  );
+  useRegisterColumn('files', {
+    ...useCollapsibleColumn('files', fileSize, setFileSize),
+    items: tree.navItems,
+    selected: browsed,
+    onSelect: tree.selectItem,
+    onActivate: tree.activateItem,
+  });
   const fileSet = repoFiles.fileSet;
   return (
     <div className="flex min-h-0 flex-1 max-md:flex-col max-md:overflow-y-auto">

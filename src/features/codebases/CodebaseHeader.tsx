@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 import { CodebaseList } from './CodebaseList';
 import { HeaderMenu } from './HeaderMenu';
+import type { CommandSpec } from '@/features/hotkeys/commandStore';
 import { branchBeingRead, pullBeingRead, repoBeingRead, repoRoute } from './repoPaths';
 import { sidebarGroups } from './sidebarGroups';
 import { useSourceResults } from './useSourceResults';
@@ -24,6 +25,8 @@ import { disconnectGithub, useGithubAccess, useGithubToken, useSources, useStore
 import { GithubSignedOutNotice } from '@/features/sources/GithubSignedOutNotice';
 
 const ALL_PULLS = '/pulls';
+
+const REPO_MENU_COMMAND: CommandSpec = { id: 'repo-menu', label: 'repositories menu', keys: ['0', 'r'] };
 
 export function CodebaseHeader() {
   const pathname = usePathname();
@@ -76,6 +79,7 @@ function CodebaseMenu({ reading }: { reading: RepoRef | null }) {
     <HeaderMenu
       label={readingAllPulls ? ALL_PULLS_ROWS[author].label : reading ? <RepoLabel reading={reading} /> : 'Codebases'}
       width="w-80"
+      command={REPO_MENU_COMMAND}
     >
       {(close) => (
         <>
